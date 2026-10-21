@@ -1,0 +1,247 @@
+{
+  "auth": {
+    "registerRequest": {
+      "email": "buyer@example.test",
+      "password": "ExampleOnly_1234",
+      "fullName": "Buyer Example",
+      "clientPlatform": "WEB"
+    },
+    "tokenResponse": {
+      "data": {
+        "accessToken": "<redacted-example-access-token>",
+        "expiresIn": 600,
+        "sessionId": "10000000-0000-4000-8000-000000000001",
+        "user": {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "email": "buyer@example.test",
+          "fullName": "Buyer Example",
+          "roles": [
+            "BUYER"
+          ],
+          "status": "ACTIVE",
+          "version": 0,
+          "createdAt": "2026-10-21T08:00:00Z",
+          "updatedAt": "2026-10-21T08:00:00Z"
+        }
+      }
+    }
+  },
+  "product": {
+    "id": "20000000-0000-4000-8000-000000000001",
+    "shopId": "20000000-0000-4000-8000-000000000002",
+    "categoryId": "20000000-0000-4000-8000-000000000003",
+    "name": "Example product",
+    "description": "Example only",
+    "images": [],
+    "selling": true,
+    "adminHidden": false,
+    "minimumPrice": "120000",
+    "ratingCount": 0,
+    "version": 1,
+    "createdAt": "2026-10-21T08:00:00Z",
+    "updatedAt": "2026-10-21T08:00:00Z"
+  },
+  "multiShopQuote": {
+    "data": {
+      "quoteId": "30000000-0000-4000-8000-000000000001",
+      "expiresAt": "2026-10-21T08:05:00Z",
+      "lines": [
+        {
+          "cartItemId": "30000000-0000-4000-8000-000000000011",
+          "variantId": "30000000-0000-4000-8000-000000000021",
+          "shopId": "20000000-0000-4000-8000-000000000002",
+          "quantity": 2,
+          "unitPrice": "120000",
+          "lineTotal": "240000"
+        },
+        {
+          "cartItemId": "30000000-0000-4000-8000-000000000012",
+          "variantId": "30000000-0000-4000-8000-000000000022",
+          "shopId": "20000000-0000-4000-8000-000000000002",
+          "quantity": 1,
+          "unitPrice": "80000",
+          "lineTotal": "80000"
+        },
+        {
+          "cartItemId": "30000000-0000-4000-8000-000000000013",
+          "variantId": "30000000-0000-4000-8000-000000000031",
+          "shopId": "20000000-0000-4000-8000-000000000003",
+          "quantity": 1,
+          "unitPrice": "250000",
+          "lineTotal": "250000"
+        },
+        {
+          "cartItemId": "30000000-0000-4000-8000-000000000014",
+          "variantId": "30000000-0000-4000-8000-000000000032",
+          "shopId": "20000000-0000-4000-8000-000000000003",
+          "quantity": 2,
+          "unitPrice": "75000",
+          "lineTotal": "150000"
+        },
+        {
+          "cartItemId": "30000000-0000-4000-8000-000000000015",
+          "variantId": "30000000-0000-4000-8000-000000000033",
+          "shopId": "20000000-0000-4000-8000-000000000003",
+          "quantity": 1,
+          "unitPrice": "90000",
+          "lineTotal": "90000"
+        }
+      ],
+      "groups": [
+        {
+          "shopId": "20000000-0000-4000-8000-000000000002",
+          "subtotal": "320000",
+          "shippingFee": "0",
+          "total": "320000"
+        },
+        {
+          "shopId": "20000000-0000-4000-8000-000000000003",
+          "subtotal": "490000",
+          "shippingFee": "0",
+          "total": "490000"
+        }
+      ],
+      "addressSnapshot": {
+        "recipientName": "Buyer Example",
+        "phone": "0900000000",
+        "line1": "1 Example Street",
+        "ward": "Ward 1",
+        "district": "District 1",
+        "province": "Ho Chi Minh City",
+        "country": "VN",
+        "isDefault": true
+      },
+      "total": "810000",
+      "currency": "VND",
+      "valid": true,
+      "issues": []
+    }
+  },
+  "checkoutRequest": {
+    "body": {
+      "quoteId": "30000000-0000-4000-8000-000000000001"
+    },
+    "headers": {
+      "Idempotency-Key": "40000000-0000-4000-8000-000000000001"
+    }
+  },
+  "orderResponse": {
+    "data": {
+      "id": "50000000-0000-4000-8000-000000000001",
+      "buyerId": "10000000-0000-4000-8000-000000000002",
+      "orderNumber": "MP-20261021-000001",
+      "sellerOrders": [
+        {
+          "id": "50000000-0000-4000-8000-000000000011",
+          "orderId": "50000000-0000-4000-8000-000000000001",
+          "shopId": "20000000-0000-4000-8000-000000000002",
+          "shopNameSnapshot": "Shop A",
+          "status": "PENDING",
+          "items": [],
+          "originalTotal": "320000",
+          "cancelledAmount": "0",
+          "capturedAmount": "0",
+          "refundedAmount": "0",
+          "outstandingAmount": "320000",
+          "currency": "VND",
+          "addressSnapshot": {
+            "recipientName": "Buyer Example",
+            "phone": "0900000000",
+            "line1": "1 Example Street",
+            "ward": "Ward 1",
+            "district": "District 1",
+            "province": "Ho Chi Minh City",
+            "country": "VN",
+            "isDefault": true
+          },
+          "shipment": null,
+          "version": 0,
+          "createdAt": "2026-10-21T08:00:00Z",
+          "updatedAt": "2026-10-21T08:00:00Z"
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000012",
+          "orderId": "50000000-0000-4000-8000-000000000001",
+          "shopId": "20000000-0000-4000-8000-000000000003",
+          "shopNameSnapshot": "Shop B",
+          "status": "PENDING",
+          "items": [],
+          "originalTotal": "490000",
+          "cancelledAmount": "0",
+          "capturedAmount": "0",
+          "refundedAmount": "0",
+          "outstandingAmount": "490000",
+          "currency": "VND",
+          "addressSnapshot": {
+            "recipientName": "Buyer Example",
+            "phone": "0900000000",
+            "line1": "1 Example Street",
+            "ward": "Ward 1",
+            "district": "District 1",
+            "province": "Ho Chi Minh City",
+            "country": "VN",
+            "isDefault": true
+          },
+          "shipment": null,
+          "version": 0,
+          "createdAt": "2026-10-21T08:00:00Z",
+          "updatedAt": "2026-10-21T08:00:00Z"
+        }
+      ],
+      "status": "PENDING",
+      "partiallyCancelled": false,
+      "originalTotal": "810000",
+      "cancelledAmount": "0",
+      "capturedAmount": "0",
+      "refundedAmount": "0",
+      "outstandingAmount": "810000",
+      "paymentMethod": "MOCK",
+      "paymentStatus": "UNPAID",
+      "currency": "VND",
+      "paymentDeadline": "2026-10-21T08:15:00Z",
+      "payments": [],
+      "version": 0,
+      "createdAt": "2026-10-21T08:00:00Z",
+      "updatedAt": "2026-10-21T08:00:00Z"
+    }
+  },
+  "paymentResult": {
+    "data": {
+      "id": "60000000-0000-4000-8000-000000000001",
+      "orderId": "50000000-0000-4000-8000-000000000001",
+      "transactionCode": "MOCK-EXAMPLE-001",
+      "method": "MOCK",
+      "status": "SUCCEEDED",
+      "settlementKind": "NORMAL",
+      "amount": "810000",
+      "currency": "VND",
+      "allocations": [
+        {
+          "sellerOrderId": "50000000-0000-4000-8000-000000000011",
+          "amount": "320000"
+        },
+        {
+          "sellerOrderId": "50000000-0000-4000-8000-000000000012",
+          "amount": "490000"
+        }
+      ],
+      "refunds": [],
+      "createdAt": "2026-10-21T08:01:00Z",
+      "resolvedAt": "2026-10-21T08:01:01Z"
+    }
+  },
+  "errorConflict": {
+    "error": {
+      "code": "PRICE_CHANGED",
+      "message": "A line price changed. Create and confirm a new quote.",
+      "details": [
+        {
+          "field": "quoteId",
+          "code": "QUOTE_STALE",
+          "message": "Quote is no longer current."
+        }
+      ],
+      "requestId": "req-example-001"
+    }
+  }
+}

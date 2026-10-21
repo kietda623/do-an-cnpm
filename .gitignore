@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.yarn/
+
+# Build output and caches
+dist/
+build/
+.next/
+.turbo/
+.expo/
+.metro-cache/
+.cache/
+coverage/
+*.tsbuildinfo
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+
+# Runtime output
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+*.pid
+*.seed
+
+# Test output
+playwright-report/
+test-results/
+artifacts/
+
+# Native and desktop build output
+android/.gradle/
+android/app/build/
+ios/Pods/
+ios/build/
+src-tauri/target/
+
+# Local databases and uploaded files
+*.sqlite
+*.sqlite3
+*.db
+uploads/
+
+# Editor and operating system files
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.DS_Store
+Thumbs.db
+Desktop.ini
