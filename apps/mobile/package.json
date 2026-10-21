@@ -1,0 +1,15 @@
+{
+  "name": "@marketplace/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo/AppEntry",
+  "dependencies": {
+    "expo": "57.0.30",
+    "react": "catalog:",
+    "react-native": "0.86.3"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "typescript": "catalog:"
+  }
+}
