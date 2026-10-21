@@ -4,7 +4,7 @@ Workspace cho đồ án nền tảng thương mại điện tử đa người b�
 
 ## Trạng thái hiện tại
 
-Repo đã có monorepo skeleton, package manifests, lockfile, cấu hình TypeScript dùng chung, lint/format và `.env.example`. Source nghiệp vụ, Docker Compose, database migrations và các lệnh test ứng dụng chưa được triển khai; tài liệu setup mô tả contract mục tiêu, không khẳng định ứng dụng đã chạy được.
+Repo đã có monorepo skeleton, package manifests, lockfile, cấu hình TypeScript dùng chung, lint/format, `.env.example` và NestJS API bootstrap với Swagger/health routes. Source nghiệp vụ, Docker Compose, database migrations và các lệnh test ứng dụng chưa được triển khai; tài liệu setup mô tả contract mục tiêu, không khẳng định marketplace đã sẵn sàng chạy.
 
 ## Bắt đầu
 
@@ -14,6 +14,6 @@ Repo đã có monorepo skeleton, package manifests, lockfile, cấu hình TypeSc
 
 ## Các lệnh đã cấu hình
 
-Dùng Node.js 24.18.0 và pnpm 12.14.0 theo `.nvmrc` và `package.json`. Hiện có thể dùng `pnpm lint`, `pnpm lint:workspaces`, `pnpm typecheck` và `pnpm format:check`; các workspace chưa có mã nguồn nên lint/typecheck sẽ báo skip. Các test nghiệp vụ, database, API và native sẽ được bổ sung cùng implementation tương ứng.
+Dùng Node.js 24.18.0 và pnpm 12.14.0 theo `.nvmrc` và `package.json`. Hiện có thể dùng `pnpm lint`, `pnpm lint:workspaces`, `pnpm typecheck`, `pnpm format:check` và build/start API. Các workspace chưa có mã nguồn sẽ báo skip; API bootstrap có health/Swagger, còn test nghiệp vụ, database và native sẽ được bổ sung cùng implementation tương ứng.
 
 Xem [hướng dẫn local](docs/development/local.md) trước khi cài dependencies hoặc chạy service.

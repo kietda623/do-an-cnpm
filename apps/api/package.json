@@ -4,23 +4,30 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@nestjs/config": "12.0.1",
     "@nestjs/common": "12.2.0",
     "@nestjs/core": "12.2.0",
     "@nestjs/platform-express": "12.2.0",
+    "@nestjs/swagger": "12.0.2",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1",
     "pg": "8.23.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/pg": "8.23.1",
     "prisma": "7.10.1",
     "typescript": "catalog:",
     "eslint": "catalog:"
   },
   "scripts": {
+    "build": "tsc --project tsconfig.build.json",
     "lint": "node ../../packages/config/lint.mjs",
+    "start": "node dist/main.js",
     "typecheck": "node ../../packages/config/typecheck.mjs"
   }
 }

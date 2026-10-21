@@ -2,7 +2,7 @@
 
 ## Trạng thái
 
-Workspace đã có manifests/lockfile, TypeScript config, lint/format và `.env.example`. Source ứng dụng, Docker Compose, migrations và các script test nghiệp vụ chưa có. Vì vậy các hướng dẫn về PostgreSQL, API, web và native bên dưới là contract cho các task tiếp theo, không phải kết quả chạy thử thành công.
+Workspace đã có manifests/lockfile, TypeScript config, lint/format, `.env.example` và API bootstrap NestJS. Health liveness và Swagger đã được smoke test; readiness chỉ trả sẵn sàng khi cấu hình thiết yếu và PostgreSQL reachable. Source nghiệp vụ, Docker Compose, migrations và các script test nghiệp vụ chưa có, nên các hướng dẫn về service bên dưới vẫn là contract cho các task tiếp theo.
 
 ## Toolchain cần dùng
 
@@ -24,7 +24,7 @@ Kiểm tra phiên bản bằng `node --version` và `pnpm --version`. `pnpm inst
 | Storefront web | 3000 | Local development |
 | Seller Center web | 3001 | Local development |
 | Admin panel web | 3002 | Local development |
-| API | 4000 | Local development; `/api/v1`, docs dự kiến ở `/api/docs` |
+| API | 4000 | Local development; prefix `/api/v1`, Swagger `/api/docs`, liveness `/health/live`, readiness `/health/ready` |
 | PostgreSQL | 5432 | Chỉ bind loopback/local trong development; không public ra Internet |
 | Expo development server | 8081 | Cho thiết bị/emulator khi chạy mobile |
 
@@ -50,6 +50,7 @@ Copy-Item .env.example .env
 | `pnpm lint:workspaces` | Đã cấu hình qua Turbo; workspace rỗng sẽ báo skip |
 | `pnpm typecheck` | Đã cấu hình qua Turbo; workspace chưa có TypeScript sẽ báo skip |
 | `pnpm format` / `pnpm format:check` | Đã cấu hình cho source và workspace config |
+| `pnpm --filter @marketplace/api build` / `start` | NestJS bootstrap đã cấu hình; `start` cần build trước |
 | `pnpm dev`, `pnpm build`, `pnpm test`, `pnpm clean` | Root orchestration đã có; package tasks tương ứng chưa được triển khai |
 | `pnpm test:unit`, `test:integration`, `test:contract`, `test:e2e`, `test:concurrency`, `test:security`, `test:performance` | Contract mục tiêu trong quickstart; chưa có script thực thi |
 | API `db:migrate:deploy`, `db:seed:demo`, `test:expiry`; Mobile `start`; Desktop `tauri`, `build:desktop` | Contract mục tiêu; chưa có script/service tương ứng |
@@ -58,7 +59,7 @@ Cập nhật quickstart cùng task implementation nếu tên script hoặc servi
 
 ## Khi nền tảng chạy được
 
-Quickstart mô tả luồng dự kiến: copy `.env.example`, cài frozen lockfile, khởi động PostgreSQL, migrate/seed qua script API, rồi chạy API và ba web app. Hiện chưa có Compose/migrations nên chưa chạy các lệnh service đó. Khi được triển khai, xác nhận database URL và namespace trước khi migrate hoặc seed.
+Quickstart mô tả luồng dự kiến: copy `.env.example`, cài frozen lockfile, khởi động PostgreSQL, migrate/seed qua script API, rồi chạy API và ba web app. API bootstrap có thể build/start riêng; hiện chưa có Compose/migrations nên các lệnh database và web container chưa chạy được. Khi được triển khai, xác nhận database URL và namespace trước khi migrate hoặc seed.
 
 ### Bảo vệ dữ liệu
 

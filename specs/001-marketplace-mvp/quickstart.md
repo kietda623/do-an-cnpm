@@ -29,7 +29,8 @@ Root đã cấu hình `lint`, `lint:workspaces`, `typecheck`, `format`, `format:
 `dev`, `build`, `test`, `clean` có lệnh Turbo nhưng package tasks/source tương ứng chưa sẵn sàng.
 Các script test:unit, test:integration, test:contract, test:e2e, test:concurrency,
 test:security và test:performance là contract cần implementation cung cấp.
-API package `@marketplace/api` dự kiến có db:migrate:deploy, db:seed:demo, test:expiry.
+API package `@marketplace/api` hiện có `build`/`start` cho Nest bootstrap;
+db:migrate:deploy, db:seed:demo và test:expiry sẽ được thêm cùng các task database/test.
 `@marketplace/mobile`: start. `@marketplace/desktop`: tauri, build:desktop.
 Compose services: postgres, api, storefront, seller-center, admin-panel;
 packages expose scripts consistent với Turbo graph. Contract này là công việc W011/015–17/033/040/057.
