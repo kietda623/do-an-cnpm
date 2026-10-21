@@ -2,10 +2,11 @@
 
 ## Trạng thái và mục đích
 
-Đây là run guide mục tiêu sau implementation, KHÔNG phải xác nhận repo hiện chạy được.
-Hiện không có package.json, Docker Compose, migrations hoặc source ứng dụng.
-Không chạy các lệnh triển khai bên dưới trong bước planning. W017/016 và các owner feature
-phải cung cấp các script/service theo contract lệnh này; nếu đổi tên, cập nhật guide cùng PR.
+Đây là run guide và acceptance contract, KHÔNG phải xác nhận repo hiện chạy được.
+Repo đã có workspace manifests/lockfile, shared TypeScript config, lint/format và `.env.example`;
+source nghiệp vụ, Docker Compose, migrations và test scripts ứng dụng vẫn chưa được triển khai.
+Các lệnh service bên dưới chỉ chạy sau khi các task nền tảng/API cung cấp chúng. W017/016 và các owner feature
+phải cập nhật guide cùng implementation nếu đổi tên script/service.
 
 Nguồn: [spec](spec.md), [plan](plan.md), [data model](data-model.md), [API](contracts/api.md).
 DoD chỉ đạt khi command/evidence thật được ghi lại; không dùng guide như kết quả test đã pass.
@@ -24,9 +25,11 @@ DoD chỉ đạt khi command/evidence thật được ghi lại; không dùng gu
 
 ## Script/service contract cần được implementation cung cấp
 
-Root pnpm scripts: lint, typecheck, test:unit, build, test:integration, test:contract,
-test:e2e, test:concurrency, test:security, test:performance và dev.
-API package `@marketplace/api`: db:migrate:deploy, db:seed:demo, test:expiry.
+Root đã cấu hình `lint`, `lint:workspaces`, `typecheck`, `format`, `format:check`;
+`dev`, `build`, `test`, `clean` có lệnh Turbo nhưng package tasks/source tương ứng chưa sẵn sàng.
+Các script test:unit, test:integration, test:contract, test:e2e, test:concurrency,
+test:security và test:performance là contract cần implementation cung cấp.
+API package `@marketplace/api` dự kiến có db:migrate:deploy, db:seed:demo, test:expiry.
 `@marketplace/mobile`: start. `@marketplace/desktop`: tauri, build:desktop.
 Compose services: postgres, api, storefront, seller-center, admin-panel;
 packages expose scripts consistent với Turbo graph. Contract này là công việc W011/015–17/033/040/057.
@@ -36,6 +39,9 @@ trong development, không public demo. Mobile/native PUBLIC_API_URL theo thiết
 Web apps dùng cùng scheme/site với API ở demo để cookie SameSite hợp lệ.
 
 ## Local setup sau khi foundation/feature code có đủ
+
+Compose, migration, seed và API service hiện chưa được triển khai; chưa chạy các lệnh service dưới đây.
+Trước khi cài dependencies, dùng đúng pnpm 12.14.0 và chấp thuận build-script policy của workspace.
 
 PowerShell từ repository root, không từ folder specs:
 
