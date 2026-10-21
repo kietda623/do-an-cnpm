@@ -19,6 +19,10 @@ coverage/
 .env.*
 !.env.example
 !.env.*.example
+.envrc
+.envrc.local
+*.local.env
+*.secret
 *.pem
 *.key
 
