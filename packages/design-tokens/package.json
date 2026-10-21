@@ -2,5 +2,13 @@
   "name": "@marketplace/design-tokens",
   "version": "0.1.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "lint": "node ../../packages/config/lint.mjs",
+    "typecheck": "node ../../packages/config/typecheck.mjs"
+  },
+  "devDependencies": {
+    "eslint": "catalog:",
+    "typescript": "catalog:"
+  }
 }

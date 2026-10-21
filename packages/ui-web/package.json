@@ -12,6 +12,11 @@
     "@types/react-dom": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "eslint": "catalog:"
+  },
+  "scripts": {
+    "lint": "node ../../packages/config/lint.mjs",
+    "typecheck": "node ../../packages/config/typecheck.mjs"
   }
 }

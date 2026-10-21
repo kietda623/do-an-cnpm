@@ -9,12 +9,17 @@
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
-    "lint": "turbo run lint",
+    "lint": "eslint .",
+    "lint:workspaces": "turbo run lint",
     "typecheck": "turbo run typecheck",
+    "format": "prettier --write \"apps/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/config/*.mjs\" \"eslint.config.mjs\" \"package.json\" \"pnpm-workspace.yaml\" \"turbo.json\"",
+    "format:check": "prettier --check \"apps/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/config/*.mjs\" \"eslint.config.mjs\" \"package.json\" \"pnpm-workspace.yaml\" \"turbo.json\"",
     "test": "turbo run test",
     "clean": "turbo run clean"
   },
   "devDependencies": {
+    "eslint": "10.13.0",
+    "prettier": "3.9.10",
     "turbo": "2.11.9",
     "typescript": "6.0.3"
   }
