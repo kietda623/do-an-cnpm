@@ -79,7 +79,7 @@ specs/001-marketplace-mvp/
 
 ### Source Code (repository root)
 
-Cây mục tiêu sau đây chưa được tạo:
+Cây workspace được khởi tạo ở T008; source của từng app/package sẽ được thêm bởi các task triển khai tương ứng:
 
 ```text
 apps/
