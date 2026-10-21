@@ -2,5 +2,16 @@
   "name": "@marketplace/contracts",
   "version": "0.1.0",
   "private": true,
-  "files": ["openapi.yaml", "examples"]
+  "files": [
+    "openapi.yaml",
+    "examples"
+  ],
+  "scripts": {
+    "lint": "node ../../packages/config/lint.mjs",
+    "typecheck": "node ../../packages/config/typecheck.mjs"
+  },
+  "devDependencies": {
+    "eslint": "catalog:",
+    "typescript": "catalog:"
+  }
 }

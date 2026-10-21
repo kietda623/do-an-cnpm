@@ -16,6 +16,11 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "prisma": "7.10.1",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "eslint": "catalog:"
+  },
+  "scripts": {
+    "lint": "node ../../packages/config/lint.mjs",
+    "typecheck": "node ../../packages/config/typecheck.mjs"
   }
 }
