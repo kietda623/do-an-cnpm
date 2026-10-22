@@ -1,6 +1,6 @@
-import { Injectable, OnModuleDestroy } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { Pool } from "pg";
+import { DatabaseService } from "../database/prisma.service.js";
 
 export type ReadinessChecks = {
   configuration: "up" | "down";
@@ -8,34 +8,26 @@ export type ReadinessChecks = {
 };
 
 @Injectable()
-export class ReadinessService implements OnModuleDestroy {
-  private readonly pool?: Pool;
+export class ReadinessService {
   private readonly configurationReady: boolean;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly database: DatabaseService,
+  ) {
     const connectionString = config.get<string>("DATABASE_URL")?.trim();
     const signingSecret = config.get<string>("JWT_SIGNING_SECRET")?.trim();
     this.configurationReady = Boolean(connectionString && signingSecret);
-
-    if (connectionString) {
-      this.pool = new Pool({
-        connectionString,
-        max: 1,
-        connectionTimeoutMillis: 1_000,
-        idleTimeoutMillis: 1_000,
-        query_timeout: 1_000,
-      });
-    }
   }
 
   async check(): Promise<ReadinessChecks> {
-    if (!this.pool) {
+    if (!this.database.isConfigured) {
       return { configuration: "down", database: "down" };
     }
 
     let databaseReady: ReadinessChecks["database"];
     try {
-      await this.pool.query("SELECT 1");
+      await this.database.checkConnection();
       databaseReady = "up";
     } catch {
       databaseReady = "down";
@@ -45,9 +37,5 @@ export class ReadinessService implements OnModuleDestroy {
       configuration: this.configurationReady ? "up" : "down",
       database: databaseReady,
     };
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    await this.pool?.end();
   }
 }
