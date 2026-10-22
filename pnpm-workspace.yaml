@@ -2,6 +2,14 @@ packages:
   - apps/*
   - packages/*
 
+allowBuilds:
+  "@parcel/watcher": false
+  "@prisma/engines": true
+  "@scarf/scarf": false
+  "@swc/core": true
+  "unrs-resolver": true
+  prisma: true
+
 catalog:
   "@types/node": 24.19.2
   "@types/react": 19.2.18

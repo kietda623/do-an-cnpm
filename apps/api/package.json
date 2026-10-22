@@ -44,6 +44,7 @@
     "prisma:generate": "prisma generate --schema prisma/schema.prisma",
     "prisma:migrate:dev": "node scripts/prisma-migrate.mjs dev",
     "prisma:migrate:deploy": "node scripts/prisma-migrate.mjs deploy",
-    "prisma:migrate:status": "node scripts/prisma-migrate.mjs status"
+    "prisma:migrate:status": "node scripts/prisma-migrate.mjs status",
+    "prisma:schema:check": "node scripts/prisma-schema-check.mjs"
   }
 }
