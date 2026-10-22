@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@nestjs/config": "12.0.1",
     "@nestjs/common": "12.2.0",
+    "@nestjs/config": "12.0.1",
     "@nestjs/core": "12.2.0",
     "@nestjs/platform-express": "12.2.0",
     "@nestjs/swagger": "12.0.2",
@@ -18,18 +18,29 @@
     "rxjs": "7.8.2"
   },
   "devDependencies": {
+    "@jest/globals": "30.5.2",
+    "@nestjs/testing": "12.2.0",
+    "@swc/core": "1.16.18",
+    "@swc/jest": "0.2.39",
+    "@types/jest": "30.0.0",
     "@types/node": "catalog:",
     "@types/pg": "8.23.1",
+    "@types/supertest": "7.2.1",
     "dotenv": "18.0.3",
+    "eslint": "catalog:",
+    "jest": "30.5.2",
     "prisma": "7.10.1",
-    "typescript": "catalog:",
-    "eslint": "catalog:"
+    "supertest": "7.3.1",
+    "typescript": "catalog:"
   },
   "scripts": {
     "build": "pnpm prisma:generate && tsc --project tsconfig.build.json",
     "lint": "node ../../packages/config/lint.mjs",
     "start": "node dist/main.js",
     "typecheck": "pnpm prisma:generate && node ../../packages/config/typecheck.mjs",
+    "test": "node scripts/run-tests.mjs unit",
+    "test:unit": "node scripts/run-tests.mjs unit",
+    "test:integration": "node scripts/run-tests.mjs integration",
     "prisma:generate": "prisma generate --schema prisma/schema.prisma",
     "prisma:migrate:dev": "node scripts/prisma-migrate.mjs dev",
     "prisma:migrate:deploy": "node scripts/prisma-migrate.mjs deploy",

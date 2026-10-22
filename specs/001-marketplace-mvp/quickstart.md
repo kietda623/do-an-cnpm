@@ -2,9 +2,9 @@
 
 ## Trạng thái và mục đích
 
-Đây là run guide và acceptance contract, KHÔNG phải xác nhận repo hiện chạy được.
-Repo đã có workspace manifests/lockfile, shared TypeScript config, lint/format và `.env.example`;
-source nghiệp vụ, Docker Compose, migrations và test scripts ứng dụng vẫn chưa được triển khai.
+Đây là run guide và acceptance contract, KHÔNG phải xác nhận toàn repo đã chạy được.
+Repo có workspace manifests/lockfile, shared TypeScript config, lint/format, Prisma foundation và test harness API;
+source nghiệp vụ, Docker Compose và seed demo vẫn chưa được triển khai.
 Các lệnh service bên dưới chỉ chạy sau khi các task nền tảng/API cung cấp chúng. W017/016 và các owner feature
 phải cập nhật guide cùng implementation nếu đổi tên script/service.
 
@@ -26,11 +26,11 @@ DoD chỉ đạt khi command/evidence thật được ghi lại; không dùng gu
 ## Script/service contract cần được implementation cung cấp
 
 Root đã cấu hình `lint`, `lint:workspaces`, `typecheck`, `format`, `format:check`;
-`dev`, `build`, `test`, `clean` có lệnh Turbo nhưng package tasks/source tương ứng chưa sẵn sàng.
-Các script test:unit, test:integration, test:contract, test:e2e, test:concurrency,
-test:security và test:performance là contract cần implementation cung cấp.
-API package `@marketplace/api` hiện có `build`/`start` cho Nest bootstrap;
-db:migrate:deploy, db:seed:demo và test:expiry sẽ được thêm cùng các task database/test.
+`dev`, `build`, `test`, `clean` có lệnh Turbo nhưng phần lớn app source chưa sẵn sàng.
+API package `@marketplace/api` có `test:unit` và `test:integration` (Jest/Supertest), Prisma schema,
+migration và `prisma:migrate:dev|deploy|status`; integration test chỉ nhận `TEST_DATABASE_URL` riêng.
+Compose, `db:seed:demo`, cùng các script test:contract, test:e2e, test:concurrency, test:security,
+test:performance và test:expiry sẽ được bổ sung ở các task tương ứng.
 `@marketplace/mobile`: start. `@marketplace/desktop`: tauri, build:desktop.
 Compose services: postgres, api, storefront, seller-center, admin-panel;
 packages expose scripts consistent với Turbo graph. Contract này là công việc W011/015–17/033/040/057.
@@ -73,9 +73,9 @@ W016 phải cung cấp env mapping rõ. Test database/bucket namespace riêng.
 ```powershell
 pnpm lint
 pnpm typecheck
-pnpm test:unit
+pnpm --filter @marketplace/api test:unit
 pnpm build
-pnpm test:integration
+pnpm --filter @marketplace/api test:integration
 pnpm test:contract
 pnpm test:e2e
 pnpm test:concurrency
@@ -83,6 +83,10 @@ pnpm test:security
 pnpm test:performance
 pnpm --filter @marketplace/api test:expiry
 ```
+
+Trước integration, tạo database riêng có hậu tố `_test` hoặc `_disposable`, copy `.env.test.example` thành `.env.test`,
+điền `TEST_DATABASE_URL` và giữ `TEST_DATABASE_NAME_CONFIRMATION` trùng chính xác tên database.
+Integration harness reset database đã xác nhận rồi áp migrations; không dùng `DATABASE_URL` làm fallback.
 
 Expected: exit0 cho từng command có test thật. Integration dùng PostgreSQL thật,
 contract gate validate OpenAPI/runtime/examples, E2E Web không mock checkout/payment persistence.
