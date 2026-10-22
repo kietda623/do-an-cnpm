@@ -20,14 +20,19 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "8.23.1",
+    "dotenv": "18.0.3",
     "prisma": "7.10.1",
     "typescript": "catalog:",
     "eslint": "catalog:"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.build.json",
+    "build": "pnpm prisma:generate && tsc --project tsconfig.build.json",
     "lint": "node ../../packages/config/lint.mjs",
     "start": "node dist/main.js",
-    "typecheck": "node ../../packages/config/typecheck.mjs"
+    "typecheck": "pnpm prisma:generate && node ../../packages/config/typecheck.mjs",
+    "prisma:generate": "prisma generate --schema prisma/schema.prisma",
+    "prisma:migrate:dev": "node scripts/prisma-migrate.mjs dev",
+    "prisma:migrate:deploy": "node scripts/prisma-migrate.mjs deploy",
+    "prisma:migrate:status": "node scripts/prisma-migrate.mjs status"
   }
 }

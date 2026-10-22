@@ -6,6 +6,7 @@ node_modules/
 # Build output and caches
 dist/
 build/
+apps/api/src/generated/prisma/
 .next/
 .turbo/
 .expo/
