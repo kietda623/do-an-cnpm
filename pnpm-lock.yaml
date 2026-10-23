@@ -571,6 +571,9 @@ importers:
         specifier: workspace:*
         version: link:../api-client
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.18
