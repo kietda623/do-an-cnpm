@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@source "../../../../packages/ui-web/src";
+
+@theme inline {
+  --color-marketplace-accent: var(--color-accent);
+  --color-marketplace-accent-foreground: var(--color-accent-foreground);
+  --color-marketplace-background: var(--color-background);
+  --color-marketplace-border: var(--color-border);
+  --color-marketplace-danger: var(--color-danger);
+  --color-marketplace-foreground: var(--color-foreground);
+  --color-marketplace-muted-foreground: var(--color-muted-foreground);
+  --color-marketplace-ring: var(--color-ring);
+  --radius-marketplace-control: var(--radius-control);
+  --spacing-control-gap: 0.5rem;
+}

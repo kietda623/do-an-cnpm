@@ -3,19 +3,28 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@marketplace/design-tokens": "workspace:*",
+    "@marketplace/ui-web": "workspace:*",
+    "@tanstack/react-query": "5.104.5",
     "next": "16.4.2",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "typescript": "catalog:",
-    "eslint": "catalog:"
+    "eslint": "catalog:",
+    "postcss": "8.5.31",
+    "tailwindcss": "4.3.3",
+    "typescript": "catalog:"
   },
   "scripts": {
+    "build": "next build",
+    "dev": "next dev --hostname 0.0.0.0",
     "lint": "node ../../packages/config/lint.mjs",
+    "start": "next start --hostname 0.0.0.0",
     "typecheck": "node ../../packages/config/typecheck.mjs"
   }
 }

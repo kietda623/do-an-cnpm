@@ -1,0 +1,171 @@
+name: marketplace-dev
+
+services:
+  postgres:
+    image: postgres:17.11-bookworm
+    environment:
+      POSTGRES_DB: marketplace_dev
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env.compose}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.compose}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - marketplace-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d marketplace_dev']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    environment:
+      API_PORT: "4000"
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/marketplace_dev?schema=public
+      JWT_SIGNING_SECRET: ${JWT_SIGNING_SECRET:?Set JWT_SIGNING_SECRET in .env.compose}
+      NODE_ENV: production
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_REGION: ${S3_REGION:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_PUBLIC_READ_BASE: ${S3_PUBLIC_READ_BASE:-}
+    ports:
+      - "127.0.0.1:4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/health/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  storefront:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        APP_FILTER: "@marketplace/storefront"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+      PORT: "3000"
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  seller-center:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        APP_FILTER: "@marketplace/seller-center"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+      PORT: "3001"
+    ports:
+      - "127.0.0.1:3001:3001"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  admin-panel:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        APP_FILTER: "@marketplace/admin-panel"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+      PORT: "3002"
+    ports:
+      - "127.0.0.1:3002:3002"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3002').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  postgres-test:
+    image: postgres:17.11-bookworm
+    profiles: [test]
+    environment:
+      POSTGRES_DB: marketplace_test
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env.compose}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.compose}
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - marketplace-test-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d marketplace_test']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  api-test:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    profiles: [test]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-test:5432/marketplace_test?schema=public
+      TEST_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-test:5432/marketplace_test?schema=public
+      TEST_DATABASE_NAME_CONFIRMATION: marketplace_test
+      NODE_ENV: test
+    command: ["pnpm", "test:integration"]
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+
+volumes:
+  marketplace-postgres-data:
+  marketplace-test-postgres-data:

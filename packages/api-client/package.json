@@ -3,12 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth/types": "./src/auth/types.ts"
+  },
   "scripts": {
+    "generate:types": "openapi-typescript ../contracts/openapi.yaml -o src/generated/index.ts && prettier --write src/generated/index.ts",
     "lint": "node ../../packages/config/lint.mjs",
+    "test": "node --experimental-strip-types --test test/transport.test.ts",
     "typecheck": "node ../../packages/config/typecheck.mjs"
   },
   "devDependencies": {
     "eslint": "catalog:",
+    "openapi-typescript": "7.13.0",
+    "prettier": "catalog:",
     "typescript": "catalog:"
   }
 }

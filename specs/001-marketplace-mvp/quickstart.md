@@ -3,10 +3,9 @@
 ## Trạng thái và mục đích
 
 Đây là run guide và acceptance contract, KHÔNG phải xác nhận toàn repo đã chạy được.
-Repo có workspace manifests/lockfile, shared TypeScript config, lint/format, Prisma foundation và test harness API;
-source nghiệp vụ, Docker Compose và seed demo vẫn chưa được triển khai.
-Các lệnh service bên dưới chỉ chạy sau khi các task nền tảng/API cung cấp chúng. W017/016 và các owner feature
-phải cập nhật guide cùng implementation nếu đổi tên script/service.
+Repo có workspace manifests/lockfile, shared TypeScript config, ba Next.js shell, shared web UI/tokens,
+OpenAPI API client, Prisma foundation, disposable PostgreSQL integration harness và Docker Compose local.
+Domain features, database demo seed và CI gates vẫn đang được triển khai theo tasks.md.
 
 Nguồn: [spec](spec.md), [plan](plan.md), [data model](data-model.md), [API](contracts/api.md).
 DoD chỉ đạt khi command/evidence thật được ghi lại; không dùng guide như kết quả test đã pass.
@@ -23,73 +22,79 @@ DoD chỉ đạt khi command/evidence thật được ghi lại; không dùng gu
 - CPU/RAM/disk đủ chạy containers; môi trường không trùng tên/database production.
   Thiết bị native phải truy cập được API: URL LAN/HTTPS hợp lệ, không dùng localhost của máy khác.
 
-## Script/service contract cần được implementation cung cấp
+## Scripts và services hiện có
 
 Root đã cấu hình `lint`, `lint:workspaces`, `typecheck`, `format`, `format:check`;
-`dev`, `build`, `test`, `clean` có lệnh Turbo nhưng phần lớn app source chưa sẵn sàng.
+`dev`, `build`, `test`, `clean` chạy qua Turbo; ba web shell có `dev`, `build`, `start`.
 API package `@marketplace/api` có `test:unit` và `test:integration` (Jest/Supertest), Prisma schema,
 migration và `prisma:migrate:dev|deploy|status`; integration test chỉ nhận `TEST_DATABASE_URL` riêng.
-Compose, `db:seed:demo`, cùng các script test:contract, test:e2e, test:concurrency, test:security,
-test:performance và test:expiry sẽ được bổ sung ở các task tương ứng.
+`@marketplace/api-client` có `generate:types` và `test`; `@marketplace/contracts` là workspace package cho OpenAPI/examples.
+Database demo seed, contract/E2E/concurrency/security, performance và expiry suites sẽ được bổ sung ở các task tương ứng.
 `@marketplace/mobile`: start. `@marketplace/desktop`: tauri, build:desktop.
-Compose services: postgres, api, storefront, seller-center, admin-panel;
-packages expose scripts consistent với Turbo graph. Contract này là công việc W011/015–17/033/040/057.
+Compose services: postgres, api, storefront, seller-center, admin-panel; profile `test` có PostgreSQL/API test riêng.
+Contract này là công việc W011/015–17/033/040/057.
 
-Ports mục tiêu: storefront3000, seller3001, admin3002, API4000; PostgreSQL5432 chỉ bind local
-trong development, không public demo. Mobile/native PUBLIC_API_URL theo thiết bị;
+Ports mục tiêu: storefront3000, seller3001, admin3002, API4000; Compose PostgreSQL development bind
+127.0.0.1:55432 và test database riêng bind 127.0.0.1:55433, không dùng database `cnpm`.
+Mobile/native PUBLIC_API_URL theo thiết bị;
 Web apps dùng cùng scheme/site với API ở demo để cookie SameSite hợp lệ.
 
 ## Local setup sau khi foundation/feature code có đủ
 
-Compose, migration, seed và API service hiện chưa được triển khai; chưa chạy các lệnh service dưới đây.
-Trước khi cài dependencies, dùng đúng pnpm 12.14.0 và chấp thuận build-script policy của workspace.
+Compose và API service đã có; database demo seed vẫn chưa triển khai. Dùng đúng pnpm 12.14.0.
+Database Compose development và test có volume/tên riêng, tách khỏi PostgreSQL cài trực tiếp trên máy.
 
 PowerShell từ repository root, không từ folder specs:
 
 ```powershell
-Copy-Item .env.example .env
-# Điền .env theo plan mục11, không commit secrets.
-pnpm install --frozen-lockfile
-docker compose up -d postgres
-pnpm --filter @marketplace/api db:migrate:deploy
-pnpm --filter @marketplace/api db:seed:demo
-docker compose up -d --build api storefront seller-center admin-panel
+Copy-Item .env.compose.example .env.compose
+# Đổi POSTGRES_PASSWORD và JWT_SIGNING_SECRET; mật khẩu DB phải dùng ký tự URL-safe.
+corepack pnpm install --frozen-lockfile
+docker compose --env-file .env.compose up -d --build postgres api storefront seller-center admin-panel
+docker compose --env-file .env.compose run --rm api pnpm prisma:migrate:deploy
 Invoke-RestMethod http://localhost:4000/health/live
 Invoke-RestMethod http://localhost:4000/health/ready
 ```
 
-Expected: migration exit0 không reset; repeat seed không nhân đôi; readiness success sau DB ready;
+Expected: migration deploy exit0 và không reset; readiness success sau DB ready;
 Web 3000/3001/3002 truy cập được, API docs `/api/docs` có schema v1.
-Seed demo cần có Admin/SellerA/SellerB/Buyer1/Buyer2 credentials cấu hình local an toàn,
-2 shop active cùng sản phẩm biến thể, và negative fixtures pending/suspended/hidden.
-Không in mật khẩu thật/token vào terminal logs hoặc đưa chúng vào báo cáo.
+Chưa có lệnh seed demo, nên chưa thể tạo Admin/SellerA/SellerB/Buyer1/Buyer2 fixtures.
+
+Chạy migration integration trên PostgreSQL test riêng của Compose bằng lệnh sau; suite reset toàn bộ
+database `marketplace_test` trên volume `marketplace-test-postgres-data`, không đổi URL sang `cnpm`:
+
+```powershell
+docker compose --env-file .env.compose --profile test run --rm api-test
+```
 
 Có thể chạy `pnpm dev` thay app containers cho hot reload; không chạy hai app cùng port.
 Default database env của root host và API container khác host name (`localhost`/`postgres`),
-W016 phải cung cấp env mapping rõ. Test database/bucket namespace riêng.
+Compose env mapping tách host URL khỏi container hostname. Test database/bucket namespace riêng.
 
-## Checks từng lớp
+## Foundation quality gates
 
 ```powershell
-pnpm lint
-pnpm typecheck
-pnpm --filter @marketplace/api test:unit
-pnpm build
-pnpm --filter @marketplace/api test:integration
-pnpm test:contract
-pnpm test:e2e
-pnpm test:concurrency
-pnpm test:security
-pnpm test:performance
-pnpm --filter @marketplace/api test:expiry
+corepack pnpm install --frozen-lockfile
+corepack pnpm lint:workspaces
+corepack pnpm typecheck
+corepack pnpm --filter @marketplace/api-client generate:types
+git diff --exit-code -- packages/api-client/src/generated/index.ts
+corepack pnpm test
+corepack pnpm build
+corepack pnpm --filter @marketplace/api test:integration
+corepack pnpm --filter @marketplace/api prisma:schema:check
 ```
+
+`pnpm test` chạy unit suites. Pull request chạy cùng các gate trong `.github/workflows/ci.yml` với PostgreSQL
+ephemeral. Workflow cấp `contents: read`, không dùng secret hoặc quyền ghi cho mã từ fork.
 
 Trước integration, tạo database riêng có hậu tố `_test` hoặc `_disposable`, copy `.env.test.example` thành `.env.test`,
 điền `TEST_DATABASE_URL` và giữ `TEST_DATABASE_NAME_CONFIRMATION` trùng chính xác tên database.
 Integration harness reset database đã xác nhận rồi áp migrations; không dùng `DATABASE_URL` làm fallback.
 
-Expected: exit0 cho từng command có test thật. Integration dùng PostgreSQL thật,
-contract gate validate OpenAPI/runtime/examples, E2E Web không mock checkout/payment persistence.
+`prisma:schema:check` dùng `.env.test`, yêu cầu hậu tố `_test`/`_disposable` và xác nhận chính xác tên database;
+nó so sánh database với schema ở chế độ read-only. OpenAPI type regeneration và git diff phát hiện generated type drift.
+E2E Web chưa được triển khai nên chưa thể xác nhận checkout/payment persistence.
 Performance test ghi host/network/fixture cùng100 observations, không chỉ số trung bình.
 Không bỏ failing test hoặc thay DB mock để báo pass. Chỉ chạy test reset trên disposable test DB
 được kiểm tra tên/URL; không áp dụng `migrate reset`/`docker compose down -v` lên dữ liệu demo dùng chung.

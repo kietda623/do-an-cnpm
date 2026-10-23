@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Workspace and PostgreSQL checks
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17.11-bookworm
+        env:
+          POSTGRES_DB: marketplace_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: local_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d marketplace_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:local_test_password@localhost:5432/marketplace_test?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:local_test_password@localhost:5432/marketplace_test?schema=public
+      TEST_DATABASE_NAME_CONFIRMATION: marketplace_test
+
+    steps:
+      - name: Check out source without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+
+      - name: Activate pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.14.0 --activate
+          pnpm --version
+
+      - name: Install frozen workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint workspaces
+        run: pnpm lint:workspaces
+
+      - name: Typecheck workspaces
+        run: pnpm typecheck
+
+      - name: Regenerate and verify OpenAPI types
+        run: |
+          pnpm --filter @marketplace/api-client generate:types
+          git diff --exit-code -- packages/api-client/src/generated/index.ts
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Build workspaces
+        run: pnpm build
+
+      - name: Run PostgreSQL integration tests
+        run: pnpm --filter @marketplace/api test:integration
+
+      - name: Check database migration and Prisma schema parity
+        run: pnpm --filter @marketplace/api prisma:schema:check

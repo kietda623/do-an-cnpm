@@ -72,7 +72,7 @@ export function runPrismaMigration(
       command,
       "--schema",
       "prisma/schema.prisma",
-      ...(command === "reset" ? ["--force", "--skip-seed"] : []),
+      ...(command === "reset" ? ["--force"] : []),
     ],
     {
       cwd: packageRoot,
