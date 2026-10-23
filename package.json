@@ -16,6 +16,7 @@
     "format:check": "prettier --check \"apps/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/config/*.mjs\" \"eslint.config.mjs\" \"package.json\" \"pnpm-workspace.yaml\" \"turbo.json\"",
     "test": "turbo run test",
     "test:e2e": "playwright test --config=playwright.config.ts",
+    "test:e2e:seller": "playwright test --config=playwright.seller.config.ts",
     "clean": "turbo run clean"
   },
   "devDependencies": {

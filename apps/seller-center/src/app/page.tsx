@@ -1,15 +1,18 @@
 "use client";
 import Link from "next/link";
-import { RoleGate, useSession } from "@marketplace/ui-web";
+import { useSession } from "@marketplace/ui-web";
 export default function HomePage() {
   const { user } = useSession();
   return (
     <main className="mx-auto max-w-5xl px-[var(--space-page-gutter)] py-8">
       {user ? (
-        <RoleGate role="SELLER">
+        <>
           <h1 className="text-3xl font-semibold">Seller Center</h1>
-          <p>Không gian quản lý cửa hàng.</p>
-        </RoleGate>
+          <p>Quản lý cửa hàng hoặc gửi hồ sơ đăng ký người bán.</p>
+          <Link className="underline" href="/shops">
+            Đến cửa hàng của tôi
+          </Link>
+        </>
       ) : (
         <>
           <h1 className="text-3xl font-semibold">Seller Center</h1>

@@ -63,6 +63,29 @@ enum AssetStatus {
   @@map("asset_status")
 }
 
+enum ShopStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  SUSPENDED
+
+  @@map("shop_status")
+}
+
+enum ShopMemberRole {
+  OWNER
+  MANAGER
+
+  @@map("shop_member_role")
+}
+
+enum ShopMemberStatus {
+  ACTIVE
+  REVOKED
+
+  @@map("shop_member_status")
+}
+
 model User {
   id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   emailNormalized String              @unique(map: "users_email_normalized_key") @map("email_normalized") @db.VarChar(254)
@@ -79,6 +102,8 @@ model User {
   addresses       Address[]
   avatarAsset     Asset?              @relation("UserAvatar", fields: [avatarAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   uploadedAssets  Asset[]             @relation("AssetUploader")
+  ownedShops      Shop[]              @relation("ShopOwner")
+  shopMemberships ShopMember[]
   auditEvents     AuditEvent[]
   idempotencyRows IdempotencyRecord[]
 
@@ -146,6 +171,9 @@ model Asset {
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   avatarForUsers User[]       @relation("UserAvatar")
+  shop           Shop?        @relation("ShopAssets", fields: [shopId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  logoForShop    Shop?        @relation("ShopLogo")
+  bannerForShop  Shop?        @relation("ShopBanner")
 
   @@index([uploaderUserId, status, createdAt, id], map: "assets_uploader_status_created_at_id_idx")
   @@index([shopId, purpose, status, id], map: "assets_shop_purpose_status_id_idx")
@@ -161,6 +189,7 @@ model AuditEvent {
   targetType   String   @map("target_type") @db.Text
   targetId     String   @map("target_id") @db.Uuid
   shopId       String?  @map("shop_id") @db.Uuid
+  shop         Shop?    @relation(fields: [shopId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   reason       String?  @db.Text
   outcome      String   @db.Text
   requestId    String   @map("request_id") @db.Uuid
@@ -194,4 +223,47 @@ model IdempotencyRecord {
   @@index([expiresAt])
   @@index([actorUserId, createdAt, id])
   @@map("idempotency_records")
+}
+
+model Shop {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerUserId     String       @map("owner_user_id") @db.Uuid
+  owner           User         @relation("ShopOwner", fields: [ownerUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  name            String       @db.VarChar(150)
+  slugNormalized  String       @unique(map: "shops_slug_normalized_key") @map("slug_normalized") @db.VarChar(80)
+  description     String       @db.Text
+  logoAssetId     String       @unique(map: "shops_logo_asset_id_key") @map("logo_asset_id") @db.Uuid
+  logo            Asset        @relation("ShopLogo", fields: [logoAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  bannerAssetId   String?      @unique(map: "shops_banner_asset_id_key") @map("banner_asset_id") @db.Uuid
+  banner          Asset?       @relation("ShopBanner", fields: [bannerAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  assets          Asset[]      @relation("ShopAssets")
+  contactAddress  String       @map("contact_address") @db.VarChar(500)
+  phone           String       @db.VarChar(20)
+  status          ShopStatus   @default(PENDING)
+  decisionReason  String?      @map("decision_reason") @db.VarChar(500)
+  approvedAt      DateTime?    @map("approved_at") @db.Timestamptz(6)
+  version         Int          @default(0)
+  members         ShopMember[]
+  auditEvents     AuditEvent[]
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status, createdAt, id], map: "shops_status_created_at_id_idx")
+  @@map("shops")
+}
+
+model ShopMember {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId    String           @map("shop_id") @db.Uuid
+  shop      Shop             @relation(fields: [shopId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  userId    String           @map("user_id") @db.Uuid
+  user      User             @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  role      ShopMemberRole
+  status    ShopMemberStatus @default(ACTIVE)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([shopId, userId], map: "shop_members_shop_id_user_id_key")
+  @@index([userId, status, shopId], map: "shop_members_user_id_status_shop_id_idx")
+  @@map("shop_members")
 }

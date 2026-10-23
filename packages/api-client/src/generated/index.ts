@@ -1668,7 +1668,7 @@ export interface components {
       phone?: string;
       /** Format: uuid */
       bannerAssetId?: string | null;
-      expectedVersion?: number;
+      expectedVersion: number;
     };
     Shop: {
       /** Format: uuid */
@@ -1685,6 +1685,8 @@ export interface components {
       /** @enum {string} */
       status: "PENDING" | "ACTIVE" | "REJECTED" | "SUSPENDED";
       rejectionReason?: string | null;
+      /** Format: date-time */
+      approvedAt: string | null;
       version: number;
       /** Format: date-time */
       createdAt: string;
@@ -4041,9 +4043,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            data: {
-              [key: string]: unknown;
-            };
+            data: components["schemas"]["ShopPublic"];
             meta?: components["schemas"]["PageMeta"];
           };
         };

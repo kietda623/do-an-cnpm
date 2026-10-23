@@ -7,6 +7,7 @@ import { RequestLoggerMiddleware } from "./common/logging/request-logger.middlew
 import { DatabaseModule } from "./database/database.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { IdentityModule } from "./modules/identity/identity.module.js";
+import { ShopModule } from "./modules/shop/shop.module.js";
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { IdentityModule } from "./modules/identity/identity.module.js";
     DatabaseModule,
     HealthModule,
     IdentityModule,
+    ShopModule,
   ],
   providers: [
     RequestIdMiddleware,
