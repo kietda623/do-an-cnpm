@@ -273,7 +273,10 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
     expect(started.status).toBe(201);
     await db.prisma.marketplaceOrder.update({
       where: { id: test.orderId },
-      data: { paymentDeadline: new Date(Date.now() - 60_000) },
+      data: {
+        createdAt: new Date(Date.now() - 16 * 60_000),
+        paymentDeadline: new Date(Date.now() - 60_000),
+      },
     });
     expect([0, 1]).toContain(await app.get(PaymentService).expireDueOrders());
     let order = (

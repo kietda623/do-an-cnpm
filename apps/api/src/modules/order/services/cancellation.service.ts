@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "../../../generated/prisma/client.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
 import {
@@ -281,7 +281,7 @@ export class CancellationService {
     requestData: string,
     work: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<{ summary: T; replay: boolean }> {
-    const requestHash = `${orderId}:${requestData}`;
+    const requestHash = createHash("sha256").update(`${orderId}:${requestData}`).digest("hex");
     const idemResult = await this.orderTx.run(async (tx) => {
       await tx.$executeRaw`INSERT INTO idempotency_records (actor_user_id, actor_scope, operation, idempotency_key, request_hash, state)
         VALUES (${userId}::uuid, ${userId}, ${operation}, ${key}, ${requestHash}, 'IN_PROGRESS')
