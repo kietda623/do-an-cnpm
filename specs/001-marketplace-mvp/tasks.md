@@ -76,8 +76,8 @@ Phase là thứ tự capability, không tương đương Sprint. Gán lịch the
 
 ### Tests
 
-- [ ] T023 [P] [US1] Viết contract tests tất cả auth/csrf/register/login/refresh/logout,users/me/password/addresses/assets,redacted DTOs trong tests/contracts/identity.contract.spec.ts; auth và upload fixtures đúng OpenAPI. [Owner: M5; Reviewer: M1; Sprint: S2; WBS: W015,W024; Allocation: W015=0.40PD(M5/S2), W024=0.00PD(reference); Depends: T022]
-- [ ] T024 [P] [US1] Viết integration tests session rotation/reuse/logout/locked account/password/CSRF,unique email/default-address concurrency,cross-user upload trong apps/api/test/integration/identity.integration.spec.ts. [Owner: M5; Reviewer: M1; Sprint: S2; WBS: W015,W025; Allocation: W015=0.40PD(M5/S2), W025=0.00PD(reference); Depends: T022]
+- [x] T023 [P] [US1] Viết contract tests tất cả auth/csrf/register/login/refresh/logout,users/me/password/addresses/assets,redacted DTOs trong tests/contracts/identity.contract.spec.ts; auth và upload fixtures đúng OpenAPI. [Owner: M5; Reviewer: M1; Sprint: S2; WBS: W015,W024; Allocation: W015=0.40PD(M5/S2), W024=0.00PD(reference); Depends: T022]
+- [x] T024 [P] [US1] Viết integration tests session rotation/reuse/logout/locked account/password/CSRF,unique email/default-address concurrency,cross-user upload trong apps/api/test/integration/identity.integration.spec.ts. [Owner: M5; Reviewer: M1; Sprint: S2; WBS: W015,W025; Allocation: W015=0.40PD(M5/S2), W025=0.00PD(reference); Depends: T022]
 - [ ] T025 [P] [US1] Viết E2E register→login→profile/address/password→avatar→logout,mọi L/E/X/S và unauthorized trong tests/e2e/buyer-account.spec.ts. [Owner: M5; Reviewer: M1; Sprint: S2; WBS: W015; Allocation: W015=0.40PD(M5/S2); Depends: T022]
 
 ### Implementation

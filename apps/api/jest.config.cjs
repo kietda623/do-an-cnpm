@@ -1,6 +1,9 @@
+const apiNodeModules = `${__dirname}/node_modules`;
+const repositoryRoot = `${__dirname}/../..`;
+
 const transform = {
   "^.+\\.tsx?$": [
-    "@swc/jest",
+    `${apiNodeModules}/@swc/jest`,
     {
       jsc: {
         parser: { syntax: "typescript", decorators: true },
@@ -40,6 +43,18 @@ module.exports = {
       setupFiles,
       setupFilesAfterEnv,
       transform,
+      moduleNameMapper: { "^(\\.{1,2}/.*)\\.js$": "$1" },
+    },
+    {
+      displayName: "contracts",
+      rootDir: repositoryRoot,
+      roots: ["<rootDir>/tests/contracts"],
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/tests/contracts/**/*.spec.ts"],
+      setupFiles: ["<rootDir>/apps/api/test/setup.ts"],
+      setupFilesAfterEnv: ["<rootDir>/apps/api/test/after-env.ts"],
+      transform,
+      modulePaths: [apiNodeModules],
       moduleNameMapper: { "^(\\.{1,2}/.*)\\.js$": "$1" },
     },
   ],

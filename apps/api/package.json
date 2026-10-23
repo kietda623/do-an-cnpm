@@ -31,7 +31,8 @@
     "jest": "30.5.2",
     "prisma": "7.10.1",
     "supertest": "7.3.1",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "yaml": "2.9.1"
   },
   "scripts": {
     "build": "pnpm prisma:generate && tsc --project tsconfig.build.json",
@@ -41,6 +42,7 @@
     "test": "node scripts/run-tests.mjs unit",
     "test:unit": "node scripts/run-tests.mjs unit",
     "test:integration": "node scripts/run-tests.mjs integration",
+    "test:contracts": "node scripts/run-tests.mjs contracts",
     "prisma:generate": "prisma generate --schema prisma/schema.prisma",
     "prisma:migrate:dev": "node scripts/prisma-migrate.mjs dev",
     "prisma:migrate:deploy": "node scripts/prisma-migrate.mjs deploy",

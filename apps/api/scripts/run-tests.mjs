@@ -9,6 +9,7 @@ const mode = process.argv[2] ?? "unit";
 const projects = {
   unit: ["unit"],
   integration: ["integration"],
+  contracts: ["contracts"],
   all: ["unit", "integration"],
 };
 
