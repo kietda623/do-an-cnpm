@@ -15,9 +15,11 @@
     "format": "prettier --write \"apps/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/config/*.mjs\" \"eslint.config.mjs\" \"package.json\" \"pnpm-workspace.yaml\" \"turbo.json\"",
     "format:check": "prettier --check \"apps/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/config/*.mjs\" \"eslint.config.mjs\" \"package.json\" \"pnpm-workspace.yaml\" \"turbo.json\"",
     "test": "turbo run test",
+    "test:e2e": "playwright test --config=playwright.config.ts",
     "clean": "turbo run clean"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "eslint": "10.13.0",
     "prettier": "3.9.10",
     "turbo": "2.11.9",
