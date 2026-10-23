@@ -43,7 +43,7 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
       .post("/api/v1/auth/register")
       .send({ email: email(), password, fullName: name, clientPlatform: "ANDROID" });
     expect(response.status).toBe(201);
-    return response.body as Auth;
+    return response as Auth;
   }
   async function fixture() {
     const owner = await register("Payment Seller");
