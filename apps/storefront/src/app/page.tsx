@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { ProductGrid } from "../features/discovery/product-grid";
 
@@ -23,7 +24,9 @@ export default function HomePage() {
       </header>
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Sản phẩm mới</h2>
-        <ProductGrid />
+        <Suspense fallback={<p className="py-8 text-center">Đang tải sản phẩm…</p>}>
+          <ProductGrid />
+        </Suspense>
       </div>
     </main>
   );
