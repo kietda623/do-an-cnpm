@@ -49,6 +49,7 @@ export class AssetService {
     userId: string,
     file: { buffer: Buffer; originalname: string; mimetype: string } | undefined,
     purpose: string,
+    shopId?: string,
   ) {
     if (!file?.buffer?.length)
       throw new UnprocessableEntityException({
@@ -65,7 +66,7 @@ export class AssetService {
         code: "UNSUPPORTED_IMAGE",
         message: "Only JPEG, PNG, and WebP images are supported.",
       });
-    if (!["AVATAR", "SHOP_LOGO", "SHOP_BANNER"].includes(purpose))
+    if (!["AVATAR", "SHOP_LOGO", "SHOP_BANNER", "PRODUCT_IMAGE"].includes(purpose))
       throw new UnprocessableEntityException({
         code: "INVALID_ASSET_PURPOSE",
         message: "The selected upload purpose is not available.",
@@ -89,6 +90,21 @@ export class AssetService {
         message: "The image could not be decoded.",
       });
     }
+    if (purpose === "PRODUCT_IMAGE") {
+      if (!shopId)
+        throw new UnprocessableEntityException({
+          code: "SHOP_REQUIRED",
+          message: "Choose a shop for this product image.",
+        });
+      const membership = await this.db.prisma.shopMember.findFirst({
+        where: { shopId, userId, status: "ACTIVE", shop: { status: "ACTIVE" } },
+      });
+      if (!membership)
+        throw new ServiceUnavailableException({
+          code: "SHOP_MEDIA_UNAVAILABLE",
+          message: "The selected shop is unavailable.",
+        });
+    }
     if (!this.bucket || !this.publicBase)
       throw new ServiceUnavailableException({
         code: "MEDIA_STORAGE_UNAVAILABLE",
@@ -109,7 +125,8 @@ export class AssetService {
       const asset = await this.db.prisma.asset.create({
         data: {
           uploaderUserId: userId,
-          purpose: purpose as "AVATAR" | "SHOP_LOGO" | "SHOP_BANNER",
+          purpose: purpose as "AVATAR" | "SHOP_LOGO" | "SHOP_BANNER" | "PRODUCT_IMAGE",
+          ...(purpose === "PRODUCT_IMAGE" ? { shopId, attachedAt: new Date() } : {}),
           objectKey,
           mimeType: detected.mime,
           byteSize: file.buffer.length,

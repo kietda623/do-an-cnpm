@@ -1854,13 +1854,13 @@ paths:
         required: false
         schema:
           type: string
-          pattern: ^[0-9]+$
+          pattern: ^[0-9]{1,18}$
       - name: maxPrice
         in: query
         required: false
         schema:
           type: string
-          pattern: ^[0-9]+$
+          pattern: ^[0-9]{1,18}$
       - name: sort
         in: query
         required: false
@@ -1986,6 +1986,39 @@ paths:
           type: string
           format: uuid
   /admin/categories:
+    get:
+      operationId: get_admin_categories
+      summary: List all categories for administration
+      description: 'Auth scope: A. Includes hidden categories so administrators can restore them.'
+      tags:
+      - admin
+      responses:
+        '200':
+          description: Category tree including hidden entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CategoryTreeNode'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Administrator access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - BearerAuth: []
     post:
       operationId: post_admin_categories
       summary: POST /admin/categories
@@ -2174,12 +2207,12 @@ paths:
     get:
       operationId: get_products
       summary: GET /products
-      description: 'Auth scope: NEWEST`,page,pageSize. Source constraint: List<ProductSummary>'
+      description: 'Anonymous discovery of publicly sellable products. Filters use active variants and visible category ancestry.'
       tags:
       - products
       responses:
         '200':
-          description: Success. PRICE_DESC
+          description: Success. Page of public product summaries.
           content:
             application/json:
               schema:
@@ -2188,8 +2221,9 @@ paths:
                 - data
                 properties:
                   data:
-                    type: object
-                    additionalProperties: true
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductSummary'
                   meta:
                     $ref: '#/components/schemas/PageMeta'
         '400':
@@ -2252,8 +2286,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-      security:
-      - BearerAuth: []
+      security: []
       parameters:
       - name: q
         in: query
@@ -2278,11 +2311,13 @@ paths:
         required: false
         schema:
           type: string
+          pattern: ^[0-9]{1,18}$
       - name: maxPrice
         in: query
         required: false
         schema:
           type: string
+          pattern: ^[0-9]{1,18}$
       - name: sort
         in: query
         required: false
@@ -2292,6 +2327,21 @@ paths:
           - PRICE_ASC
           - PRICE_DESC
           - NEWEST
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
   /products/{id}:
     get:
       operationId: get_products_by_id
@@ -2310,10 +2360,7 @@ paths:
                 - data
                 properties:
                   data:
-                    type: object
-                    additionalProperties: true
-                  meta:
-                    $ref: '#/components/schemas/PageMeta'
+                    $ref: '#/components/schemas/DiscoveryProduct'
         '400':
           description: Malformed request
           content:
@@ -8395,6 +8442,8 @@ components:
           maxLength: 80
         description:
           type: string
+        selling:
+          type: boolean
           minLength: 1
           maxLength: 5000
         logo:
@@ -8478,6 +8527,8 @@ components:
           type: integer
           minimum: 0
       additionalProperties: false
+      required:
+      - expectedVersion
     Category:
       type: object
       properties:
@@ -8543,6 +8594,8 @@ components:
           type: integer
           minimum: 0
       additionalProperties: false
+      required:
+      - expectedVersion
     ProductCreate:
       type: object
       properties:
@@ -8599,6 +8652,8 @@ components:
           type: integer
           minimum: 0
       additionalProperties: false
+      required:
+      - expectedVersion
     Variant:
       type: object
       properties:
@@ -8692,6 +8747,66 @@ components:
       - version
       - createdAt
       - updatedAt
+    DiscoveryProduct:
+      type: object
+      properties:
+        id: *id001
+        shopId: *id001
+        categoryId: *id001
+        name:
+          type: string
+        description:
+          type: string
+        selling:
+          type: boolean
+        category:
+          type: object
+          properties:
+            id: *id001
+            name:
+              type: string
+          required: [id, name]
+          additionalProperties: false
+        shop:
+          type: object
+          properties:
+            id: *id001
+            name:
+              type: string
+            slug:
+              type: string
+          required: [id, name, slug]
+          additionalProperties: false
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        minimumPrice: *id020
+        variants:
+          type: array
+          items:
+            type: object
+            properties:
+              id: *id001
+              sku:
+                type: string
+              attributes:
+                type: object
+                additionalProperties: true
+              price: *id020
+              availableQuantity:
+                type: integer
+                minimum: 0
+            required: [id, sku, attributes, price, availableQuantity]
+            additionalProperties: false
+        ratingAverage:
+          type: string
+          nullable: true
+        ratingCount:
+          type: integer
+          minimum: 0
+      required: [id, shopId, categoryId, name, description, selling, category, shop, images, minimumPrice, variants, ratingCount]
+      additionalProperties: false
     ProductPublic:
       type: object
       properties:
@@ -8739,6 +8854,10 @@ components:
       properties:
         id: *id001
         shopId: *id001
+        shopName:
+          type: string
+          minLength: 1
+          maxLength: 150
         name:
           type: string
           minLength: 1
@@ -8762,6 +8881,7 @@ components:
       required:
       - id
       - shopId
+      - shopName
       - name
       - minimumPrice
       - available

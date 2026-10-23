@@ -252,12 +252,14 @@ export class UserController {
     @Req() req: ApiRequest,
     @UploadedFile() file: { buffer: Buffer; originalname: string; mimetype: string } | undefined,
     @Body("purpose") purpose: string,
+    @Body("shopId") shopId?: string,
   ) {
     return {
       data: await this.assets.upload(
         currentAccessContext(req as ApiRequest & { accessContext?: AccessContext }).userId,
         file,
         purpose,
+        shopId,
       ),
     };
   }

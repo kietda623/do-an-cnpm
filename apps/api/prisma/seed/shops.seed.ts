@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import dotenv from "dotenv";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
-import { PrismaClient } from "../../src/generated/prisma/client.js";
+import { PrismaClient } from "../../src/generated/prisma/client.ts";
 
 dotenv.config({ path: resolve(process.cwd(), "../../.env.test"), quiet: true });
 const testUrl = process.env.TEST_DATABASE_URL?.trim();
