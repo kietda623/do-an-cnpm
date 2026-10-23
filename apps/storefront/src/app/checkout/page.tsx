@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession, type SessionUser } from "@marketplace/ui-web";
-import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
+import { normalizeFormError } from "@marketplace/api-client";
 import { webSession } from "../auth-form";
 import { CheckoutConfirm } from "../../features/checkout/checkout-confirm";
 import { formatVnd } from "../../features/money";
