@@ -8241,6 +8241,38 @@ components:
       - province
       - country
       - isDefault
+    AddressSnapshot:
+      type: object
+      properties:
+        recipientName:
+          type: string
+        phone:
+          type: string
+        line1:
+          type: string
+        ward:
+          type: string
+        district:
+          type: string
+        province:
+          type: string
+        country:
+          type: string
+          enum:
+          - VN
+        postalCode:
+          type: string
+          maxLength: 20
+          nullable: true
+      additionalProperties: false
+      required:
+      - recipientName
+      - phone
+      - line1
+      - ward
+      - district
+      - province
+      - country
     AddressPatch:
       type: object
       properties: *id003
@@ -9113,7 +9145,7 @@ components:
           items:
             $ref: '#/components/schemas/QuoteGroup'
         addressSnapshot:
-          $ref: '#/components/schemas/AddressWrite'
+          $ref: '#/components/schemas/AddressSnapshot'
         total: *id020
         currency:
           type: string
@@ -9252,7 +9284,7 @@ components:
           enum:
           - VND
         addressSnapshot:
-          $ref: '#/components/schemas/AddressWrite'
+          $ref: '#/components/schemas/AddressSnapshot'
         shipment:
           allOf:
           - $ref: '#/components/schemas/Shipment'

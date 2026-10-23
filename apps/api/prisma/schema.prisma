@@ -125,6 +125,37 @@ enum InventoryEffectType {
   @@map("inventory_effect_type")
 }
 
+enum PaymentMethod {
+  COD
+  MOCK
+
+  @@map("payment_method")
+}
+
+enum MarketplaceOrderStatus {
+  PENDING
+  CONFIRMED
+  PACKING
+  SHIPPING
+  DELIVERED
+  COMPLETED
+  CANCELLED
+
+  @@map("marketplace_order_status")
+}
+
+enum SellerOrderStatus {
+  PENDING
+  CONFIRMED
+  PACKING
+  SHIPPING
+  DELIVERED
+  COMPLETED
+  CANCELLED
+
+  @@map("seller_order_status")
+}
+
 model User {
   id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   emailNormalized    String              @unique(map: "users_email_normalized_key") @map("email_normalized") @db.VarChar(254)
@@ -146,6 +177,10 @@ model User {
   auditEvents        AuditEvent[]
   idempotencyRows    IdempotencyRecord[]
   inventoryMovements InventoryMovement[]
+  orderEvents        OrderEvent[]
+  cart               Cart?
+  checkoutQuotes     CheckoutQuote[]
+  marketplaceOrders  MarketplaceOrder[]
 
   @@index([status, createdAt, id], map: "users_status_created_at_id_idx")
   @@map("users")
@@ -190,6 +225,7 @@ model Address {
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  checkoutQuotes CheckoutQuote[]
 
   @@index([userId, deletedAt], map: "addresses_user_id_deleted_at_idx")
   @@map("addresses")
@@ -215,6 +251,7 @@ model Asset {
   logoForShop    Shop?          @relation("ShopLogo")
   bannerForShop  Shop?          @relation("ShopBanner")
   productImages  ProductImage[]
+  orderItemImages OrderItem[]
 
   @@index([uploaderUserId, status, createdAt, id], map: "assets_uploader_status_created_at_id_idx")
   @@index([shopId, purpose, status, id], map: "assets_shop_purpose_status_id_idx")
@@ -289,6 +326,7 @@ model Shop {
   products           Product[]
   inventories        Inventory[]
   inventoryMovements InventoryMovement[]
+  sellerOrders       SellerOrder[]
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -343,6 +381,7 @@ model Product {
   version      Int               @default(0)
   images       ProductImage[]
   variants     ProductVariant[]
+  orderItems   OrderItem[]
   createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -377,6 +416,8 @@ model ProductVariant {
   saleStatus    VariantSaleStatus @default(ACTIVE) @map("sale_status")
   version       Int               @default(0)
   inventory     Inventory?
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
   createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -413,6 +454,8 @@ model InventoryMovement {
   actor         User?                 @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   shopId        String?               @map("shop_id") @db.Uuid
   shop          Shop?                 @relation(fields: [shopId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  sellerOrder   SellerOrder?          @relation(fields: [sellerOrderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orderItem     OrderItem?            @relation(fields: [orderItemId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   kind          InventoryMovementKind
   effectType    InventoryEffectType?  @map("effect_type")
   quantityDelta Int                   @map("quantity_delta")
@@ -424,4 +467,169 @@ model InventoryMovement {
   @@unique([orderItemId, effectType], map: "inventory_movements_order_item_effect_key")
   @@index([inventoryId, createdAt, id], map: "inventory_movements_inventory_created_id_idx")
   @@map("inventory_movements")
+}
+
+model Cart {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  buyerUserId String     @unique(map: "carts_buyer_user_id_key") @map("buyer_user_id") @db.Uuid
+  buyer       User       @relation(fields: [buyerUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  version     Int        @default(0)
+  items       CartItem[]
+  quotes      CheckoutQuote[]
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cartId    String         @map("cart_id") @db.Uuid
+  cart      Cart           @relation(fields: [cartId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  variantId String         @map("variant_id") @db.Uuid
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantity  Int
+  selected  Boolean        @default(true)
+  version   Int            @default(0)
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([cartId, variantId], map: "cart_items_cart_variant_key")
+  @@index([cartId, selected, id], map: "cart_items_cart_selected_id_idx")
+  @@map("cart_items")
+}
+
+model CheckoutQuote {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  buyerUserId       String            @map("buyer_user_id") @db.Uuid
+  buyer             User              @relation(fields: [buyerUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  cartId            String            @map("cart_id") @db.Uuid
+  cart              Cart              @relation(fields: [cartId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  cartVersion       Int               @map("cart_version")
+  selectedItems     Json              @map("selected_items_snapshot") @db.JsonB
+  addressId         String            @map("address_id") @db.Uuid
+  address           Address           @relation(fields: [addressId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  recipientSnapshot Json              @map("recipient_snapshot") @db.JsonB
+  paymentMethod     PaymentMethod     @map("payment_method")
+  total             Decimal           @db.Decimal(18, 0)
+  canonicalHash     String            @map("canonical_hash") @db.Text
+  expiresAt         DateTime          @map("expires_at") @db.Timestamptz(6)
+  consumedOrderId   String?           @unique(map: "checkout_quotes_consumed_order_id_key") @map("consumed_order_id") @db.Uuid
+  consumedOrder     MarketplaceOrder? @relation(fields: [consumedOrderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([buyerUserId, expiresAt, id], map: "checkout_quotes_buyer_expiry_id_idx")
+  @@index([expiresAt], map: "checkout_quotes_expires_at_idx")
+  @@map("checkout_quotes")
+}
+
+model MarketplaceOrder {
+  id                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  buyerUserId       String                  @map("buyer_user_id") @db.Uuid
+  buyer             User                    @relation(fields: [buyerUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  publicNumber      String                  @unique(map: "marketplace_orders_public_number_key") @map("public_number") @db.VarChar(32)
+  recipientSnapshot Json                    @map("recipient_snapshot") @db.JsonB
+  paymentMethod     PaymentMethod           @map("payment_method")
+  originalTotal     Decimal                 @map("original_total") @db.Decimal(18, 0)
+  shippingTotal     Decimal                 @default(0) @map("shipping_total") @db.Decimal(18, 0)
+  paymentDeadline   DateTime?               @map("payment_deadline") @db.Timestamptz(6)
+  status            MarketplaceOrderStatus @default(PENDING)
+  version           Int                     @default(0)
+  sellerOrders      SellerOrder[]
+  payment           Payment?
+  quote             CheckoutQuote?
+  events            OrderEvent[]
+  createdAt         DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([buyerUserId, createdAt, id], map: "marketplace_orders_buyer_created_id_idx")
+  @@map("marketplace_orders")
+}
+
+model SellerOrder {
+  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId            String            @map("order_id") @db.Uuid
+  order              MarketplaceOrder  @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  shopId             String            @map("shop_id") @db.Uuid
+  shop               Shop              @relation(fields: [shopId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  shopNameSnapshot   String            @map("shop_name_snapshot") @db.VarChar(150)
+  status             SellerOrderStatus @default(PENDING)
+  originalTotal      Decimal           @map("original_total") @db.Decimal(18, 0)
+  cancelledAt        DateTime?         @map("cancelled_at") @db.Timestamptz(6)
+  cancellationReason String?           @map("cancellation_reason") @db.VarChar(500)
+  completedAt        DateTime?         @map("completed_at") @db.Timestamptz(6)
+  stockReturnedAt    DateTime?         @map("stock_returned_at") @db.Timestamptz(6)
+  version            Int               @default(0)
+  items              OrderItem[]
+  movements          InventoryMovement[]
+  events             OrderEvent[]
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([orderId, shopId], map: "seller_orders_order_shop_key")
+  @@unique([id, shopId], map: "seller_orders_id_shop_key")
+  @@index([shopId, status, createdAt, id], map: "seller_orders_shop_status_created_id_idx")
+  @@index([shopId, completedAt, id], map: "seller_orders_shop_completed_id_idx")
+  @@map("seller_orders")
+}
+
+model OrderItem {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sellerOrderId       String             @map("seller_order_id") @db.Uuid
+  shopId              String             @map("shop_id") @db.Uuid
+  sellerOrder         SellerOrder        @relation(fields: [sellerOrderId, shopId], references: [id, shopId], onDelete: Restrict, onUpdate: Cascade)
+  productId           String             @map("product_id") @db.Uuid
+  product             Product            @relation(fields: [productId, shopId], references: [id, shopId], onDelete: Restrict, onUpdate: Cascade)
+  variantId           String             @map("variant_id") @db.Uuid
+  variant             ProductVariant     @relation(fields: [variantId, shopId], references: [id, shopId], onDelete: Restrict, onUpdate: Cascade)
+  productNameSnapshot String             @map("product_name_snapshot") @db.VarChar(200)
+  skuSnapshot         String             @map("sku_snapshot") @db.VarChar(100)
+  attributesSnapshot  Json               @map("attributes_snapshot") @db.JsonB
+  imageAssetId        String?            @map("image_asset_id") @db.Uuid
+  imageAsset          Asset?             @relation(fields: [imageAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  imageKeySnapshot    String?            @map("image_key_snapshot") @db.Text
+  unitPrice           Decimal            @map("unit_price") @db.Decimal(18, 0)
+  quantity            Int
+  lineTotal           Decimal            @map("line_total") @db.Decimal(18, 0)
+  movements           InventoryMovement[]
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([sellerOrderId, variantId], map: "order_items_seller_variant_key")
+  @@index([productId, id], map: "order_items_product_id_idx")
+  @@map("order_items")
+}
+
+model OrderEvent {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId       String            @map("order_id") @db.Uuid
+  order         MarketplaceOrder  @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  sellerOrderId String?           @map("seller_order_id") @db.Uuid
+  sellerOrder   SellerOrder?      @relation(fields: [sellerOrderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  actorUserId   String?           @map("actor_user_id") @db.Uuid
+  actorUser     User?             @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  actorKind     String            @map("actor_kind") @db.Text
+  action        String            @db.Text
+  fromStatus    String?           @map("from_status") @db.Text
+  toStatus      String?           @map("to_status") @db.Text
+  reason        String?           @db.Text
+  operationKey  String            @unique(map: "order_events_operation_key_key") @map("operation_key") @db.VarChar(160)
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([orderId, createdAt, id], map: "order_events_order_created_id_idx")
+  @@index([sellerOrderId, createdAt, id], map: "order_events_seller_created_id_idx")
+  @@map("order_events")
+}
+
+model Payment {
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId   String          @unique(map: "payments_order_id_key") @map("order_id") @db.Uuid
+  order     MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  method    PaymentMethod
+  currency  String          @default("VND") @db.Char(3)
+  version   Int             @default(0)
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("payments")
 }

@@ -19,6 +19,7 @@
     "test:e2e:seller": "playwright test --config=playwright.seller.config.ts",
     "test:e2e:catalog": "playwright test --config=playwright.catalog.config.ts",
     "test:e2e:discovery": "playwright test --config=playwright.discovery.config.ts",
+    "test:e2e:checkout": "playwright test --config=playwright.checkout.config.ts",
     "clean": "turbo run clean"
   },
   "devDependencies": {
