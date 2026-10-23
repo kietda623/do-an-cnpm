@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "../generated/prisma/client.js";
+import type { TransactionContext as TransactionContextPort } from "../common/database/transaction-context.js";
 import { DatabaseService } from "./prisma.service.js";
 
 @Injectable()
-export class TransactionContext {
+export class PrismaTransactionContext implements TransactionContextPort<Prisma.TransactionClient> {
   constructor(private readonly database: DatabaseService) {}
 
   run<Result>(
