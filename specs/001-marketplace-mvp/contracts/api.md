@@ -152,6 +152,7 @@ Empty request = no body. Queries are optional unless noted. `List<T>` uses pagin
 | POST /shops/{id}/resubmit | {expectedVersion} | Shop | S | only REJECTED -> PENDING |
 | GET /shops/{id}/products | product query | List<ProductSummary> | G | only publicly sellable products |
 | GET /categories | {parentId?,tree?:boolean} | List<Category> or tree nodes | G | hidden category excluded; deterministic tree |
+| GET /admin/categories | — | Full category tree including hidden entries | A | deterministic tree; enables restore after hide |
 | POST /admin/categories | CategoryWrite | Category 201 | A | parent invalid/hidden 422; cycle 409 |
 | PATCH /admin/categories/{id} | partial CategoryWrite | Category | A | parent self/descendant 409; hide prevents new sale |
 

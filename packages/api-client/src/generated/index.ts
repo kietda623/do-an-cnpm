@@ -367,7 +367,11 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /**
+     * List all categories for administration
+     * @description Auth scope: A. Includes hidden categories so administrators can restore them.
+     */
+    get: operations["get_admin_categories"];
     put?: never;
     /**
      * POST /admin/categories
@@ -1726,7 +1730,7 @@ export interface components {
       /** Format: uuid */
       parentId?: string | null;
       visible?: boolean;
-      expectedVersion?: number;
+      expectedVersion: number;
     };
     Category: {
       /** Format: uuid */
@@ -1758,7 +1762,7 @@ export interface components {
       /** @example 150000 */
       price?: string;
       selling?: boolean;
-      expectedVersion?: number;
+      expectedVersion: number;
     };
     ProductCreate: {
       name: string;
@@ -1776,7 +1780,7 @@ export interface components {
       categoryId?: string;
       imageAssetIds?: string[];
       selling?: boolean;
-      expectedVersion?: number;
+      expectedVersion: number;
     };
     Variant: {
       /** Format: uuid */
@@ -1819,6 +1823,31 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
+    DiscoveryProduct: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      shopId: string;
+      /** Format: uuid */
+      categoryId: string;
+      name: string;
+      description: string;
+      selling: boolean;
+      category: { id: string; name: string };
+      shop: { id: string; name: string; slug: string };
+      images: components["schemas"]["Asset"][];
+      /** @example 150000 */
+      minimumPrice: string;
+      variants: {
+        id: string;
+        sku: string;
+        attributes: { [key: string]: unknown };
+        price: string;
+        availableQuantity: number;
+      }[];
+      ratingAverage?: string | null;
+      ratingCount: number;
+    };
     ProductPublic: {
       /** Format: uuid */
       id: string;
@@ -1841,6 +1870,7 @@ export interface components {
       id: string;
       /** Format: uuid */
       shopId: string;
+      shopName: string;
       name: string;
       image?: components["schemas"]["Asset"] | null;
       /** @example 150000 */
@@ -4732,6 +4762,46 @@ export interface operations {
       };
     };
   };
+  get_admin_categories: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Category tree including hidden entries */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            data: components["schemas"]["CategoryTreeNode"][];
+          };
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description Administrator access required */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
   post_admin_categories: {
     parameters: {
       query?: never;
@@ -4977,6 +5047,8 @@ export interface operations {
         minPrice?: string;
         maxPrice?: string;
         sort?: "PRICE_ASC" | "PRICE_DESC" | "NEWEST";
+        page?: number;
+        pageSize?: number;
       };
       header?: never;
       path?: never;
@@ -4984,16 +5056,14 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Success. PRICE_DESC */
+      /** @description Success. Page of public product summaries. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
           "application/json": {
-            data: {
-              [key: string]: unknown;
-            };
+            data: components["schemas"]["ProductSummary"][];
             meta?: components["schemas"]["PageMeta"];
           };
         };
@@ -5101,17 +5171,14 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Success. public Product */
+      /** @description Success. Public product detail. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
           "application/json": {
-            data: {
-              [key: string]: unknown;
-            };
-            meta?: components["schemas"]["PageMeta"];
+            data: components["schemas"]["DiscoveryProduct"];
           };
         };
       };

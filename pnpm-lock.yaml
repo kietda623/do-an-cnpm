@@ -566,6 +566,10 @@ importers:
         version: 6.0.3
 
   packages/ui-web:
+    dependencies:
+      '@marketplace/api-client':
+        specifier: workspace:*
+        version: link:../api-client
     devDependencies:
       '@types/react':
         specifier: 'catalog:'

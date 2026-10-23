@@ -8,6 +8,8 @@ import { DatabaseModule } from "./database/database.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { IdentityModule } from "./modules/identity/identity.module.js";
 import { ShopModule } from "./modules/shop/shop.module.js";
+import { CatalogModule } from "./modules/catalog/catalog.module.js";
+import { InventoryModule } from "./modules/inventory/inventory.module.js";
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { ShopModule } from "./modules/shop/shop.module.js";
     HealthModule,
     IdentityModule,
     ShopModule,
+    CatalogModule,
+    InventoryModule,
   ],
   providers: [
     RequestIdMiddleware,

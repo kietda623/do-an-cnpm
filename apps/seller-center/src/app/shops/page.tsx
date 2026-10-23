@@ -161,6 +161,7 @@ export default function ShopsPage() {
         <h1 className="text-3xl font-semibold">Cửa hàng của tôi</h1>
         <p>Tài khoản mua hàng cũng có thể đăng ký trở thành người bán.</p>
       </div>
+      {shop?.status === "ACTIVE" && <Link className="underline" href={`/shops/${shop.id}/products`}>Quản lý sản phẩm</Link>}
       {memberships.length > 1 && (
         <label className="grid gap-2">
           Chọn cửa hàng

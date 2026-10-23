@@ -34,7 +34,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               String(values.get("password")),
             );
       setUser(user);
-      router.push("/account");
+      const requestedReturn = new URLSearchParams(window.location.search).get("returnTo");
+      const destination = requestedReturn ? new URL(requestedReturn, window.location.origin) : null;
+      const returnTo =
+        destination?.origin === window.location.origin
+          ? `${destination.pathname}${destination.search}${destination.hash}`
+          : "/account";
+      router.push(returnTo);
     } catch (cause) {
       setStatus("");
       setError(normalizeFormError(cause));

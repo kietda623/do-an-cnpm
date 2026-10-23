@@ -12,6 +12,9 @@ export default function HomePage() {
           <Link className="underline" href="/shops">
             Duyệt cửa hàng
           </Link>
+          <Link className="underline" href="/categories">
+            Quản lý danh mục
+          </Link>
         </RoleGate>
       ) : (
         <>

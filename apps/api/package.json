@@ -54,7 +54,8 @@
     "prisma:migrate:deploy": "node scripts/prisma-migrate.mjs deploy",
     "prisma:migrate:status": "node scripts/prisma-migrate.mjs status",
     "prisma:schema:check": "node scripts/prisma-schema-check.mjs",
-    "seed:identity": "node --experimental-strip-types prisma/seed/identity.seed.ts",
-    "seed:shops": "node --experimental-strip-types prisma/seed/shops.seed.ts"
+    "seed:identity": "node --experimental-loader ./scripts/resolve-prisma-generated-ts.mjs --experimental-strip-types prisma/seed/identity.seed.ts",
+    "seed:shops": "node --experimental-loader ./scripts/resolve-prisma-generated-ts.mjs --experimental-strip-types prisma/seed/shops.seed.ts",
+    "seed:catalog": "node --experimental-loader ./scripts/resolve-prisma-generated-ts.mjs --experimental-strip-types prisma/seed/catalog.seed.ts"
   }
 }

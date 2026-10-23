@@ -86,26 +86,66 @@ enum ShopMemberStatus {
   @@map("shop_member_status")
 }
 
+enum CategoryStatus {
+  VISIBLE
+  HIDDEN
+
+  @@map("category_status")
+}
+
+enum ProductSaleStatus {
+  DRAFT
+  ACTIVE
+  DISCONTINUED
+
+  @@map("product_sale_status")
+}
+
+enum VariantSaleStatus {
+  ACTIVE
+  DISCONTINUED
+
+  @@map("variant_sale_status")
+}
+
+enum InventoryMovementKind {
+  INITIAL
+  ADJUST
+  SALE
+  CANCEL_RETURN
+  CONFIRMED_RETURN
+
+  @@map("inventory_movement_kind")
+}
+
+enum InventoryEffectType {
+  SALE
+  RESTORE
+
+  @@map("inventory_effect_type")
+}
+
 model User {
-  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  emailNormalized String              @unique(map: "users_email_normalized_key") @map("email_normalized") @db.VarChar(254)
-  passwordHash    String              @map("password_hash") @db.Text
-  displayName     String              @map("display_name") @db.VarChar(120)
-  phone           String?             @db.VarChar(20)
-  avatarAssetId   String?             @map("avatar_asset_id") @db.Uuid
-  systemRole      SystemRole          @default(BUYER) @map("system_role")
-  status          UserStatus          @default(ACTIVE)
-  authVersion     Int                 @default(0) @map("auth_version")
-  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  sessions        Session[]
-  addresses       Address[]
-  avatarAsset     Asset?              @relation("UserAvatar", fields: [avatarAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  uploadedAssets  Asset[]             @relation("AssetUploader")
-  ownedShops      Shop[]              @relation("ShopOwner")
-  shopMemberships ShopMember[]
-  auditEvents     AuditEvent[]
-  idempotencyRows IdempotencyRecord[]
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  emailNormalized    String              @unique(map: "users_email_normalized_key") @map("email_normalized") @db.VarChar(254)
+  passwordHash       String              @map("password_hash") @db.Text
+  displayName        String              @map("display_name") @db.VarChar(120)
+  phone              String?             @db.VarChar(20)
+  avatarAssetId      String?             @map("avatar_asset_id") @db.Uuid
+  systemRole         SystemRole          @default(BUYER) @map("system_role")
+  status             UserStatus          @default(ACTIVE)
+  authVersion        Int                 @default(0) @map("auth_version")
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  sessions           Session[]
+  addresses          Address[]
+  avatarAsset        Asset?              @relation("UserAvatar", fields: [avatarAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  uploadedAssets     Asset[]             @relation("AssetUploader")
+  ownedShops         Shop[]              @relation("ShopOwner")
+  shopMemberships    ShopMember[]
+  auditEvents        AuditEvent[]
+  idempotencyRows    IdempotencyRecord[]
+  inventoryMovements InventoryMovement[]
 
   @@index([status, createdAt, id], map: "users_status_created_at_id_idx")
   @@map("users")
@@ -156,24 +196,25 @@ model Address {
 }
 
 model Asset {
-  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  uploaderUserId String       @map("uploader_user_id") @db.Uuid
-  uploaderUser   User         @relation("AssetUploader", fields: [uploaderUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  shopId         String?      @map("shop_id") @db.Uuid
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uploaderUserId String         @map("uploader_user_id") @db.Uuid
+  uploaderUser   User           @relation("AssetUploader", fields: [uploaderUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  shopId         String?        @map("shop_id") @db.Uuid
   purpose        AssetPurpose
-  objectKey      String       @unique(map: "assets_object_key_key") @map("object_key") @db.Text
-  mimeType       String       @map("mime_type") @db.VarChar(100)
-  byteSize       Int          @map("byte_size")
+  objectKey      String         @unique(map: "assets_object_key_key") @map("object_key") @db.Text
+  mimeType       String         @map("mime_type") @db.VarChar(100)
+  byteSize       Int            @map("byte_size")
   width          Int
   height         Int
-  status         AssetStatus  @default(PENDING)
-  attachedAt     DateTime?    @map("attached_at") @db.Timestamptz(6)
-  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  avatarForUsers User[]       @relation("UserAvatar")
-  shop           Shop?        @relation("ShopAssets", fields: [shopId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  logoForShop    Shop?        @relation("ShopLogo")
-  bannerForShop  Shop?        @relation("ShopBanner")
+  status         AssetStatus    @default(PENDING)
+  attachedAt     DateTime?      @map("attached_at") @db.Timestamptz(6)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  avatarForUsers User[]         @relation("UserAvatar")
+  shop           Shop?          @relation("ShopAssets", fields: [shopId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  logoForShop    Shop?          @relation("ShopLogo")
+  bannerForShop  Shop?          @relation("ShopBanner")
+  productImages  ProductImage[]
 
   @@index([uploaderUserId, status, createdAt, id], map: "assets_uploader_status_created_at_id_idx")
   @@index([shopId, purpose, status, id], map: "assets_shop_purpose_status_id_idx")
@@ -226,27 +267,30 @@ model IdempotencyRecord {
 }
 
 model Shop {
-  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  ownerUserId     String       @map("owner_user_id") @db.Uuid
-  owner           User         @relation("ShopOwner", fields: [ownerUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  name            String       @db.VarChar(150)
-  slugNormalized  String       @unique(map: "shops_slug_normalized_key") @map("slug_normalized") @db.VarChar(80)
-  description     String       @db.Text
-  logoAssetId     String       @unique(map: "shops_logo_asset_id_key") @map("logo_asset_id") @db.Uuid
-  logo            Asset        @relation("ShopLogo", fields: [logoAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  bannerAssetId   String?      @unique(map: "shops_banner_asset_id_key") @map("banner_asset_id") @db.Uuid
-  banner          Asset?       @relation("ShopBanner", fields: [bannerAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  assets          Asset[]      @relation("ShopAssets")
-  contactAddress  String       @map("contact_address") @db.VarChar(500)
-  phone           String       @db.VarChar(20)
-  status          ShopStatus   @default(PENDING)
-  decisionReason  String?      @map("decision_reason") @db.VarChar(500)
-  approvedAt      DateTime?    @map("approved_at") @db.Timestamptz(6)
-  version         Int          @default(0)
-  members         ShopMember[]
-  auditEvents     AuditEvent[]
-  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerUserId        String              @map("owner_user_id") @db.Uuid
+  owner              User                @relation("ShopOwner", fields: [ownerUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  name               String              @db.VarChar(150)
+  slugNormalized     String              @unique(map: "shops_slug_normalized_key") @map("slug_normalized") @db.VarChar(80)
+  description        String              @db.Text
+  logoAssetId        String              @unique(map: "shops_logo_asset_id_key") @map("logo_asset_id") @db.Uuid
+  logo               Asset               @relation("ShopLogo", fields: [logoAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  bannerAssetId      String?             @unique(map: "shops_banner_asset_id_key") @map("banner_asset_id") @db.Uuid
+  banner             Asset?              @relation("ShopBanner", fields: [bannerAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  assets             Asset[]             @relation("ShopAssets")
+  contactAddress     String              @map("contact_address") @db.VarChar(500)
+  phone              String              @db.VarChar(20)
+  status             ShopStatus          @default(PENDING)
+  decisionReason     String?             @map("decision_reason") @db.VarChar(500)
+  approvedAt         DateTime?           @map("approved_at") @db.Timestamptz(6)
+  version            Int                 @default(0)
+  members            ShopMember[]
+  auditEvents        AuditEvent[]
+  products           Product[]
+  inventories        Inventory[]
+  inventoryMovements InventoryMovement[]
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([status, createdAt, id], map: "shops_status_created_at_id_idx")
   @@map("shops")
@@ -266,4 +310,118 @@ model ShopMember {
   @@unique([shopId, userId], map: "shop_members_shop_id_user_id_key")
   @@index([userId, status, shopId], map: "shop_members_user_id_status_shop_id_idx")
   @@map("shop_members")
+}
+
+model Category {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  parentId  String?        @map("parent_id") @db.Uuid
+  parent    Category?      @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  children  Category[]     @relation("CategoryTree")
+  name      String         @db.VarChar(120)
+  slug      String         @unique(map: "categories_slug_key") @db.VarChar(160)
+  status    CategoryStatus @default(VISIBLE)
+  version   Int            @default(0)
+  products  Product[]
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([parentId, status, id], map: "categories_parent_status_id_idx")
+  @@map("categories")
+}
+
+model Product {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId       String            @map("shop_id") @db.Uuid
+  shop         Shop              @relation(fields: [shopId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  categoryId   String            @map("category_id") @db.Uuid
+  category     Category          @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  name         String            @db.VarChar(200)
+  description  String            @db.Text
+  saleStatus   ProductSaleStatus @default(DRAFT) @map("sale_status")
+  adminHidden  Boolean           @default(false) @map("admin_hidden")
+  hiddenReason String?           @map("hidden_reason") @db.VarChar(500)
+  version      Int               @default(0)
+  images       ProductImage[]
+  variants     ProductVariant[]
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([id, shopId], map: "products_id_shop_id_key")
+  @@index([shopId, saleStatus, createdAt, id], map: "products_shop_status_created_id_idx")
+  @@index([categoryId, saleStatus, createdAt, id], map: "products_category_status_created_id_idx")
+  @@map("products")
+}
+
+model ProductImage {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId String  @map("product_id") @db.Uuid
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  assetId   String  @map("asset_id") @db.Uuid
+  asset     Asset   @relation(fields: [assetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  position  Int
+
+  @@unique([productId, position], map: "product_images_product_position_key")
+  @@unique([productId, assetId], map: "product_images_product_asset_key")
+  @@map("product_images")
+}
+
+model ProductVariant {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId     String            @map("product_id") @db.Uuid
+  shopId        String            @map("shop_id") @db.Uuid
+  product       Product           @relation(fields: [productId, shopId], references: [id, shopId], onDelete: Restrict, onUpdate: Cascade)
+  skuNormalized String            @map("sku_normalized") @db.VarChar(100)
+  attributes    Json              @default("{}") @db.JsonB
+  attributesKey String            @map("attributes_key") @db.Text
+  price         Decimal           @db.Decimal(18, 0)
+  saleStatus    VariantSaleStatus @default(ACTIVE) @map("sale_status")
+  version       Int               @default(0)
+  inventory     Inventory?
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([shopId, skuNormalized], map: "product_variants_shop_sku_key")
+  @@unique([productId, attributesKey], map: "product_variants_product_attributes_key")
+  @@unique([id, shopId], map: "product_variants_id_shop_id_key")
+  @@index([productId, saleStatus, price, id], map: "product_variants_product_status_price_id_idx")
+  @@map("product_variants")
+}
+
+model Inventory {
+  variantId         String              @id @map("variant_id") @db.Uuid
+  shopId            String              @map("shop_id") @db.Uuid
+  variant           ProductVariant      @relation(fields: [variantId, shopId], references: [id, shopId], onDelete: Restrict, onUpdate: Cascade)
+  shop              Shop                @relation(fields: [shopId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  availableQuantity Int                 @default(0) @map("available_quantity")
+  version           Int                 @default(0)
+  movements         InventoryMovement[]
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([variantId, shopId], map: "inventory_variant_shop_id_key")
+  @@index([shopId, variantId], map: "inventory_shop_variant_idx")
+  @@map("inventory")
+}
+
+model InventoryMovement {
+  id            String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inventoryId   String                @map("inventory_id") @db.Uuid
+  inventory     Inventory             @relation(fields: [inventoryId], references: [variantId], onDelete: Restrict, onUpdate: Cascade)
+  sellerOrderId String?               @map("seller_order_id") @db.Uuid
+  orderItemId   String?               @map("order_item_id") @db.Uuid
+  actorUserId   String?               @map("actor_user_id") @db.Uuid
+  actor         User?                 @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  shopId        String?               @map("shop_id") @db.Uuid
+  shop          Shop?                 @relation(fields: [shopId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  kind          InventoryMovementKind
+  effectType    InventoryEffectType?  @map("effect_type")
+  quantityDelta Int                   @map("quantity_delta")
+  quantityAfter Int                   @map("quantity_after")
+  reason        String?               @db.VarChar(500)
+  operationKey  String                @unique(map: "inventory_movements_operation_key_key") @map("operation_key") @db.VarChar(160)
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([orderItemId, effectType], map: "inventory_movements_order_item_effect_key")
+  @@index([inventoryId, createdAt, id], map: "inventory_movements_inventory_created_id_idx")
+  @@map("inventory_movements")
 }

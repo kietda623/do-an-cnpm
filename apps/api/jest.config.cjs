@@ -22,7 +22,10 @@ module.exports = {
   rootDir: ".",
   extensionsToTreatAsEsm: [".ts"],
   transform,
-  moduleNameMapper: { "^(\\.{1,2}/.*)\\.js$": "$1" },
+  moduleNameMapper: {
+    "^\\./internal/(.*)\\.js$": `${apiNodeModules}/../src/generated/prisma/internal/$1.ts`,
+    "^(\\.{1,2}/.*)\\.js$": "$1",
+  },
   projects: [
     {
       displayName: "unit",
@@ -33,7 +36,10 @@ module.exports = {
       setupFiles,
       setupFilesAfterEnv,
       transform,
-      moduleNameMapper: { "^(\\.{1,2}/.*)\\.js$": "$1" },
+      moduleNameMapper: {
+        "^\\./internal/(.*)\\.js$": `${apiNodeModules}/../src/generated/prisma/internal/$1.ts`,
+        "^(\\.{1,2}/.*)\\.js$": "$1",
+      },
     },
     {
       displayName: "integration",
@@ -43,7 +49,10 @@ module.exports = {
       setupFiles,
       setupFilesAfterEnv,
       transform,
-      moduleNameMapper: { "^(\\.{1,2}/.*)\\.js$": "$1" },
+      moduleNameMapper: {
+        "^\\./internal/(.*)\\.js$": `${apiNodeModules}/../src/generated/prisma/internal/$1.ts`,
+        "^(\\.{1,2}/.*)\\.js$": "$1",
+      },
     },
     {
       displayName: "contracts",
