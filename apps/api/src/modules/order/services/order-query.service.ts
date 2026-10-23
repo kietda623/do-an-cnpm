@@ -7,7 +7,14 @@ const orderInclude = {
     orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
     include: { items: { orderBy: { createdAt: "asc" as const } } },
   },
-  payment: true,
+  payment: {
+    include: {
+      attempts: {
+        orderBy: [{ attemptNumber: "asc" as const }, { id: "asc" as const }],
+        include: { allocations: { include: { refund: true } } },
+      },
+    },
+  },
 };
 
 @Injectable()
@@ -27,10 +34,6 @@ export class OrderQueryService {
   ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
-    // Payment attempts and settlement are introduced in US6. US5 orders are all unpaid.
-    if (query.paymentStatus && query.paymentStatus !== "UNPAID") {
-      return { data: [], meta: { page, pageSize, total: 0 } };
-    }
     const where = {
       buyerUserId: userId,
       ...(query.from || query.to
@@ -43,17 +46,16 @@ export class OrderQueryService {
         : {}),
       ...(query.status ? { status: query.status as never } : {}),
     };
-    const [orders, total] = await Promise.all([
-      this.db.prisma.marketplaceOrder.findMany({
-        where,
-        include: orderInclude,
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      this.db.prisma.marketplaceOrder.count({ where }),
-    ]);
-    const data = orders.map((row) => {
+    const orders = await this.db.prisma.$transaction(
+      (tx) =>
+        tx.marketplaceOrder.findMany({
+          where,
+          include: orderInclude,
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        }),
+      { isolationLevel: "RepeatableRead" },
+    );
+    let rows = orders.map((row) => {
       const order = aggregateOrder(row);
       return {
         id: order.id,
@@ -66,15 +68,51 @@ export class OrderQueryService {
         createdAt: order.createdAt,
       };
     });
+    if (query.paymentStatus) rows = rows.filter((row) => row.paymentStatus === query.paymentStatus);
+    const total = rows.length;
+    const data = rows.slice((page - 1) * pageSize, page * pageSize);
     return { data, meta: { page, pageSize, total } };
   }
 
-  async get(userId: string, id: string) {
+  async get(userId: string, id: string, admin = false) {
     const row = await this.db.prisma.marketplaceOrder.findFirst({
-      where: { id, buyerUserId: userId },
-      include: orderInclude,
+      where: { id, ...(admin ? {} : { buyerUserId: userId }) },
+      include: {
+        ...orderInclude,
+        payment: {
+          include: {
+            attempts: {
+              orderBy: [{ attemptNumber: "asc" }, { id: "asc" }],
+              include: { allocations: { include: { refund: true } } },
+            },
+          },
+        },
+      },
     });
     if (!row) throw new NotFoundException();
     return aggregateOrder(row);
+  }
+
+  async getSellerPart(userId: string, shopId: string, id: string, admin = false) {
+    const row = await this.db.prisma.marketplaceOrder.findFirst({
+      where: {
+        sellerOrders: {
+          some: {
+            id,
+            shopId,
+            ...(admin
+              ? {}
+              : { shop: { status: "ACTIVE", members: { some: { userId, status: "ACTIVE" } } } }),
+          },
+        },
+      },
+      include: orderInclude,
+    });
+    if (!row) throw new NotFoundException();
+    const part = aggregateOrder(row).sellerOrders.find(
+      (item) => item.id === id && item.shopId === shopId,
+    );
+    if (!part) throw new NotFoundException();
+    return part;
   }
 }

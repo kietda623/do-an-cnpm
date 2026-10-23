@@ -7,6 +7,8 @@ import { useSession, type SessionUser } from "@marketplace/ui-web";
 import type { ApiPath } from "@marketplace/api-client";
 import { webSession } from "../../auth-form";
 import { formatVnd } from "../../../features/money";
+import { PaymentPanel } from "../../../features/orders/payment-panel";
+import { CancelDialog } from "../../../features/orders/cancel-dialog";
 
 type Order = {
   orderNumber: string;
@@ -14,12 +16,20 @@ type Order = {
   paymentMethod: string;
   originalTotal: string;
   paymentDeadline: string | null;
+  paymentStatus: string;
+  outstandingAmount: string;
+  version: number;
   createdAt: string;
   sellerOrders: Array<{
     id: string;
     shopNameSnapshot: string;
     status: string;
     originalTotal: string;
+    version: number;
+    cancelledAt: string | null;
+    cancelReason: string | null;
+    capturedAmount: string;
+    refundedAmount: string;
     addressSnapshot: {
       recipientName: string;
       phone: string;
@@ -66,6 +76,10 @@ export default function OrderDetailPage() {
       active = false;
     };
   }, [orderId]);
+  async function refreshOrder() {
+    const value = await webSession.api.request<Order>(`/orders/${orderId}` as ApiPath);
+    setOrder(value);
+  }
   if (loading)
     return (
       <main className="mx-auto max-w-4xl px-5 py-10">
@@ -132,13 +146,33 @@ export default function OrderDetailPage() {
           <p className="text-right font-semibold">
             Tổng cửa hàng: {formatVnd(seller.originalTotal)}
           </p>
+          <p className="text-right text-sm text-neutral-600">
+            Đã thu {formatVnd(seller.capturedAmount)} · Đã hoàn {formatVnd(seller.refundedAmount)}
+          </p>
+          {seller.status === "CANCELLED" && (
+            <p className="text-right text-sm">
+              Đã hủy{seller.cancelReason ? `: ${seller.cancelReason}` : ""}
+            </p>
+          )}
         </section>
       ))}
+      <PaymentPanel
+        orderId={orderId}
+        method={order.paymentMethod}
+        status={order.status}
+        paymentStatus={order.paymentStatus}
+        outstandingAmount={order.outstandingAmount}
+        deadline={order.paymentDeadline}
+        onChange={refreshOrder}
+      />
+      <CancelDialog
+        orderId={orderId}
+        orderVersion={order.version}
+        parts={order.sellerOrders}
+        status={order.status}
+        onDone={refreshOrder}
+      />
       <section className="rounded-xl bg-neutral-50 p-5">
-        <p>Thanh toán: {order.paymentMethod === "COD" ? "Khi nhận hàng" : "Thử nghiệm"}</p>
-        {order.paymentDeadline && (
-          <p>Hạn thanh toán: {new Date(order.paymentDeadline).toLocaleString("vi-VN")}</p>
-        )}
         <p className="mt-2 flex justify-between text-lg">
           <span>Tổng đơn hàng</span>
           <strong>{formatVnd(order.originalTotal)}</strong>
