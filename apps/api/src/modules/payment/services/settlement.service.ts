@@ -102,7 +102,7 @@ export class SettlementService {
         payloadDigest,
         observedStatus: "SUCCEEDED",
         processingResult: "REFUNDED",
-        lateReceivedAmount: attempt.amount,
+        lateReceivedAmount: attempt.amount.toString(),
         lateReceivedTransactionId: `MOCK-LATE-${eventId}`,
       },
     });
@@ -121,7 +121,7 @@ export class SettlementService {
         compensatesEventId: source.id,
         status: "SUCCEEDED",
         targetSellerOrdersSnapshot: snapshot as unknown as Prisma.InputJsonValue,
-        amount: attempt.amount,
+        amount: attempt.amount.toString(),
         externalTransactionId: `MOCK-LATE-${eventId}`,
         settledAt: now,
         operationKey: `late-compensation:${eventId}`,

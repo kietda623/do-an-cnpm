@@ -25,7 +25,7 @@ const paymentInclude = {
     orderBy: [{ attemptNumber: "asc" as const }, { id: "asc" as const }],
     include: attemptInclude,
   },
-} as const;
+} satisfies Prisma.PaymentInclude;
 
 @Injectable()
 export class PaymentService {
