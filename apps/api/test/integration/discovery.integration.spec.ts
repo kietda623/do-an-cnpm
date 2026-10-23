@@ -215,7 +215,10 @@ describe("public discovery PostgreSQL integration", () => {
     expect((await request(app.getHttpServer()).get("/api/v1/products?minPrice=oops")).status).toBe(
       400,
     );
-    await db.prisma.shop.update({ where: { id: shop.id }, data: { status: "SUSPENDED" } });
+    await db.prisma.shop.update({
+      where: { id: shop.id },
+      data: { status: "SUSPENDED", decisionReason: "Policy violation" },
+    });
     expect(
       (await request(app.getHttpServer()).get(`/api/v1/shops/${shop.id}/products`)).status,
     ).toBe(404);
