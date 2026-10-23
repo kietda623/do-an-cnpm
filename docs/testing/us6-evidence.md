@@ -1,0 +1,9 @@
+# US6 payment and cancellation evidence
+
+The disposable PostgreSQL integration suite in `apps/api/test/integration/payment.integration.spec.ts` creates a real multi-step checkout, starts a mock attempt twice with one idempotency key, captures it once, cancels the pending order, and checks the exact VND refund total and restored inventory. Run it with the repository's CI command and a confirmed `TEST_DATABASE_URL` ending in `_test` or `_disposable`; the helper refuses to use `DATABASE_URL` as a fallback.
+
+Unit coverage in `apps/api/src/modules/payment/services/payment-policy.spec.ts` and `apps/api/src/modules/order/services/cancellation-policy.spec.ts` checks integer VND arithmetic, payment status/refund precedence, terminal attempt states and buyer/seller cancellation eligibility. Contract coverage checks that payment and cancellation endpoints exist in both runtime Swagger and OpenAPI, use authenticated access, require idempotency keys for mutations and retain integer-string VND amounts.
+
+The API uses the database clock for the 15-minute checkout payment deadline. `PaymentExpiryJob` immediately scans on process start and repeats a bounded, database-backed scan every 30 seconds. It never uses an in-memory deadline as the source of truth. The separate payment fixture seed requires both a disposable database name confirmation and `PAYMENT_FIXTURE_ORDER_ID`; it refuses orders that already have attempts or are not pending MOCK orders.
+
+COD collection is intentionally not used to fake delivery. Its happy path requires a seller order in `DELIVERED`, which is supplied by US7. CI must run against PostgreSQL after migration deployment; static contract checks and unit tests alone do not establish race, restart or database-trigger behavior. Local execution has not been recorded as passing while the workspace's installed pnpm 11 / `node_modules` mount issue prevents Prisma and Jest from starting.

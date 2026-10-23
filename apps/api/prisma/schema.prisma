@@ -132,6 +132,61 @@ enum PaymentMethod {
   @@map("payment_method")
 }
 
+enum PaymentProvider {
+  MOCK
+  COD_SIMULATION
+
+  @@map("payment_provider")
+}
+
+enum PaymentAttemptStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+
+  @@map("payment_attempt_status")
+}
+
+enum PaymentSettlementKind {
+  NORMAL
+  LATE_COMPENSATION
+
+  @@map("payment_settlement_kind")
+}
+
+enum PaymentAllocationKind {
+  MOCK_PREPAYMENT
+  COD_COLLECTION
+
+  @@map("payment_allocation_kind")
+}
+
+enum PaymentEventResult {
+  APPLIED
+  DUPLICATE
+  IGNORED
+  REFUNDED
+
+  @@map("payment_event_result")
+}
+
+enum PaymentObservedStatus {
+  SUCCEEDED
+  FAILED
+  CANCELLED
+
+  @@map("payment_observed_status")
+}
+
+enum SimulatedRefundReason {
+  CANCELLATION
+  LATE_SUCCESS
+  CONFIRMED_RETURN
+
+  @@map("simulated_refund_reason")
+}
+
 enum MarketplaceOrderStatus {
   PENDING
   CONFIRMED
@@ -544,6 +599,7 @@ model MarketplaceOrder {
   updatedAt         DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([buyerUserId, createdAt, id], map: "marketplace_orders_buyer_created_id_idx")
+  @@index([paymentMethod, paymentDeadline, id], map: "marketplace_orders_payment_deadline_idx")
   @@map("marketplace_orders")
 }
 
@@ -564,6 +620,8 @@ model SellerOrder {
   items              OrderItem[]
   movements          InventoryMovement[]
   events             OrderEvent[]
+  paymentAllocations PaymentAllocation[]
+  refunds            SimulatedRefund[]
   createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -628,8 +686,91 @@ model Payment {
   method    PaymentMethod
   currency  String          @default("VND") @db.Char(3)
   version   Int             @default(0)
+  attempts  PaymentAttempt[]
+  events    PaymentEvent[]
   createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("payments")
+}
+
+model PaymentAttempt {
+  id                         String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paymentId                  String                 @map("payment_id") @db.Uuid
+  payment                    Payment                @relation(fields: [paymentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  attemptNumber              Int                    @map("attempt_number")
+  provider                   PaymentProvider
+  settlementKind             PaymentSettlementKind  @default(NORMAL) @map("settlement_kind")
+  originalAttemptId          String?                @map("original_attempt_id") @db.Uuid
+  originalAttempt            PaymentAttempt?        @relation("PaymentAttemptChain", fields: [originalAttemptId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  compensationAttempts       PaymentAttempt[]       @relation("PaymentAttemptChain")
+  compensatesEventId         String?                @unique(map: "payment_attempts_compensates_event_id_key") @map("compensates_event_id") @db.Uuid
+  compensatesEvent           PaymentEvent?          @relation("LateCompensationSource", fields: [compensatesEventId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  status                     PaymentAttemptStatus   @default(PENDING)
+  targetSellerOrdersSnapshot Json                   @map("target_seller_orders_snapshot") @db.JsonB
+  amount                     Decimal                @db.Decimal(18, 0)
+  externalTransactionId      String?                @map("external_transaction_id") @db.VarChar(160)
+  expiresAt                  DateTime?              @map("expires_at") @db.Timestamptz(6)
+  settledAt                  DateTime?              @map("settled_at") @db.Timestamptz(6)
+  operationKey               String                 @unique(map: "payment_attempts_operation_key_key") @map("operation_key") @db.VarChar(160)
+  allocations                PaymentAllocation[]
+  events                     PaymentEvent[]         @relation("PaymentAttemptEvents")
+  createdAt                  DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([paymentId, attemptNumber], map: "payment_attempts_payment_number_key")
+  @@index([paymentId, status, createdAt], map: "payment_attempts_payment_status_created_idx")
+  @@map("payment_attempts")
+}
+
+model PaymentAllocation {
+  id             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attemptId      String                @map("attempt_id") @db.Uuid
+  attempt        PaymentAttempt        @relation(fields: [attemptId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  sellerOrderId  String                @map("seller_order_id") @db.Uuid
+  sellerOrder    SellerOrder           @relation(fields: [sellerOrderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  amount         Decimal               @db.Decimal(18, 0)
+  kind           PaymentAllocationKind
+  refund         SimulatedRefund?
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([attemptId, sellerOrderId], map: "payment_allocations_attempt_seller_key")
+  @@index([sellerOrderId, id], map: "payment_allocations_seller_id_idx")
+  @@map("payment_allocations")
+}
+
+model SimulatedRefund {
+  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  allocationId  String               @unique(map: "simulated_refunds_allocation_id_key") @map("allocation_id") @db.Uuid
+  allocation    PaymentAllocation    @relation(fields: [allocationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  sellerOrderId String               @map("seller_order_id") @db.Uuid
+  sellerOrder   SellerOrder          @relation(fields: [sellerOrderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  amount        Decimal              @db.Decimal(18, 0)
+  reason        SimulatedRefundReason
+  status        String               @default("SUCCEEDED") @db.Text
+  operationKey  String               @unique(map: "simulated_refunds_operation_key_key") @map("operation_key") @db.VarChar(160)
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([sellerOrderId, createdAt, id], map: "simulated_refunds_seller_created_id_idx")
+  @@map("simulated_refunds")
+}
+
+model PaymentEvent {
+  id                           String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paymentId                    String                 @map("payment_id") @db.Uuid
+  payment                      Payment                @relation(fields: [paymentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  attemptId                    String?                @map("attempt_id") @db.Uuid
+  attempt                      PaymentAttempt?        @relation("PaymentAttemptEvents", fields: [attemptId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  compensationAttempt          PaymentAttempt?        @relation("LateCompensationSource")
+  provider                     PaymentProvider
+  externalEventId              String                 @map("external_event_id") @db.VarChar(160)
+  payloadDigest                String                 @map("payload_digest") @db.Char(64)
+  observedStatus               PaymentObservedStatus  @map("observed_status")
+  processingResult             PaymentEventResult     @map("processing_result")
+  lateReceivedAmount           Decimal?               @map("late_received_amount") @db.Decimal(18, 0)
+  lateReceivedTransactionId    String?                @map("late_received_transaction_id") @db.VarChar(160)
+  receivedAt                   DateTime               @default(now()) @map("received_at") @db.Timestamptz(6)
+
+  @@unique([provider, externalEventId], map: "payment_events_provider_external_event_key")
+  @@index([paymentId, receivedAt, id], map: "payment_events_payment_received_id_idx")
+  @@map("payment_events")
 }
