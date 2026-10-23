@@ -6,6 +6,7 @@ import { StructuredLogger } from "./common/logging/logger.js";
 import { RequestLoggerMiddleware } from "./common/logging/request-logger.middleware.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { HealthModule } from "./health/health.module.js";
+import { IdentityModule } from "./modules/identity/identity.module.js";
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { HealthModule } from "./health/health.module.js";
     }),
     DatabaseModule,
     HealthModule,
+    IdentityModule,
   ],
   providers: [
     RequestIdMiddleware,

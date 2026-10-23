@@ -14,9 +14,148 @@ enum IdempotencyState {
   @@map("idempotency_state")
 }
 
+enum SystemRole {
+  BUYER
+  ADMIN
+
+  @@map("system_role")
+}
+
+enum UserStatus {
+  ACTIVE
+  LOCKED
+
+  @@map("user_status")
+}
+
+enum SessionPlatform {
+  WEB
+  MOBILE
+  DESKTOP
+
+  @@map("session_platform")
+}
+
+enum ClientPlatform {
+  WEB
+  ANDROID
+  IOS
+  WINDOWS
+  MACOS
+
+  @@map("client_platform")
+}
+
+enum AssetPurpose {
+  AVATAR
+  SHOP_LOGO
+  SHOP_BANNER
+  PRODUCT_IMAGE
+
+  @@map("asset_purpose")
+}
+
+enum AssetStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+
+  @@map("asset_status")
+}
+
+model User {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  emailNormalized String              @unique(map: "users_email_normalized_key") @map("email_normalized") @db.VarChar(254)
+  passwordHash    String              @map("password_hash") @db.Text
+  displayName     String              @map("display_name") @db.VarChar(120)
+  phone           String?             @db.VarChar(20)
+  avatarAssetId   String?             @map("avatar_asset_id") @db.Uuid
+  systemRole      SystemRole          @default(BUYER) @map("system_role")
+  status          UserStatus          @default(ACTIVE)
+  authVersion     Int                 @default(0) @map("auth_version")
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  sessions        Session[]
+  addresses       Address[]
+  avatarAsset     Asset?              @relation("UserAvatar", fields: [avatarAssetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  uploadedAssets  Asset[]             @relation("AssetUploader")
+  auditEvents     AuditEvent[]
+  idempotencyRows IdempotencyRecord[]
+
+  @@index([status, createdAt, id], map: "users_status_created_at_id_idx")
+  @@map("users")
+}
+
+model Session {
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String          @map("user_id") @db.Uuid
+  user                User            @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  platform            SessionPlatform
+  clientPlatform      ClientPlatform  @map("client_platform")
+  refreshHash         String          @unique(map: "sessions_refresh_hash_key") @map("refresh_hash") @db.Text
+  familyId            String          @map("family_id") @db.Uuid
+  expiresAt           DateTime        @map("expires_at") @db.Timestamptz(6)
+  revokedAt           DateTime?       @map("revoked_at") @db.Timestamptz(6)
+  replacedBySessionId String?         @unique(map: "sessions_replaced_by_session_id_key") @map("replaced_by_session_id") @db.Uuid
+  replacedBySession   Session?        @relation("SessionRotation", fields: [replacedBySessionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  replacesSession     Session?        @relation("SessionRotation")
+  lastSeenAt          DateTime        @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([userId, revokedAt], map: "sessions_user_id_revoked_at_idx")
+  @@index([expiresAt], map: "sessions_expires_at_idx")
+  @@index([familyId], map: "sessions_family_id_idx")
+  @@map("sessions")
+}
+
+model Address {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  user          User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  recipientName String    @map("recipient_name") @db.VarChar(120)
+  phone         String    @db.VarChar(20)
+  line1         String    @db.VarChar(250)
+  ward          String    @db.VarChar(120)
+  district      String    @db.VarChar(120)
+  province      String    @db.VarChar(120)
+  country       String    @default("VN") @db.Char(2)
+  postalCode    String?   @map("postal_code") @db.VarChar(20)
+  isDefault     Boolean   @default(false) @map("is_default")
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([userId, deletedAt], map: "addresses_user_id_deleted_at_idx")
+  @@map("addresses")
+}
+
+model Asset {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uploaderUserId String       @map("uploader_user_id") @db.Uuid
+  uploaderUser   User         @relation("AssetUploader", fields: [uploaderUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  shopId         String?      @map("shop_id") @db.Uuid
+  purpose        AssetPurpose
+  objectKey      String       @unique(map: "assets_object_key_key") @map("object_key") @db.Text
+  mimeType       String       @map("mime_type") @db.VarChar(100)
+  byteSize       Int          @map("byte_size")
+  width          Int
+  height         Int
+  status         AssetStatus  @default(PENDING)
+  attachedAt     DateTime?    @map("attached_at") @db.Timestamptz(6)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  avatarForUsers User[]       @relation("UserAvatar")
+
+  @@index([uploaderUserId, status, createdAt, id], map: "assets_uploader_status_created_at_id_idx")
+  @@index([shopId, purpose, status, id], map: "assets_shop_purpose_status_id_idx")
+  @@map("assets")
+}
+
 model AuditEvent {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   actorUserId  String?  @map("actor_user_id") @db.Uuid
+  actorUser    User?    @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   actorKind    String   @map("actor_kind") @db.Text
   action       String   @db.Text
   targetType   String   @map("target_type") @db.Text
@@ -37,6 +176,7 @@ model AuditEvent {
 model IdempotencyRecord {
   id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   actorUserId     String?          @map("actor_user_id") @db.Uuid
+  actorUser       User?            @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   actorScope      String           @map("actor_scope") @db.Text
   operation       String           @db.Text
   idempotencyKey  String           @map("idempotency_key") @db.VarChar(128)

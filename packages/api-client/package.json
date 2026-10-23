@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./auth/types": "./src/auth/types.ts"
+    "./auth/types": "./src/auth/types.ts",
+    "./auth/web-session": "./src/auth/web-session.ts"
   },
   "scripts": {
     "generate:types": "openapi-typescript ../contracts/openapi.yaml -o src/generated/index.ts && prettier --write src/generated/index.ts",

@@ -14,7 +14,7 @@ const buyer = {
   updatedAt: "2026-10-23T00:00:00.000Z",
 };
 
-const tokens = { accessToken: "e2e-access-token", refreshToken: "e2e-refresh-token" };
+const tokens = { accessToken: "e2e-access-token", refreshToken: "e2e-refresh-token", user: buyer };
 const accountAddress = {
   id: "00000000-0000-4000-8000-000000000002",
   recipientName: "E2E Buyer",
@@ -148,7 +148,7 @@ test("E: duplicate email shows a recoverable form error", async ({ page }) => {
     .getByRole("button", { name: /register|đăng ký/i })
     .last()
     .click();
-  await expect(page.getByRole("alert")).toContainText(/email/i);
+  await expect(page.locator("p[role=alert]")).toContainText(/email/i);
   await expect(page.getByLabel(/email/i)).toBeVisible();
 });
 

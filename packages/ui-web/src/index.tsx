@@ -1,4 +1,7 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+export { SessionProvider, useSession } from "./auth/session-provider";
+export { RoleGate } from "./auth/role-gate";
+export type { SessionUser } from "./auth/session-provider";
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "danger";

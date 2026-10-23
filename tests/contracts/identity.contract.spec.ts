@@ -107,6 +107,7 @@ describe("identity OpenAPI and runtime contract", () => {
     runtimeDocument = SwaggerModule.createDocument(
       app,
       new DocumentBuilder().setTitle("Marketplace API").setVersion("1.0.0").build(),
+      { ignoreGlobalPrefix: true },
     );
   });
 

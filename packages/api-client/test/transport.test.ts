@@ -30,6 +30,9 @@ describe("API transport auth behavior", () => {
     let readCalls = 0;
     const fetcher: typeof fetch = async (input, init) => {
       const url = new URL(String(input));
+      if (url.pathname.endsWith("/auth/csrf")) {
+        return Response.json({ data: { csrfToken: "csrf-test" } });
+      }
       if (url.pathname.endsWith("/auth/refresh")) {
         refreshCalls += 1;
         await new Promise((resolve) => setTimeout(resolve, 10));
@@ -66,6 +69,9 @@ describe("API transport auth behavior", () => {
     let refreshCalls = 0;
     const fetcher: typeof fetch = async (input) => {
       const url = new URL(String(input));
+      if (url.pathname.endsWith("/auth/csrf")) {
+        return Response.json({ data: { csrfToken: "csrf-test" } });
+      }
       if (url.pathname.endsWith("/auth/refresh")) {
         refreshCalls += 1;
         return Response.json({

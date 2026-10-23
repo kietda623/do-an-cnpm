@@ -31,13 +31,14 @@ export class ApiTransport {
   private readonly baseUrl: string;
   private readonly fetcher: typeof fetch;
   private refreshInFlight: Promise<void> | undefined;
+  private csrfToken: string | undefined;
 
   private readonly options: ApiTransportOptions;
 
   constructor(options: ApiTransportOptions) {
     this.options = options;
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
-    this.fetcher = options.fetcher ?? fetch;
+    this.fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
   }
 
   async request<T>(path: ApiPath, init: RequestInit = {}): Promise<T> {
@@ -53,11 +54,23 @@ export class ApiTransport {
     return this.readResponse<T>(await this.send(path, init));
   }
 
+  async setTokens(tokens: TokenSet): Promise<void> {
+    await this.options.tokens.write(tokens);
+  }
+
   private async send(path: ApiPath, init: RequestInit): Promise<Response> {
     const headers = new Headers(init.headers);
+    const method = (init.method ?? "GET").toUpperCase();
+    if (!new Set(["GET", "HEAD", "OPTIONS"]).has(method) && this.options.clientPlatform === "WEB") {
+      headers.set("X-CSRF-Token", await this.getCsrfToken());
+    }
     const tokens = await this.options.tokens.read();
     if (tokens?.accessToken) headers.set("Authorization", `Bearer ${tokens.accessToken}`);
-    if (init.body !== undefined && !headers.has("Content-Type")) {
+    if (
+      init.body !== undefined &&
+      !(init.body instanceof FormData) &&
+      !headers.has("Content-Type")
+    ) {
       headers.set("Content-Type", "application/json");
     }
 
@@ -88,7 +101,12 @@ export class ApiTransport {
 
     const response = await this.fetcher(this.buildUrl("/auth/refresh"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(this.options.clientPlatform === "WEB"
+          ? { "X-CSRF-Token": await this.getCsrfToken() }
+          : {}),
+      },
       credentials: "include",
       body: JSON.stringify(body),
     });
@@ -102,6 +120,15 @@ export class ApiTransport {
     const result: TokenSet = { accessToken: envelope.data.accessToken };
     if (envelope.data.refreshToken) result.refreshToken = envelope.data.refreshToken;
     await this.options.tokens.write(result);
+  }
+
+  private async getCsrfToken(): Promise<string> {
+    if (this.csrfToken) return this.csrfToken;
+    const response = await this.fetcher(this.buildUrl("/auth/csrf"), { credentials: "include" });
+    if (!response.ok) throw await this.toError(response);
+    const envelope = (await response.json()) as ApiEnvelope<{ csrfToken: string }>;
+    this.csrfToken = envelope.data.csrfToken;
+    return this.csrfToken;
   }
 
   private async readResponse<T>(response: Response): Promise<T> {
