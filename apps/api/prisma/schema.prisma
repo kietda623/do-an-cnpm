@@ -125,6 +125,16 @@ enum InventoryEffectType {
   @@map("inventory_effect_type")
 }
 
+enum ShipmentStatus {
+  WAITING_PICKUP
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+
+  @@map("shipment_status")
+}
+
 enum PaymentMethod {
   COD
   MOCK
@@ -212,6 +222,7 @@ enum SellerOrderStatus {
 }
 
 model User {
+  shipmentEvents ShipmentEvent[]
   id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   emailNormalized    String              @unique(map: "users_email_normalized_key") @map("email_normalized") @db.VarChar(254)
   passwordHash       String              @map("password_hash") @db.Text
@@ -604,6 +615,7 @@ model MarketplaceOrder {
 }
 
 model SellerOrder {
+  shipment           Shipment?
   id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   orderId            String            @map("order_id") @db.Uuid
   order              MarketplaceOrder  @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
@@ -773,4 +785,37 @@ model PaymentEvent {
   @@unique([provider, externalEventId], map: "payment_events_provider_external_event_key")
   @@index([paymentId, receivedAt, id], map: "payment_events_payment_received_id_idx")
   @@map("payment_events")
+}
+
+model Shipment {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sellerOrderId String @unique(map: "shipments_seller_order_id_key") @map("seller_order_id") @db.Uuid
+  sellerOrder SellerOrder @relation(fields: [sellerOrderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  trackingCode String @unique(map: "shipments_tracking_code_key") @map("tracking_code") @db.VarChar(80)
+  status ShipmentStatus @default(WAITING_PICKUP)
+  deliveryAttempt Int @default(1) @map("delivery_attempt")
+  deliveredAt DateTime? @map("delivered_at") @db.Timestamptz(6)
+  returnedConfirmedAt DateTime? @map("returned_confirmed_at") @db.Timestamptz(6)
+  version Int @default(0)
+  events ShipmentEvent[]
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  @@index([status, updatedAt, id], map: "shipments_status_updated_id_idx")
+  @@map("shipments")
+}
+
+model ShipmentEvent {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shipmentId String @map("shipment_id") @db.Uuid
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  actorUserId String @map("actor_user_id") @db.Uuid
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  fromStatus ShipmentStatus? @map("from_status")
+  toStatus ShipmentStatus @map("to_status")
+  deliveryAttempt Int @map("delivery_attempt")
+  reason String? @db.VarChar(500)
+  operationKey String @unique(map: "shipment_events_operation_key_key") @map("operation_key") @db.VarChar(160)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@index([shipmentId, createdAt, id], map: "shipment_events_shipment_created_id_idx")
+  @@map("shipment_events")
 }
