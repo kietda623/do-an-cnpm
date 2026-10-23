@@ -271,11 +271,12 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
       .set("Idempotency-Key", randomUUID())
       .send({ orderId: test.orderId });
     expect(started.status).toBe(201);
+    const fixtureTime = Date.now();
     await db.prisma.marketplaceOrder.update({
       where: { id: test.orderId },
       data: {
-        createdAt: new Date(Date.now() - 16 * 60_000),
-        paymentDeadline: new Date(Date.now() - 60_000),
+        createdAt: new Date(fixtureTime - 16 * 60_000),
+        paymentDeadline: new Date(fixtureTime - 60_000),
       },
     });
     expect([0, 1]).toContain(await app.get(PaymentService).expireDueOrders());
