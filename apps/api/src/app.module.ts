@@ -10,6 +10,8 @@ import { IdentityModule } from "./modules/identity/identity.module.js";
 import { ShopModule } from "./modules/shop/shop.module.js";
 import { CatalogModule } from "./modules/catalog/catalog.module.js";
 import { InventoryModule } from "./modules/inventory/inventory.module.js";
+import { CartModule } from "./modules/cart/cart.module.js";
+import { OrderModule } from "./modules/order/order.module.js";
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { InventoryModule } from "./modules/inventory/inventory.module.js";
     ShopModule,
     CatalogModule,
     InventoryModule,
+    CartModule,
+    OrderModule,
   ],
   providers: [
     RequestIdMiddleware,

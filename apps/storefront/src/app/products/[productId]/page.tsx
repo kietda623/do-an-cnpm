@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { WebSession, type ApiPath } from "@marketplace/api-client";
+import { useQueryClient } from "@tanstack/react-query";
+import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
+import { useSession, type SessionUser } from "@marketplace/ui-web";
+import { webSession } from "../../auth-form";
+import { formatVnd } from "../../../features/money";
 
 type Product = {
   id: string;
@@ -20,16 +24,20 @@ type Product = {
     availableQuantity: number;
   }[];
 };
-const api = new WebSession(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1").api;
-const money = (value: string) => `${Number(value).toLocaleString("vi-VN")}₫`;
+const api = webSession.api;
 
 export default function ProductDetailPage() {
   const { productId } = useParams<{ productId: string }>();
+  const queryClient = useQueryClient();
+  const { user, setUser } = useSession();
   const [product, setProduct] = useState<Product | null>(null);
   const [variantId, setVariantId] = useState("");
   const [imageIndex, setImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [cartError, setCartError] = useState("");
+  const [added, setAdded] = useState(false);
+  const [adding, setAdding] = useState(false);
   useEffect(() => {
     let live = true;
     void api
@@ -49,6 +57,13 @@ export default function ProductDetailPage() {
       live = false;
     };
   }, [productId]);
+  useEffect(() => {
+    if (user) return;
+    void webSession
+      .restore<SessionUser>()
+      .then(setUser)
+      .catch(() => {});
+  }, [setUser, user]);
   if (loading)
     return (
       <main className="mx-auto max-w-6xl px-4 py-10" role="status">
@@ -100,7 +115,7 @@ export default function ProductDetailPage() {
         </div>
         <h1 className="text-3xl font-bold">{product.name}</h1>
         <p className="text-2xl font-semibold text-marketplace-accent">
-          {money(selected?.price ?? product.minimumPrice)}
+          {formatVnd(selected?.price ?? product.minimumPrice)}
         </p>
         <label className="block font-medium">
           Phân loại
@@ -113,7 +128,7 @@ export default function ProductDetailPage() {
             {product.variants.map((variant) => (
               <option key={variant.id} value={variant.id}>
                 {Object.values(variant.attributes).join(" / ") || variant.sku} ·{" "}
-                {money(variant.price)}
+                {formatVnd(variant.price)}
               </option>
             ))}
           </select>
@@ -123,12 +138,50 @@ export default function ProductDetailPage() {
             ? `Còn ${selected.availableQuantity} sản phẩm`
             : "Tạm hết hàng"}
         </p>
-        <Link
-          href={`/login?returnTo=${encodeURIComponent(`/products/${product.id}`)}`}
-          className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-marketplace-accent px-5 font-semibold text-white"
-        >
-          Đăng nhập để mua
-        </Link>
+        {user ? (
+          <div className="space-y-2">
+            <button
+              disabled={adding || !selected?.availableQuantity}
+              onClick={() => {
+                if (!selected) return;
+                setAdding(true);
+                setCartError("");
+                setAdded(false);
+                void api
+                  .request("/cart/items", {
+                    method: "POST",
+                    body: JSON.stringify({ variantId: selected.id, quantity: 1 }),
+                  })
+                  .then(async () => {
+                    if (user) await queryClient.invalidateQueries({ queryKey: ["cart", user.id] });
+                    setAdded(true);
+                  })
+                  .catch((cause) => setCartError(normalizeFormError(cause)))
+                  .finally(() => setAdding(false));
+              }}
+              className="min-h-12 w-full rounded-lg bg-marketplace-accent px-5 font-semibold text-white disabled:opacity-50"
+            >
+              {adding ? "Đang thêm…" : added ? "Đã thêm vào giỏ" : "Thêm vào giỏ hàng"}
+            </button>
+            {cartError && (
+              <p role="alert" className="text-sm text-red-700">
+                {cartError}
+              </p>
+            )}
+            {added && (
+              <Link href="/cart" className="text-sm underline">
+                Xem giỏ hàng
+              </Link>
+            )}
+          </div>
+        ) : (
+          <Link
+            href={`/login?returnTo=${encodeURIComponent(`/products/${product.id}`)}`}
+            className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-marketplace-accent px-5 font-semibold text-white"
+          >
+            Đăng nhập để mua
+          </Link>
+        )}
         <section>
           <h2 className="mb-2 text-lg font-semibold">Mô tả</h2>
           <p className="whitespace-pre-wrap leading-7">{product.description}</p>

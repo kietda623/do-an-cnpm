@@ -1606,6 +1606,17 @@ export interface components {
       country: "VN";
       isDefault: boolean;
     };
+    AddressSnapshot: {
+      recipientName: string;
+      phone: string;
+      line1: string;
+      ward: string;
+      district: string;
+      province: string;
+      /** @enum {string} */
+      country: "VN";
+      postalCode?: string | null;
+    };
     AddressPatch: {
       recipientName?: string;
       phone?: string;
@@ -2002,7 +2013,7 @@ export interface components {
       expiresAt: string;
       lines: components["schemas"]["QuoteLine"][];
       groups: components["schemas"]["QuoteGroup"][];
-      addressSnapshot: components["schemas"]["AddressWrite"];
+      addressSnapshot: components["schemas"]["AddressSnapshot"];
       /** @example 150000 */
       total: string;
       /** @enum {string} */
@@ -2078,7 +2089,7 @@ export interface components {
       outstandingAmount: string;
       /** @enum {string} */
       currency: "VND";
-      addressSnapshot: components["schemas"]["AddressWrite"];
+      addressSnapshot: components["schemas"]["AddressSnapshot"];
       shipment: components["schemas"]["Shipment"] | null;
       version: number;
       /** Format: date-time */
