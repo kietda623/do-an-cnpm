@@ -6,13 +6,14 @@ import { randomUUID } from "node:crypto";
 import request from "supertest";
 import type { Pool } from "pg";
 import { AppModule } from "../../src/app.module.js";
+import { DatabaseService } from "../../src/database/prisma.service.js";
 import { CsrfRequestMiddleware } from "../../src/common/http/csrf-request.middleware.js";
 import { ContractErrorFilter } from "../../src/common/http/error.filter.js";
 import { createTestPool, resetAndDeployMigrations } from "../helpers/database.js";
 
 type TokenResponse = {
   status: number;
-  body: { data: { accessToken: string; refreshToken: string } };
+  body: { data: { accessToken: string; refreshToken: string; user: { id: string } } };
 };
 
 const password = "Correct horse battery staple 9!";
@@ -64,21 +65,30 @@ identityDescribe("Buyer identity PostgreSQL integration", () => {
     expect(rotated.status).toBe(200);
     expect(rotated.body.data.refreshToken).not.toBe(originalRefresh);
 
-    const reuse = await request(app.getHttpServer())
-      .post("/api/v1/auth/refresh")
-      .send({ refreshToken: originalRefresh, clientPlatform: "ANDROID" });
-    expect(reuse.status).toBe(401);
-
     const logout = await request(app.getHttpServer())
       .post("/api/v1/auth/logout")
       .set("Authorization", `Bearer ${rotated.body.data.accessToken}`)
-      .send({ refreshToken: rotated.body.data.refreshToken });
+      .send({ refreshToken: rotated.body.data.refreshToken, clientPlatform: "ANDROID" });
     expect(logout.status).toBe(204);
 
     const afterLogout = await request(app.getHttpServer())
       .post("/api/v1/auth/refresh")
       .send({ refreshToken: rotated.body.data.refreshToken, clientPlatform: "ANDROID" });
     expect(afterLogout.status).toBe(401);
+
+    const replayVictim = await register(app);
+    const replayRotation = await request(app.getHttpServer())
+      .post("/api/v1/auth/refresh")
+      .send({ refreshToken: replayVictim.body.data.refreshToken, clientPlatform: "ANDROID" });
+    expect(replayRotation.status).toBe(200);
+    const reuse = await request(app.getHttpServer())
+      .post("/api/v1/auth/refresh")
+      .send({ refreshToken: replayVictim.body.data.refreshToken, clientPlatform: "ANDROID" });
+    expect(reuse.status).toBe(401);
+    const revokedFamilyRefresh = await request(app.getHttpServer())
+      .post("/api/v1/auth/refresh")
+      .send({ refreshToken: replayRotation.body.data.refreshToken, clientPlatform: "ANDROID" });
+    expect(revokedFamilyRefresh.status).toBe(401);
   });
 
   it("rejects a locked account and invalidates prior access after a password change", async () => {
@@ -162,25 +172,28 @@ identityDescribe("Buyer identity PostgreSQL integration", () => {
     expect(list.body.data.filter((item: { isDefault: boolean }) => item.isDefault)).toHaveLength(1);
   });
 
-  it("prevents a second buyer from assigning another buyer's uploaded asset", async () => {
+  it("prevents a second buyer from assigning another buyer's verified asset", async () => {
     const buyerA = await register(app);
     const buyerB = await register(app);
     expect(buyerA.status).toBe(201);
     expect(buyerB.status).toBe(201);
-    const uploaded = await request(app.getHttpServer())
-      .post("/api/v1/users/me/assets")
-      .set("Authorization", `Bearer ${buyerA.body.data.accessToken}`)
-      .field("purpose", "AVATAR")
-      .attach("file", Buffer.from("test image"), {
-        filename: "avatar.png",
-        contentType: "image/png",
-      });
-    expect(uploaded.status).toBe(201);
+    const asset = await app.get(DatabaseService).prisma.asset.create({
+      data: {
+        uploaderUserId: buyerA.body.data.user.id,
+        purpose: "AVATAR",
+        objectKey: `users/${buyerA.body.data.user.id}/assets/${randomUUID()}.png`,
+        mimeType: "image/png",
+        byteSize: 68,
+        width: 1,
+        height: 1,
+        status: "VERIFIED",
+      },
+    });
 
     const assignment = await request(app.getHttpServer())
       .patch("/api/v1/users/me")
       .set("Authorization", `Bearer ${buyerB.body.data.accessToken}`)
-      .send({ avatarAssetId: uploaded.body.data.id });
+      .send({ avatarAssetId: asset.id });
     expect([403, 404]).toContain(assignment.status);
   });
 });

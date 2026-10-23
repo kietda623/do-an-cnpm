@@ -273,9 +273,10 @@ Các lựa chọn domain/payment ở trên là quyết định thiết kế từ
 Asset thuộc module Catalog/media public service, dùng chung Identity/Shop qua service này.
 Trường: `id UUID`, `uploader_user_id FK User`, `shop_id FK Shop nullable`,
 `purpose AVATAR/SHOP_LOGO/SHOP_BANNER/PRODUCT_IMAGE`, `object_key text UNIQUE`,
-`mime_type`, `byte_size int`, `status PENDING/VERIFIED/REJECTED`, `attached_at nullable`,
-`created_at`, `updated_at`. CHECK byte_size trong 1..5242880; allowlist JPEG/PNG/WebP
-và kiểm tra nội dung thực trước VERIFIED. Index `(uploader_user_id,status,created_at,id)`
+`mime_type`, `byte_size int`, `width int`, `height int`, `status PENDING/VERIFIED/REJECTED`,
+`attached_at nullable`, `created_at`, `updated_at`. CHECK byte_size trong 1..5242880 và
+width/height dương; allowlist JPEG/PNG/WebP và kiểm tra nội dung thực trước VERIFIED.
+Index `(uploader_user_id,status,created_at,id)`
 và `(shop_id,purpose,status,id)`. API upload trả Asset UUID; không tin object key từ client.
 
 Logo trước tạo shop có shop_id NULL, purpose SHOP_LOGO và uploader chính là người tạo shop.

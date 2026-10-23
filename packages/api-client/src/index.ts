@@ -1,3 +1,4 @@
-export * from "./auth/types.js";
-export * from "./generated/index.js";
-export * from "./transport.js";
+export * from "./auth/types";
+export * from "./auth/web-session";
+export * from "./generated/index";
+export * from "./transport";

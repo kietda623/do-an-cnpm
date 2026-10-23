@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@marketplace/api-client": "workspace:*",
     "@marketplace/design-tokens": "workspace:*",
     "@marketplace/ui-web": "workspace:*",
     "@tanstack/react-query": "5.104.5",

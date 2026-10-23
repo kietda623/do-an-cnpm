@@ -7,6 +7,7 @@ allowBuilds:
   "@prisma/engines": true
   "@scarf/scarf": false
   "@swc/core": true
+  argon2: true
   "unrs-resolver": true
   prisma: true
 

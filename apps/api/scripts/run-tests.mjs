@@ -32,7 +32,13 @@ const result = spawnSync(
   ],
   {
     cwd: packageRoot,
-    env: { ...process.env, API_TEST_MODE: mode },
+    env: {
+      ...process.env,
+      ...(mode === "integration" && process.env.TEST_DATABASE_URL
+        ? { DATABASE_URL: process.env.TEST_DATABASE_URL }
+        : {}),
+      API_TEST_MODE: mode,
+    },
     stdio: "inherit",
   },
 );
