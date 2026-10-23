@@ -65,10 +65,10 @@ export class AssetService {
         code: "UNSUPPORTED_IMAGE",
         message: "Only JPEG, PNG, and WebP images are supported.",
       });
-    if (!["AVATAR", "SHOP_LOGO"].includes(purpose))
+    if (!["AVATAR", "SHOP_LOGO", "SHOP_BANNER"].includes(purpose))
       throw new UnprocessableEntityException({
         code: "INVALID_ASSET_PURPOSE",
-        message: "This upload purpose is not available yet.",
+        message: "The selected upload purpose is not available.",
       });
     const detected = await fileTypeFromBuffer(file.buffer);
     if (!detected || detected.mime !== file.mimetype || !allowed.has(detected.mime))
@@ -109,7 +109,7 @@ export class AssetService {
       const asset = await this.db.prisma.asset.create({
         data: {
           uploaderUserId: userId,
-          purpose: purpose as "AVATAR" | "SHOP_LOGO",
+          purpose: purpose as "AVATAR" | "SHOP_LOGO" | "SHOP_BANNER",
           objectKey,
           mimeType: detected.mime,
           byteSize: file.buffer.length,

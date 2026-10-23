@@ -21,8 +21,6 @@ export default function SellerLoginPage() {
         String(form.get("email")),
         String(form.get("password")),
       );
-      if (!user.roles.includes("SELLER") && !user.roles.includes("ADMIN"))
-        throw new Error("Tài khoản chưa được cấp quyền người bán.");
       setUser(user);
       router.replace("/");
     } catch (cause) {

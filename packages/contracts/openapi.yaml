@@ -1394,8 +1394,7 @@ paths:
                 - data
                 properties:
                   data:
-                    type: object
-                    additionalProperties: true
+                    $ref: '#/components/schemas/ShopPublic'
                   meta:
                     $ref: '#/components/schemas/PageMeta'
         '400':
@@ -8328,6 +8327,8 @@ components:
           type: integer
           minimum: 0
       additionalProperties: false
+      required:
+      - expectedVersion
     Shop:
       type: object
       properties:
@@ -8356,6 +8357,10 @@ components:
           type: string
           maxLength: 500
           nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
         version:
           type: integer
           minimum: 0
@@ -8372,6 +8377,7 @@ components:
       - phone
       - logo
       - status
+      - approvedAt
       - version
       - createdAt
       - updatedAt
