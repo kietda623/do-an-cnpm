@@ -413,7 +413,7 @@ export interface paths {
     };
     /**
      * GET /products
-     * @description Auth scope: NEWEST`,page,pageSize. Source constraint: List<ProductSummary>
+     * @description Anonymous discovery of publicly sellable products. Filters use active variants and visible category ancestry.
      */
     get: operations["get_products"];
     put?: never;
@@ -1703,6 +1703,7 @@ export interface components {
       name: string;
       slug: string;
       description: string;
+      selling?: boolean;
       logo: components["schemas"]["Asset"];
       banner?: components["schemas"]["Asset"] | null;
     };
@@ -1833,15 +1834,28 @@ export interface components {
       name: string;
       description: string;
       selling: boolean;
-      category: { id: string; name: string };
-      shop: { id: string; name: string; slug: string };
+      category: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+      };
+      shop: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        slug: string;
+      };
       images: components["schemas"]["Asset"][];
       /** @example 150000 */
       minimumPrice: string;
       variants: {
+        /** Format: uuid */
         id: string;
         sku: string;
-        attributes: { [key: string]: unknown };
+        attributes: {
+          [key: string]: unknown;
+        };
+        /** @example 150000 */
         price: string;
         availableQuantity: number;
       }[];
@@ -5171,7 +5185,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Success. Public product detail. */
+      /** @description Success. public Product */
       200: {
         headers: {
           [name: string]: unknown;
