@@ -188,11 +188,6 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
       .set("Idempotency-Key", randomUUID())
       .send({ eventId: randomUUID(), outcome: "FAILED", expectedVersion: order.version });
     expect(failed.status).toBe(200);
-    order = (
-      await request(app.getHttpServer())
-        .get(`/api/v1/orders/${test.orderId}`)
-        .set("Authorization", buyer)
-    ).body.data;
     const retryKey = randomUUID();
     const retry = await request(app.getHttpServer())
       .post("/api/v1/payments/mock-attempts")
