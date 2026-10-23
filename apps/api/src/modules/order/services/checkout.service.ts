@@ -214,7 +214,17 @@ export class CheckoutService {
         country: address.country,
         postalCode: address.postalCode,
       };
-      if (JSON.stringify(currentAddress) !== JSON.stringify(quote.recipientSnapshot))
+      const quotedAddress = quote.recipientSnapshot as Record<string, unknown>;
+      if (
+        currentAddress.recipientName !== quotedAddress.recipientName ||
+        currentAddress.phone !== quotedAddress.phone ||
+        currentAddress.line1 !== quotedAddress.line1 ||
+        currentAddress.ward !== quotedAddress.ward ||
+        currentAddress.district !== quotedAddress.district ||
+        currentAddress.province !== quotedAddress.province ||
+        currentAddress.country !== quotedAddress.country ||
+        currentAddress.postalCode !== quotedAddress.postalCode
+      )
         throw conflict("ADDRESS_CHANGED", "The selected address changed. Create a new quote.");
 
       const total = BigInt(quote.total.toString());
