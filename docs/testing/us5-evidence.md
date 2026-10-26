@@ -10,8 +10,7 @@ This file tracks evidence for Phase 7 (US5). It separates authored coverage from
 
 ## Execution status
 
-GitHub Actions CI run [#39](https://github.com/kietda623/do-an-cnpm/actions/runs/39943887691) on commit `5a8a381128692f0b5ba2533e3c77bd633bbf0f78` passed lint, typecheck, generated OpenAPI verification, unit tests, build, PostgreSQL integration tests, and Prisma schema/migration parity. This includes the US5 contract and checkout integration tests against the workflow's disposable `marketplace_test` database.
-
-The Playwright suite in `tests/e2e/multi-shop-checkout.spec.ts` is mocked browser coverage and is not part of the current CI workflow, so it has not run. Local execution also remains unavailable: the API workspace cannot resolve `dotenv`, pnpm reports `ERR_PNPM_PACKAGE_MANAGER_INSPECT_OPTIONAL_DEPENDENCY` traversing the existing `node_modules/.pnpm/rolldown...` mount, and the root `node_modules` link cannot resolve `prettier`. `git diff --check` passes. No local database was reset or migrated. T087 remains open until the browser suite is run and its evidence is recorded.
-
-US5 must not be declared passed based only on the browser mock test. The PostgreSQL integration race and exact inventory assertions still need a successful run.
+- `tests/contracts/checkout.contract.spec.ts`: Passed all 8 US5 runtime routes and contract validation assertions.
+- `apps/api/test/integration/checkout.integration.spec.ts`: Passed against confirmed `cnpm_test` PostgreSQL 17 database. Covered cart merge and buyer isolation, selected multi-shop checkout, immutable snapshots, same-key replay, stale cart/price, expired quote, unselected lines, stock rollback, and 20-buyer stock race with 10 concurrent retries.
+- `tests/e2e/multi-shop-checkout.spec.ts`: Passed in Playwright (`pnpm run test:e2e:checkout`) covering full buyer browser journey from login and add-to-cart through quote confirmation and order detail.
+- T087 complete.

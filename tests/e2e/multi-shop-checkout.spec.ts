@@ -198,11 +198,11 @@ test("buyer adds a product, confirms a quote, places an order and sees its snaps
   await page.goto("/cart");
   await expect(page.getByRole("link", { name: product.name })).toBeVisible();
   await page.getByRole("link", { name: "Tiến hành đặt hàng" }).click();
-  await expect(page.getByRole("heading", { name: "Thanh toán" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Thanh toán", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Kiểm tra giá và tồn kho" }).click();
   await expect(page.getByText("250.000₫").first()).toBeVisible();
   await page.getByRole("button", { name: "Đặt hàng" }).click();
   await expect(page.getByRole("heading", { name: order.orderNumber })).toBeVisible();
   await expect(page.getByText("1 Test Street, Ward 1, District 1, HCMC")).toBeVisible();
-  await expect(page.getByText("Linen Shop")).toBeVisible();
+  await expect(page.getByText("Linen Shop", { exact: true })).toBeVisible();
 });

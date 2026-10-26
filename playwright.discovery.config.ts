@@ -14,7 +14,7 @@ export default defineConfig({
   expect: { timeout: 5_000 },
   webServer: {
     command:
-      "corepack pnpm --filter @marketplace/storefront exec next dev --hostname 127.0.0.1 --port 3100",
+      "pnpm --filter @marketplace/storefront exec next dev --hostname 127.0.0.1 --port 3100",
     url: "http://127.0.0.1:3100",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

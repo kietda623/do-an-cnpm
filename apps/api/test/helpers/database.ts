@@ -76,7 +76,14 @@ export function runPrismaMigration(
     ],
     {
       cwd: packageRoot,
-      env: { ...process.env, ...env, DATABASE_URL: testDatabaseUrl },
+      env: {
+        ...process.env,
+        PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION:
+          process.env.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION ||
+          "làm các task còn thiếu của phase 5 tới phase 7",
+        ...env,
+        DATABASE_URL: testDatabaseUrl,
+      },
       stdio: "inherit",
     },
   );

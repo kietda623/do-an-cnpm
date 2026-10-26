@@ -132,5 +132,5 @@ test("discovery shows empty and error states", async ({ page }) => {
   await expect(page.getByText("Chưa tìm thấy sản phẩm phù hợp.")).toBeVisible();
   fail = true;
   await page.reload();
-  await expect(page.getByRole("alert")).toContainText("Không tải được sản phẩm");
+  await expect(page.getByRole("alert").filter({ hasText: "Không tải được sản phẩm" })).toContainText("Không tải được sản phẩm");
 });

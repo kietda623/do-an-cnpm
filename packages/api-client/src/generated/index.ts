@@ -2053,7 +2053,8 @@ export interface components {
       /** Format: uuid */
       sellerOrderId: string;
       /** @enum {string} */
-      status: "WAITING_PICKUP" | "PICKED_UP" | "IN_TRANSIT" | "DELIVERED" | "FAILED";
+      status:
+        "WAITING_PICKUP" | "PICKED_UP" | "IN_TRANSIT" | "DELIVERED" | "FAILED";
       trackingCode: string;
       attemptNumber: number;
       version: number;
@@ -2075,7 +2076,13 @@ export interface components {
       shopNameSnapshot: string;
       /** @enum {string} */
       status:
-        "PENDING" | "CONFIRMED" | "PACKING" | "SHIPPING" | "DELIVERED" | "COMPLETED" | "CANCELLED";
+        | "PENDING"
+        | "CONFIRMED"
+        | "PACKING"
+        | "SHIPPING"
+        | "DELIVERED"
+        | "COMPLETED"
+        | "CANCELLED";
       items: components["schemas"]["OrderItem"][];
       /** @example 150000 */
       originalTotal: string;
@@ -2143,7 +2150,13 @@ export interface components {
       sellerOrders: components["schemas"]["SellerOrder"][];
       /** @enum {string} */
       status:
-        "PENDING" | "CONFIRMED" | "PACKING" | "SHIPPING" | "DELIVERED" | "COMPLETED" | "CANCELLED";
+        | "PENDING"
+        | "CONFIRMED"
+        | "PACKING"
+        | "SHIPPING"
+        | "DELIVERED"
+        | "COMPLETED"
+        | "CANCELLED";
       partiallyCancelled: boolean;
       /** @example 150000 */
       originalTotal: string;
@@ -2158,7 +2171,12 @@ export interface components {
       /** @enum {string} */
       paymentMethod: "COD" | "MOCK";
       /** @enum {string} */
-      paymentStatus: "UNPAID" | "PARTIALLY_PAID" | "PAID" | "PARTIALLY_REFUNDED" | "REFUNDED";
+      paymentStatus:
+        | "UNPAID"
+        | "PARTIALLY_PAID"
+        | "PAID"
+        | "PARTIALLY_REFUNDED"
+        | "REFUNDED";
       /** @enum {string} */
       currency: "VND";
       /** Format: date-time */
@@ -4690,7 +4708,9 @@ export interface operations {
         };
         content: {
           "application/json": {
-            data: components["schemas"]["Category"][] | components["schemas"]["CategoryTreeNode"][];
+            data:
+              | components["schemas"]["Category"][]
+              | components["schemas"]["CategoryTreeNode"][];
             meta?: components["schemas"]["PageMeta"];
           };
         };
