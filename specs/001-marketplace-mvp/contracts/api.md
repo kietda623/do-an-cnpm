@@ -36,6 +36,10 @@ Status: thiết kế để triển khai, chưa có endpoint đang chạy. Nguồ
   trước khi đơn kết thúc; UI mất kết nối tra cứu đơn rồi gửi lại cùng key.
 - `expectedVersion` integer >= 0 bắt buộc với inventory và chuyển trạng thái; conflict 409.
   Transaction phải kiểm tra lại quyền, trạng thái, giá và tồn; client không quyết định tiền.
+- Seller/Admin commands trên SellerOrder (confirm, pack, reject, cod-collection) dùng
+  `expectedVersion = SellerOrder.version`. Buyer `POST /payments/{id}/mock-result` dùng
+  `expectedVersion = MarketplaceOrder.version`: Buyer đọc được Order tổng, còn Seller chỉ nhận
+  SellerOrder projection và không được cấp version của Order cha.
 - Role ký hiệu: G = public, U = authenticated user, B = owner Buyer,
   S = active user có membership shop tương ứng, A = Admin. S cũng có quyền Buyer.
   Shop SUSPENDED chỉ cấm giao dịch/sản phẩm mới; S vẫn xử lý đơn cũ.
@@ -105,7 +109,7 @@ Read DTO có `id`, `createdAt`, `updatedAt` trừ projection/command ghi khác.
 | OrderSummary | id; orderNumber; status; partiallyCancelled; originalTotal; outstandingAmount; paymentStatus; createdAt |
 | PaymentAttemptCreate | orderId |
 | Payment | id; orderId; transactionCode; method:`COD|MOCK`; status:`PENDING|SUCCEEDED|FAILED|CANCELLED`; settlementKind:`NORMAL|LATE_COMPENSATION`; originalAttemptId optional UUID (late compensation); amount; currency; allocations:{sellerOrderId,amount}[]; refunds:{id,sellerOrderId,amount,reason,createdAt}[]; createdAt; resolvedAt? |
-| MockResult | eventId UUID; outcome:`SUCCEEDED|FAILED|CANCELLED`; expectedVersion |
+| MockResult | eventId UUID; outcome:`SUCCEEDED|FAILED|CANCELLED`; expectedVersion = MarketplaceOrder.version |
 | Shipment | id; sellerOrderId; status:`WAITING_PICKUP|PICKED_UP|IN_TRANSIT|DELIVERED|FAILED`; trackingCode; attemptNumber; version; history:{id,event,status,actorId,reason?,createdAt}[]; timestamps |
 | ShipmentEvent | eventId UUID; event:`PICKED_UP|IN_TRANSIT|DELIVERED|FAILED`; reason optional required FAILED; expectedVersion |
 | CodCollection | eventId UUID; expectedVersion = SellerOrder.version; amount comes from seller order, never client input |
@@ -200,9 +204,9 @@ Only purchased lines leave cart, transaction includes all seller orders/items an
 | POST /orders/{id}/seller-orders/{sellerOrderId}/receive | {expectedVersion} | SellerOrder | B | only DELIVERED and paid/collected; review becomes eligible |
 | GET /shops/{shopId}/orders | status,from,to,page,pageSize | List<SellerOrder> | S | only shop parts, no other shop/payment credential |
 | GET /shops/{shopId}/orders/{id} | none | SellerOrder | S | id is SellerOrder ID; cross-shop 404 |
-| POST /shops/{shopId}/orders/{id}/confirm | {expectedVersion} | SellerOrder | S | PENDING only; MOCK must be paid; COD allowed unpaid |
-| POST /shops/{shopId}/orders/{id}/pack | {expectedVersion} | SellerOrder | S | CONFIRMED only; activates WAITING_PICKUP shipment |
-| POST /shops/{shopId}/orders/{id}/reject | ReasonVersion | SellerOrder | S | PENDING or CONFIRMED only; restore/refund once |
+| POST /shops/{shopId}/orders/{id}/confirm | {expectedVersion} | SellerOrder | S | expectedVersion = SellerOrder.version; PENDING only; MOCK must be paid; COD allowed unpaid |
+| POST /shops/{shopId}/orders/{id}/pack | {expectedVersion} | SellerOrder | S | expectedVersion = SellerOrder.version; CONFIRMED only; activates WAITING_PICKUP shipment |
+| POST /shops/{shopId}/orders/{id}/reject | ReasonVersion | SellerOrder | S | expectedVersion = SellerOrder.version; PENDING or CONFIRMED only; restore/refund once |
 
 Order status is derived by BR-08, never accepted as PATCH. Seller may not receive whole
 multi-shop Order. SUSPENDED shop can fulfill old orders; locked user cannot authenticate.
@@ -214,7 +218,7 @@ All order cancellation/refund/inventory writes occur atomically with audit and i
 | --- | --- | --- | --- | --- |
 | GET /payments?orderId={id} | owned orderId required | List<Payment> | B or A | no cross-buyer records |
 | POST /payments/mock-attempts | PaymentAttemptCreate | Payment 201 | B | 409 ORDER_EXPIRED/ALREADY_PAID; serializes concurrent attempts |
-| POST /payments/{id}/mock-result | MockResult | Payment | B owning attempt, mock mode only | 409 conflicting result; repeated event no double capture; late success refunded |
+| POST /payments/{id}/mock-result | MockResult | Payment | B owning attempt, mock mode only | expectedVersion = MarketplaceOrder.version because Buyer can read Order while Seller receives only SellerOrder; 409 on mismatch/conflicting result; repeated event no double capture; late success refunded |
 | POST /payments/seller-orders/{id}/cod-collection | CodCollection | Payment | S(owner shop) or A | COD only; DELIVERED required; expectedVersion = SellerOrder.version (409 on mismatch); exactly once amount server-calculated |
 
 MOCK attempt pays sum of noncancelled parts. Cancelling a seller part invalidates an existing
@@ -285,9 +289,9 @@ Admin acts through explicit actions, never arbitrary state override or mutation 
 | GET /admin/orders/{id} | none | Order + audit reference IDs | A | Sprint6; read-only completed transactions |
 | GET /admin/stats | from,to | AdminStats | A | Sprint6; all row counts; revenue only completed seller parts |
 | GET /admin/audit | resourceType,resourceId,actorId,from,to,page,pageSize | List<Audit> | A | Sprint6; immutable, sanitized |
-| POST /admin/seller-orders/{id}/confirm | {expectedVersion,reason} + Idempotency-Key | SellerOrder | A | Sprint6; account locked recovery, same domain guards |
-| POST /admin/seller-orders/{id}/pack | {expectedVersion,reason} + Idempotency-Key | SellerOrder | A | Sprint6; CONFIRMED only; logged |
-| POST /admin/seller-orders/{id}/reject | ReasonVersion | SellerOrder | A | Sprint6; PENDING/CONFIRMED only, restores once |
+| POST /admin/seller-orders/{id}/confirm | {expectedVersion,reason} + Idempotency-Key | SellerOrder | A | expectedVersion = SellerOrder.version; Sprint6; account locked recovery, same domain guards |
+| POST /admin/seller-orders/{id}/pack | {expectedVersion,reason} + Idempotency-Key | SellerOrder | A | expectedVersion = SellerOrder.version; Sprint6; CONFIRMED only; logged |
+| POST /admin/seller-orders/{id}/reject | ReasonVersion + Idempotency-Key | SellerOrder | A | expectedVersion = SellerOrder.version; Sprint6; PENDING/CONFIRMED only, restores once |
 
 Admin recovery actions exist only to process existing orders when an account is locked,
 per spec edge case; no general impersonation or arbitrary edit. No public role assignment API.

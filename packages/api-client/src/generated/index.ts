@@ -859,7 +859,7 @@ export interface paths {
     put?: never;
     /**
      * POST /shops/{shopId}/orders/{id}/confirm
-     * @description Auth scope: S. Source constraint: PENDING only; MOCK must be paid; COD allowed unpaid
+     * @description Auth scope: S. expectedVersion = SellerOrder.version; stale version returns 409. Source constraint: PENDING only; MOCK must be paid; COD allowed unpaid
      */
     post: operations["post_shops_by_shopId_orders_by_id_confirm"];
     delete?: never;
@@ -879,7 +879,7 @@ export interface paths {
     put?: never;
     /**
      * POST /shops/{shopId}/orders/{id}/pack
-     * @description Auth scope: S. Source constraint: CONFIRMED only; activates WAITING_PICKUP shipment
+     * @description Auth scope: S. expectedVersion = SellerOrder.version; stale version returns 409. Source constraint: CONFIRMED only; activates WAITING_PICKUP shipment
      */
     post: operations["post_shops_by_shopId_orders_by_id_pack"];
     delete?: never;
@@ -899,7 +899,7 @@ export interface paths {
     put?: never;
     /**
      * POST /shops/{shopId}/orders/{id}/reject
-     * @description Auth scope: S. Source constraint: PENDING or CONFIRMED only; restore/refund once
+     * @description Auth scope: S. expectedVersion = SellerOrder.version; stale version returns 409. Source constraint: PENDING or CONFIRMED only; restore/refund once
      */
     post: operations["post_shops_by_shopId_orders_by_id_reject"];
     delete?: never;
@@ -959,7 +959,7 @@ export interface paths {
     put?: never;
     /**
      * POST /payments/{id}/mock-result
-     * @description Auth scope: B owning attempt, mock mode only. Source constraint: 409 conflicting result; repeated event no double capture; late success refunded
+     * @description Auth scope: B owning attempt, mock mode only. expectedVersion = MarketplaceOrder.version because Buyer can read Order while Seller only receives SellerOrder. Source constraint: 409 on version mismatch or conflicting result; repeated event no double capture; late success refunded
      */
     post: operations["post_payments_by_id_mock_result"];
     delete?: never;
@@ -979,7 +979,7 @@ export interface paths {
     put?: never;
     /**
      * POST /payments/seller-orders/{id}/cod-collection
-     * @description Auth scope: S(owner shop) or A. Source constraint: COD only; DELIVERED required; exactly once amount server-calculated
+     * @description Auth scope: S(owner shop) or A. expectedVersion = SellerOrder.version; stale version returns 409. Source constraint: COD only; DELIVERED required; exactly once amount server-calculated
      */
     post: operations["post_payments_seller_orders_by_id_cod_collection"];
     delete?: never;
@@ -1459,7 +1459,7 @@ export interface paths {
     put?: never;
     /**
      * POST /admin/seller-orders/{id}/confirm
-     * @description Auth scope: A. Source constraint: Sprint6; account locked recovery, same domain guards
+     * @description Auth scope: A. expectedVersion = SellerOrder.version; stale version returns 409. Source constraint: Sprint6; account locked recovery, same domain guards
      */
     post: operations["post_admin_seller_orders_by_id_confirm"];
     delete?: never;
@@ -1479,7 +1479,7 @@ export interface paths {
     put?: never;
     /**
      * POST /admin/seller-orders/{id}/pack
-     * @description Auth scope: A. Source constraint: Sprint6; CONFIRMED only; logged
+     * @description Auth scope: A. expectedVersion = SellerOrder.version; stale version returns 409. Source constraint: Sprint6; CONFIRMED only; logged
      */
     post: operations["post_admin_seller_orders_by_id_pack"];
     delete?: never;
@@ -1499,7 +1499,7 @@ export interface paths {
     put?: never;
     /**
      * POST /admin/seller-orders/{id}/reject
-     * @description Auth scope: A. Source constraint: Sprint6; PENDING/CONFIRMED only, restores once
+     * @description Auth scope: A. expectedVersion = SellerOrder.version; stale version returns 409. Source constraint: Sprint6; PENDING/CONFIRMED only, restores once
      */
     post: operations["post_admin_seller_orders_by_id_reject"];
     delete?: never;
@@ -2215,6 +2215,7 @@ export interface components {
       eventId: string;
       /** @enum {string} */
       outcome: "SUCCEEDED" | "FAILED" | "CANCELLED";
+      /** @description Current MarketplaceOrder.version; a stale value returns HTTP 409. */
       expectedVersion: number;
     };
     ShipmentEvent: {
