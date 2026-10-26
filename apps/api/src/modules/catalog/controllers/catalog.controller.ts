@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { RequireAdminPermission } from "../../../common/auth/permissions.js";
 import {
   IsArray,
   ArrayMaxSize,
@@ -101,9 +102,10 @@ export class PublicCategoriesController {
   }
 }
 @ApiTags("admin")
-@ApiBearerAuth()
+@ApiBearerAuth("BearerAuth")
 @Controller("admin/categories")
 @UseGuards(AccessGuard, AdminGuard)
+@RequireAdminPermission("manageCategories")
 export class AdminCategoriesController {
   constructor(private readonly catalog: CatalogService) {}
   @Get() @ApiOperation({ summary: "List all categories for administration" }) async list() {

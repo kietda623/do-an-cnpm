@@ -280,6 +280,36 @@ describe("US7 fulfillment and suspended shop PostgreSQL integration", () => {
     expect(rejected.body.data.status).toBe("CANCELLED");
   });
 
+  it("restricts Admin seller-order rejection to locked Seller recovery", async () => {
+    const test = await fixture();
+    const rejected = await request(app.getHttpServer())
+      .post(`/api/v1/admin/seller-orders/${test.sellerOrderId}/reject`)
+      .set("Authorization", `Bearer ${test.admin.token}`)
+      .set("Idempotency-Key", randomUUID())
+      .send({ expectedVersion: 0, reason: "Recovery guard check" });
+    expect(rejected.status).toBe(409);
+    expect(rejected.body.error.code).toBe("ADMIN_RECOVERY_NOT_REQUIRED");
+    expect(
+      (await db.prisma.sellerOrder.findUniqueOrThrow({ where: { id: test.sellerOrderId } })).status,
+    ).toBe("PENDING");
+    await db.prisma.user.update({ where: { id: test.seller.id }, data: { status: "LOCKED", authVersion: { increment: 1 } } });
+    const key = randomUUID();
+    const recoveryRequest = () => request(app.getHttpServer())
+      .post(`/api/v1/admin/seller-orders/${test.sellerOrderId}/reject`)
+      .set("Authorization", `Bearer ${test.admin.token}`)
+      .set("Idempotency-Key", key)
+      .send({ expectedVersion: 0, reason: "Locked Seller recovery" });
+    const recovered = await recoveryRequest();
+    expect(recovered.status).toBe(200);
+    expect(recovered.body.data.status).toBe("CANCELLED");
+    expect((await recoveryRequest()).body.data).toEqual(recovered.body.data);
+    expect(
+      await db.prisma.inventoryMovement.count({
+        where: { sellerOrderId: test.sellerOrderId, effectType: "RESTORE" },
+      }),
+    ).toBe(1);
+  });
+
   it("lets the buyer cancel a pending part after suspension and restores stock once", async () => {
     const test = await fixture();
     await suspend(test);

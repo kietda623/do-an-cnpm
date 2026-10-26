@@ -26,6 +26,7 @@ import {
   isUUID,
 } from "class-validator";
 import type { ApiRequest } from "../../../common/http/request.types.js";
+import { RequireAdminPermission } from "../../../common/auth/permissions.js";
 import type { AccessContext } from "../../../common/auth/access-context.js";
 import {
   AccessGuard,
@@ -40,9 +41,10 @@ class ReturnConfirmationDto {
 }
 
 @ApiTags("admin")
-@ApiBearerAuth()
+@ApiBearerAuth("BearerAuth")
 @Controller("admin/shipments")
 @UseGuards(AccessGuard, AdminGuard)
+@RequireAdminPermission("confirmReturn")
 export class ReturnConfirmationController {
   constructor(private readonly shipping: ShippingService) {}
 

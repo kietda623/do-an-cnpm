@@ -5,7 +5,7 @@ import {
 } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import { canFulfillExistingOrder } from "../../../common/auth/fulfillment-access.js";
-import { isAdmin } from "../../../common/auth/permissions.js";
+import { canRecoverLockedSellerOrder } from "../../../common/auth/permissions.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
 import { canConfirmOrder, canReceiveOrder } from "./fulfillment-policy.js";
 import { deriveMarketplaceOrderStatus } from "./order-aggregate.js";
@@ -171,7 +171,7 @@ export class FulfillmentService {
       });
       if (actor?.status !== "ACTIVE") throw new NotFoundException();
       if (adminRecovery) {
-        if (!isAdmin(actor.systemRole)) throw new NotFoundException();
+        if (!canRecoverLockedSellerOrder(actor.systemRole)) throw new NotFoundException();
       } else if (shopId) {
         await canFulfillExistingOrder(tx, userId, shopId);
       }
@@ -198,7 +198,7 @@ export class FulfillmentService {
         });
         if (
           currentActor?.status !== "ACTIVE" ||
-          !isAdmin(currentActor.systemRole)
+          !canRecoverLockedSellerOrder(currentActor.systemRole)
         )
           throw new NotFoundException();
         const shop = await tx.shop.findUnique({

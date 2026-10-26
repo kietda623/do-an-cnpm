@@ -1825,6 +1825,7 @@ export interface components {
       images: components["schemas"]["Asset"][];
       selling: boolean;
       adminHidden: boolean;
+      hiddenReason?: string | null;
       minimumPrice?: string | null;
       variants: components["schemas"]["Variant"][];
       ratingAverage?: string | null;
@@ -2299,7 +2300,21 @@ export interface components {
       productCount: number;
       orderCount: number;
       countsByStatus: {
-        [key: string]: number;
+        User?: {
+          [key: string]: number;
+        };
+        Shop?: {
+          [key: string]: number;
+        };
+        Product?: {
+          [key: string]: number;
+        };
+        Order?: {
+          [key: string]: number;
+        };
+        SellerOrder?: {
+          [key: string]: number;
+        };
       };
       /** @example 150000 */
       completedSellerOrderValue: string;
@@ -9841,7 +9856,9 @@ export interface operations {
   post_admin_users_by_id_lock: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        "Idempotency-Key": string;
+      };
       path: {
         id: string;
       };
@@ -9960,7 +9977,9 @@ export interface operations {
   post_admin_users_by_id_unlock: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        "Idempotency-Key": string;
+      };
       path: {
         id: string;
       };
@@ -10792,7 +10811,9 @@ export interface operations {
   post_admin_products_by_id_hide: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        "Idempotency-Key": string;
+      };
       path: {
         id: string;
       };

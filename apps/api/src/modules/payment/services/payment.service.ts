@@ -7,7 +7,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "../../../generated/prisma/client.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
 import { canFulfillExistingOrder } from "../../../common/auth/fulfillment-access.js";
-import { isAdmin } from "../../../common/auth/permissions.js";
+import { canCollectCod } from "../../../common/auth/permissions.js";
 import { OrderTransaction } from "../../order/services/order-transaction.js";
 import { SettlementService } from "./settlement.service.js";
 import { sumVnd } from "./payment-policy.js";
@@ -385,7 +385,7 @@ export class PaymentService {
         select: { status: true, systemRole: true },
       });
       if (replayActor?.status !== "ACTIVE") throw new NotFoundException();
-      if (!isAdmin(replayActor.systemRole))
+      if (!canCollectCod(replayActor.systemRole))
         await canFulfillExistingOrder(tx, userId, preview.shopId);
       if (idem.replay) return { orderId, attemptId: idem.resourceId! };
       await this.orderTx.lockSellerOrderGraph(tx, sellerOrderId);
@@ -398,7 +398,7 @@ export class PaymentService {
         where: { id: userId },
         select: { systemRole: true },
       });
-      if (!isAdmin(actor?.systemRole)) {
+      if (!canCollectCod(actor?.systemRole)) {
         const partShop = await tx.sellerOrder.findUnique({
           where: { id: sellerOrderId },
           select: { shopId: true },

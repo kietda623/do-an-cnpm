@@ -32,5 +32,6 @@ import { FulfillmentService } from "./services/fulfillment.service.js";
     FulfillmentService,
     AdminGuard,
   ],
+  exports: [OrderQueryService],
 })
 export class OrderModule {}
