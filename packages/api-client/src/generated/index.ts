@@ -8048,7 +8048,9 @@ export interface operations {
   post_shops_by_shopId_orders_by_id_reject: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        "Idempotency-Key": string;
+      };
       path: {
         shopId: string;
         id: string;
@@ -11615,7 +11617,9 @@ export interface operations {
   post_admin_seller_orders_by_id_reject: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        "Idempotency-Key": string;
+      };
       path: {
         id: string;
       };

@@ -73,8 +73,9 @@ describe("payment and cancellation OpenAPI/runtime contract", () => {
     expect(runtime.paths[path]?.[method]).toBeDefined();
   });
 
-  it("requires UUID idempotency keys on each payment mutation and state-changing cancellation", () => {
-    for (const [, path] of operations.filter(([method]) => method === "post")) {
+  it.each(operations.filter(([method]) => method === "post"))(
+    "requires a UUID Idempotency-Key for %s %s",
+    (_, path) => {
       const key = contract.paths[path]?.post?.parameters?.find(
         (parameter) => parameter.name === "Idempotency-Key",
       );
@@ -83,8 +84,8 @@ describe("payment and cancellation OpenAPI/runtime contract", () => {
         required: true,
         schema: { type: "string", format: "uuid" },
       });
-    }
-  });
+    },
+  );
 
   it("keeps every payment amount an integer VND string and limits settlement outcomes", () => {
     const payment = contract.components.schemas.Payment.properties ?? {};
