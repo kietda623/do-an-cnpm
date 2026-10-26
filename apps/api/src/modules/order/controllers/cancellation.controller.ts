@@ -13,11 +13,27 @@ import {
   UseGuards,
   BadRequestException,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { IsInt, IsString, MaxLength, Min, MinLength, isUUID } from "class-validator";
+import {
+  ApiBearerAuth,
+  ApiHeader,
+  ApiOperation,
+  ApiTags,
+} from "@nestjs/swagger";
+import {
+  IsInt,
+  IsString,
+  MaxLength,
+  Min,
+  MinLength,
+  isUUID,
+} from "class-validator";
 import type { ApiRequest } from "../../../common/http/request.types.js";
+import { isAdmin } from "../../../common/auth/permissions.js";
 import type { AccessContext } from "../../../common/auth/access-context.js";
-import { AccessGuard, currentAccessContext } from "../../identity/access.guard.js";
+import {
+  AccessGuard,
+  currentAccessContext,
+} from "../../identity/access.guard.js";
 import { CancellationService } from "../services/cancellation.service.js";
 import { OrderQueryService } from "../services/order-query.service.js";
 
@@ -52,7 +68,12 @@ export class CancellationController {
   ) {
     this.requireKey(key);
     const context = this.context(req);
-    const result = await this.cancellations.cancelAll(context.userId, id, key, body);
+    const result = await this.cancellations.cancelAll(
+      context.userId,
+      id,
+      key,
+      body,
+    );
     return {
       data: {
         affectedResourceIds: result.summary.cancelledSellerOrderIds,
@@ -112,8 +133,16 @@ export class CancellationController {
   ) {
     this.requireKey(key);
     const context = this.context(req);
-    await this.cancellations.rejectSeller(context.userId, shopId, id, key, body);
-    return { data: await this.orders.getSellerPart(context.userId, shopId, id) };
+    await this.cancellations.rejectSeller(
+      context.userId,
+      shopId,
+      id,
+      key,
+      body,
+    );
+    return {
+      data: await this.orders.getSellerPart(context.userId, shopId, id),
+    };
   }
 
   @Post("admin/seller-orders/:id/reject")
@@ -131,10 +160,19 @@ export class CancellationController {
     @Body() body: CancelOrderDto,
   ) {
     const context = this.context(req);
-    if (context.systemRole !== "ADMIN") throw new ForbiddenException();
+    if (!isAdmin(context.systemRole)) throw new ForbiddenException();
     this.requireKey(key);
-    const result = await this.cancellations.rejectAdmin(context.userId, id, key, body);
-    const order = await this.orders.get(context.userId, result.summary.orderId, true);
+    const result = await this.cancellations.rejectAdmin(
+      context.userId,
+      id,
+      key,
+      body,
+    );
+    const order = await this.orders.get(
+      context.userId,
+      result.summary.orderId,
+      true,
+    );
     const sellerOrder = order.sellerOrders.find((part) => part.id === id);
     if (!sellerOrder) throw new NotFoundException();
     return { data: sellerOrder };
@@ -149,6 +187,8 @@ export class CancellationController {
   }
 
   private context(req: ApiRequest): AccessContext {
-    return currentAccessContext(req as ApiRequest & { accessContext?: AccessContext });
+    return currentAccessContext(
+      req as ApiRequest & { accessContext?: AccessContext },
+    );
   }
 }

@@ -27,8 +27,9 @@ Status: thiết kế để triển khai, chưa có endpoint đang chạy. Nguồ
 - Query danh sách: `page` mặc định 1, `pageSize` mặc định 20, tối đa 100;
   whitelist sort; mọi sort thêm `id` làm tie-break. Date filter `from` inclusive,
   `to` exclusive RFC3339, `from < to`; `q` tối đa 200 ký tự.
-- Ghi nhạy cảm yêu cầu `Idempotency-Key` UUID: checkout, cancel, payment attempt/result,
-  shipment events/retry/return, COD collection, inventory adjustment, nhận hàng.
+- Ghi nhạy cảm yêu cầu `Idempotency-Key` UUID: checkout, cancel, seller-order
+  confirm/pack/reject (gồm Admin recovery), payment attempt/result, shipment
+  events/retry/return, COD collection, inventory adjustment, nhận hàng.
   Phạm vi unique = actor + method + canonical route + key; lưu hash nội dung chuẩn hóa,
   status/body và resource ID. Cùng key/body trả đúng kết quả cũ; khác body trả 409
   `IDEMPOTENCY_CONFLICT`. Checkout/payment lưu liên kết bền vững, không tự hết hiệu lực
@@ -107,7 +108,7 @@ Read DTO có `id`, `createdAt`, `updatedAt` trừ projection/command ghi khác.
 | MockResult | eventId UUID; outcome:`SUCCEEDED|FAILED|CANCELLED`; expectedVersion |
 | Shipment | id; sellerOrderId; status:`WAITING_PICKUP|PICKED_UP|IN_TRANSIT|DELIVERED|FAILED`; trackingCode; attemptNumber; version; history:{id,event,status,actorId,reason?,createdAt}[]; timestamps |
 | ShipmentEvent | eventId UUID; event:`PICKED_UP|IN_TRANSIT|DELIVERED|FAILED`; reason optional required FAILED; expectedVersion |
-| CodCollection | eventId UUID; expectedVersion; amount comes from seller order, never client input |
+| CodCollection | eventId UUID; expectedVersion = SellerOrder.version; amount comes from seller order, never client input |
 | ReviewCreate | orderItemId; rating integer1–5; comment trimmed1–2000 |
 | Review | id; productId; shopId; orderItemId; buyerDisplayName; rating; comment; createdAt; no email/address |
 | SellerStats | shopId; productCount; pendingCount; processingCount; completedCount; completedRevenue; currency; simulated:true; from; to; timezone:`Asia/Saigon` |
@@ -214,7 +215,7 @@ All order cancellation/refund/inventory writes occur atomically with audit and i
 | GET /payments?orderId={id} | owned orderId required | List<Payment> | B or A | no cross-buyer records |
 | POST /payments/mock-attempts | PaymentAttemptCreate | Payment 201 | B | 409 ORDER_EXPIRED/ALREADY_PAID; serializes concurrent attempts |
 | POST /payments/{id}/mock-result | MockResult | Payment | B owning attempt, mock mode only | 409 conflicting result; repeated event no double capture; late success refunded |
-| POST /payments/seller-orders/{id}/cod-collection | CodCollection | Payment | S(owner shop) or A | COD only; DELIVERED required; exactly once amount server-calculated |
+| POST /payments/seller-orders/{id}/cod-collection | CodCollection | Payment | S(owner shop) or A | COD only; DELIVERED required; expectedVersion = SellerOrder.version (409 on mismatch); exactly once amount server-calculated |
 
 MOCK attempt pays sum of noncancelled parts. Cancelling a seller part invalidates an existing
 PENDING mock attempt to CANCELLED; a retry snapshots only remaining live parts. Only one
@@ -284,8 +285,8 @@ Admin acts through explicit actions, never arbitrary state override or mutation 
 | GET /admin/orders/{id} | none | Order + audit reference IDs | A | Sprint6; read-only completed transactions |
 | GET /admin/stats | from,to | AdminStats | A | Sprint6; all row counts; revenue only completed seller parts |
 | GET /admin/audit | resourceType,resourceId,actorId,from,to,page,pageSize | List<Audit> | A | Sprint6; immutable, sanitized |
-| POST /admin/seller-orders/{id}/confirm | {expectedVersion,reason} | SellerOrder | A | Sprint6; account locked recovery, same domain guards |
-| POST /admin/seller-orders/{id}/pack | {expectedVersion,reason} | SellerOrder | A | Sprint6; CONFIRMED only; logged |
+| POST /admin/seller-orders/{id}/confirm | {expectedVersion,reason} + Idempotency-Key | SellerOrder | A | Sprint6; account locked recovery, same domain guards |
+| POST /admin/seller-orders/{id}/pack | {expectedVersion,reason} + Idempotency-Key | SellerOrder | A | Sprint6; CONFIRMED only; logged |
 | POST /admin/seller-orders/{id}/reject | ReasonVersion | SellerOrder | A | Sprint6; PENDING/CONFIRMED only, restores once |
 
 Admin recovery actions exist only to process existing orders when an account is locked,

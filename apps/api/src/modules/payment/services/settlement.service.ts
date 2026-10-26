@@ -2,7 +2,12 @@ import { Injectable } from "@nestjs/common";
 import type { Prisma } from "../../../generated/prisma/client.js";
 
 type SnapshotPart = { sellerOrderId: string; amount: string };
-type OrderItem = { id: string; variantId: string; shopId: string; quantity: number };
+type OrderItem = {
+  id: string;
+  variantId: string;
+  shopId: string;
+  quantity: number;
+};
 
 @Injectable()
 export class SettlementService {
@@ -16,8 +21,11 @@ export class SettlementService {
     actorUserId: string | null,
     now: Date,
     action: string,
+    confirmedReturn = false,
   ) {
-    const part = await tx.sellerOrder.findUniqueOrThrow({ where: { id: sellerOrderId } });
+    const part = await tx.sellerOrder.findUniqueOrThrow({
+      where: { id: sellerOrderId },
+    });
     if (part.status === "CANCELLED") return part;
     await tx.sellerOrder.update({
       where: { id: sellerOrderId },
@@ -35,7 +43,10 @@ export class SettlementService {
       });
       await tx.inventory.update({
         where: { variantId: item.variantId },
-        data: { availableQuantity: { increment: item.quantity }, version: { increment: 1 } },
+        data: {
+          availableQuantity: { increment: item.quantity },
+          version: { increment: 1 },
+        },
       });
       await tx.inventoryMovement.create({
         data: {
@@ -44,7 +55,7 @@ export class SettlementService {
           sellerOrderId,
           orderItemId: item.id,
           actorUserId,
-          kind: "CANCEL_RETURN",
+          kind: confirmedReturn ? "CONFIRMED_RETURN" : "CANCEL_RETURN",
           effectType: "RESTORE",
           quantityDelta: item.quantity,
           quantityAfter: inventory.availableQuantity + item.quantity,
@@ -64,8 +75,8 @@ export class SettlementService {
           allocationId: allocation.id,
           sellerOrderId,
           amount: allocation.amount,
-          reason: "CANCELLATION",
-          operationKey: `refund:cancel:${allocation.id}`,
+          reason: confirmedReturn ? "CONFIRMED_RETURN" : "CANCELLATION",
+          operationKey: `refund:${confirmedReturn ? "return" : "cancel"}:${allocation.id}`,
         },
       });
     }
@@ -88,7 +99,11 @@ export class SettlementService {
   async compensateLate(
     tx: Prisma.TransactionClient,
     paymentId: string,
-    attempt: { id: string; amount: { toString(): string }; targetSellerOrdersSnapshot: unknown },
+    attempt: {
+      id: string;
+      amount: { toString(): string };
+      targetSellerOrdersSnapshot: unknown;
+    },
     eventId: string,
     payloadDigest: string,
     now: Date,
@@ -120,7 +135,8 @@ export class SettlementService {
         originalAttemptId: attempt.id,
         compensatesEventId: source.id,
         status: "SUCCEEDED",
-        targetSellerOrdersSnapshot: snapshot as unknown as Prisma.InputJsonValue,
+        targetSellerOrdersSnapshot:
+          snapshot as unknown as Prisma.InputJsonValue,
         amount: attempt.amount.toString(),
         externalTransactionId: `MOCK-LATE-${eventId}`,
         settledAt: now,

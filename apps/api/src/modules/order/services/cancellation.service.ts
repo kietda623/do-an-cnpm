@@ -1,7 +1,12 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "../../../generated/prisma/client.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
+import { canFulfillExistingOrder } from "../../../common/auth/fulfillment-access.js";
 import {
   buyerCancellationBlockers,
   canCancelSellerOrder,
@@ -21,7 +26,12 @@ export class CancellationService {
     private readonly settlement: SettlementService,
   ) {}
 
-  async cancelAll(userId: string, orderId: string, key: string, input: CancelInput) {
+  async cancelAll(
+    userId: string,
+    orderId: string,
+    key: string,
+    input: CancelInput,
+  ) {
     return this.perform(
       userId,
       "BUYER_CANCEL_ALL",
@@ -38,8 +48,13 @@ export class CancellationService {
         });
         if (!row) throw new NotFoundException();
         if (row.version !== input.expectedVersion)
-          throw conflict("VERSION_CONFLICT", "Order changed. Reload before cancelling.");
-        const live = row.sellerOrders.filter((part) => part.status !== "CANCELLED");
+          throw conflict(
+            "VERSION_CONFLICT",
+            "Order changed. Reload before cancelling.",
+          );
+        const live = row.sellerOrders.filter(
+          (part) => part.status !== "CANCELLED",
+        );
         const blockers = buyerCancellationBlockers(live);
         if (blockers.length)
           throw conflict(
@@ -52,7 +67,10 @@ export class CancellationService {
             })),
           );
         if (!live.length)
-          throw conflict("ORDER_ALREADY_CANCELLED", "The order is already cancelled.");
+          throw conflict(
+            "ORDER_ALREADY_CANCELLED",
+            "The order is already cancelled.",
+          );
         await this.orderTx.lockInventory(
           tx,
           live.map(({ id }) => id),
@@ -80,10 +98,22 @@ export class CancellationService {
             where: { id: row.payment.id },
             data: { version: { increment: 1 } },
           });
-        await this.audit(tx, userId, "ORDER_CANCELLED", "MarketplaceOrder", orderId, input.reason, {
-          sellerOrderIds: live.map(({ id }) => id),
-        });
-        return { orderId, status: "CANCELLED", cancelledSellerOrderIds: live.map(({ id }) => id) };
+        await this.audit(
+          tx,
+          userId,
+          "ORDER_CANCELLED",
+          "MarketplaceOrder",
+          orderId,
+          input.reason,
+          {
+            sellerOrderIds: live.map(({ id }) => id),
+          },
+        );
+        return {
+          orderId,
+          status: "CANCELLED",
+          cancelledSellerOrderIds: live.map(({ id }) => id),
+        };
       },
     );
   }
@@ -113,9 +143,15 @@ export class CancellationService {
         const part = row.sellerOrders.find(({ id }) => id === sellerOrderId);
         if (!part) throw new NotFoundException();
         if (part.version !== input.expectedVersion)
-          throw conflict("VERSION_CONFLICT", "Seller order changed. Reload before cancelling.");
+          throw conflict(
+            "VERSION_CONFLICT",
+            "Seller order changed. Reload before cancelling.",
+          );
         if (!canCancelSellerOrder(part.status, "BUYER"))
-          throw conflict("ORDER_NOT_CANCELLABLE", "Only a pending seller order can be cancelled.");
+          throw conflict(
+            "ORDER_NOT_CANCELLABLE",
+            "Only a pending seller order can be cancelled.",
+          );
         await this.orderTx.lockInventory(tx, [part.id]);
         await this.invalidatePendingAttempts(tx, row.payment?.attempts ?? []);
         const now = await this.dbNow(tx);
@@ -181,7 +217,12 @@ export class CancellationService {
     );
   }
 
-  async rejectAdmin(userId: string, sellerOrderId: string, key: string, input: CancelInput) {
+  async rejectAdmin(
+    userId: string,
+    sellerOrderId: string,
+    key: string,
+    input: CancelInput,
+  ) {
     const preview = await this.db.prisma.sellerOrder.findUnique({
       where: { id: sellerOrderId },
       select: { orderId: true },
@@ -204,18 +245,13 @@ export class CancellationService {
     input: CancelInput,
     shopId?: string,
   ) {
-    if (shopId) {
-      const member = await tx.shopMember.findFirst({
-        where: { shopId, userId, status: "ACTIVE", shop: { status: "ACTIVE" } },
-        select: { id: true },
-      });
-      if (!member) throw new NotFoundException();
-    }
+    if (shopId) await canFulfillExistingOrder(tx, userId, shopId);
     const partPreview = await tx.sellerOrder.findUnique({
       where: { id: sellerOrderId },
       select: { orderId: true, shopId: true },
     });
-    if (!partPreview || (shopId && partPreview.shopId !== shopId)) throw new NotFoundException();
+    if (!partPreview || (shopId && partPreview.shopId !== shopId))
+      throw new NotFoundException();
     const row = await tx.marketplaceOrder.findUniqueOrThrow({
       where: { id: partPreview.orderId },
       include: {
@@ -226,7 +262,10 @@ export class CancellationService {
     const part = row.sellerOrders.find(({ id }) => id === sellerOrderId);
     if (!part) throw new NotFoundException();
     if (part.version !== input.expectedVersion)
-      throw conflict("VERSION_CONFLICT", "Seller order changed. Reload before rejecting.");
+      throw conflict(
+        "VERSION_CONFLICT",
+        "Seller order changed. Reload before rejecting.",
+      );
     if (!canCancelSellerOrder(part.status, "SELLER"))
       throw conflict(
         "ORDER_NOT_REJECTABLE",
@@ -281,7 +320,9 @@ export class CancellationService {
     requestData: string,
     work: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<{ summary: T; replay: boolean }> {
-    const requestHash = createHash("sha256").update(`${orderId}:${requestData}`).digest("hex");
+    const requestHash = createHash("sha256")
+      .update(`${orderId}:${requestData}`)
+      .digest("hex");
     const idemResult = await this.orderTx.run(async (tx) => {
       await tx.$executeRaw`INSERT INTO idempotency_records (actor_user_id, actor_scope, operation, idempotency_key, request_hash, state)
         VALUES (${userId}::uuid, ${userId}, ${operation}, ${key}, ${requestHash}, 'IN_PROGRESS')
@@ -296,7 +337,9 @@ export class CancellationService {
         },
       });
       await tx.$queryRaw`SELECT id FROM idempotency_records WHERE id = ${idem.id}::uuid FOR UPDATE`;
-      const locked = await tx.idempotencyRecord.findUniqueOrThrow({ where: { id: idem.id } });
+      const locked = await tx.idempotencyRecord.findUniqueOrThrow({
+        where: { id: idem.id },
+      });
       if (locked.requestHash !== requestHash)
         throw conflict(
           "IDEMPOTENCY_KEY_REUSED",
@@ -336,7 +379,9 @@ export class CancellationService {
   }
 
   private async dbNow(tx: Prisma.TransactionClient) {
-    return (await tx.$queryRaw<Array<{ now: Date }>>`SELECT clock_timestamp() AS now`)[0]!.now;
+    return (
+      await tx.$queryRaw<Array<{ now: Date }>>`SELECT clock_timestamp() AS now`
+    )[0]!.now;
   }
 
   private audit(

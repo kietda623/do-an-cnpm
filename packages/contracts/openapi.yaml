@@ -4637,6 +4637,12 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uuid
       requestBody:
         required: true
         content:
@@ -4735,6 +4741,12 @@ paths:
           format: uuid
       - name: id
         in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: Idempotency-Key
+        in: header
         required: true
         schema:
           type: string
@@ -7736,6 +7748,12 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uuid
       requestBody:
         required: true
         content:
@@ -7828,6 +7846,12 @@ paths:
       parameters:
       - name: id
         in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: Idempotency-Key
+        in: header
         required: true
         schema:
           type: string
@@ -9573,6 +9597,7 @@ components:
         expectedVersion:
           type: integer
           minimum: 0
+          description: Current SellerOrder.version; a stale value returns HTTP 409.
       additionalProperties: false
       required:
       - eventId

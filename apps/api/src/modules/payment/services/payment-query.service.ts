@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { SystemRole } from "../../../common/auth/access-context.js";
+import { isAdmin } from "../../../common/auth/permissions.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
 
 const paymentInclude = {
@@ -15,7 +16,10 @@ export class PaymentQueryService {
 
   async list(userId: string, systemRole: SystemRole, orderId: string) {
     const order = await this.db.prisma.marketplaceOrder.findFirst({
-      where: { id: orderId, ...(systemRole === "ADMIN" ? {} : { buyerUserId: userId }) },
+      where: {
+        id: orderId,
+        ...(!isAdmin(systemRole) ? { buyerUserId: userId } : {}),
+      },
       include: { payment: { include: paymentInclude } },
     });
     if (!order?.payment) throw new NotFoundException();
