@@ -25,6 +25,7 @@ export type CatalogProduct = {
     inventoryVersion: number;
   }>;
 };
+declare const process: { env: Record<string, string | undefined> };
 const api = new WebSession(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1").api;
 const request = <T,>(path: string, init?: RequestInit) => api.request<T>(path as ApiPath, init);
 export function InventoryEditor({

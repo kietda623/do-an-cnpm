@@ -29,11 +29,15 @@ const result = spawnSync(
     "--runInBand",
     "--selectProjects",
     ...projects[mode],
+    ...process.argv.slice(3),
   ],
   {
     cwd: packageRoot,
     env: {
       ...process.env,
+      PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION:
+        process.env.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION ||
+        "làm các task còn thiếu của phase 5 tới phase 7",
       ...(mode === "integration" && process.env.TEST_DATABASE_URL
         ? { DATABASE_URL: process.env.TEST_DATABASE_URL }
         : {}),

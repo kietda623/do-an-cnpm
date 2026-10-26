@@ -146,9 +146,11 @@ export default function OrderDetailPage() {
           <p className="text-right font-semibold">
             Tổng cửa hàng: {formatVnd(seller.originalTotal)}
           </p>
-          <p className="text-right text-sm text-neutral-600">
-            Đã thu {formatVnd(seller.capturedAmount)} · Đã hoàn {formatVnd(seller.refundedAmount)}
-          </p>
+          {seller.capturedAmount !== undefined && (
+            <p className="text-right text-sm text-neutral-600">
+              Đã thu {formatVnd(seller.capturedAmount)} · Đã hoàn {formatVnd(seller.refundedAmount)}
+            </p>
+          )}
           {seller.status === "CANCELLED" && (
             <p className="text-right text-sm">
               Đã hủy{seller.cancelReason ? `: ${seller.cancelReason}` : ""}
