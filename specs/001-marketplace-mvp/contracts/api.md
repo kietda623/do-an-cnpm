@@ -1,6 +1,6 @@
 # Marketplace REST contract v1
 
-Status: thiết kế để triển khai, chưa có endpoint đang chạy. Nguồn nghiệp vụ:
+Status: hợp đồng API chuẩn; runtime được hiện thực hóa theo từng module. Nguồn nghiệp vụ:
 `../spec.md` FR-01–50, BR-01–10; dữ liệu: `../data-model.md`.
 
 ## Quy ước dùng chung
@@ -29,7 +29,8 @@ Status: thiết kế để triển khai, chưa có endpoint đang chạy. Nguồ
   `to` exclusive RFC3339, `from < to`; `q` tối đa 200 ký tự.
 - Ghi nhạy cảm yêu cầu `Idempotency-Key` UUID: checkout, cancel, seller-order
   confirm/pack/reject (gồm Admin recovery), payment attempt/result, shipment
-  events/retry/return, COD collection, inventory adjustment, nhận hàng.
+  events/retry/return, COD collection, inventory adjustment, nhận hàng và Admin
+  user lock/unlock, product hide.
   Phạm vi unique = actor + method + canonical route + key; lưu hash nội dung chuẩn hóa,
   status/body và resource ID. Cùng key/body trả đúng kết quả cũ; khác body trả 409
   `IDEMPOTENCY_CONFLICT`. Checkout/payment lưu liên kết bền vững, không tự hết hiệu lực
@@ -73,7 +74,7 @@ Read DTO có `id`, `createdAt`, `updatedAt` trừ projection/command ghi khác.
 | Login | email; password; clientPlatform |
 | Tokens | accessToken; expiresIn:600; user:User; sessionId; refreshToken optional native only |
 | Refresh | refreshToken optional native only; clientPlatform |
-| User | id; email; fullName; phone?; avatar:Asset?; roles:`BUYER|ADMIN`[]; status:`ACTIVE|LOCKED`; timestamps |
+| User | id; email; fullName; phone?; avatar:Asset?; roles:`BUYER|ADMIN`[]; status:`ACTIVE|LOCKED`; version (auth_version); timestamps |
 | ProfilePatch | fullName optional 1–120; phone optional 8–20; avatarAssetId optional UUID nullable |
 | PasswordChange | currentPassword; newPassword 12–128 |
 | AddressWrite | recipientName 1–120; phone 8–20; line1 1–250; ward 1–120; district 1–120; province 1–120; country:`VN`; isDefault boolean |
@@ -92,7 +93,7 @@ Read DTO có `id`, `createdAt`, `updatedAt` trừ projection/command ghi khác.
 | ProductPatch | name,description,categoryId,imageAssetIds,selling optional; no shop reassignment |
 | VariantPatch | sku,attributes,price,selling optional; no stock field; use inventory action |
 | Variant | id; productId; sku; attributes; price; availableQuantity integer>=0; selling; version; timestamps |
-| Product | id; shopId; categoryId; name; description; images:Asset[]; selling; adminHidden; minimumPrice money?; variants:Variant[]; ratingAverage decimal string?; ratingCount; timestamps |
+| Product | id; shopId; categoryId; name; description; images:Asset[]; selling; adminHidden; hiddenReason string?; minimumPrice money?; variants:Variant[]; ratingAverage decimal string?; ratingCount; timestamps |
 | ProductSummary | id; shopId; name; image:Asset?; minimumPrice money; available boolean; ratingAverage?; ratingCount; createdAt |
 | InventoryAdjust | delta nonzero integer; reason 1–500; expectedVersion; resulting available must be>=0 |
 | Inventory | variantId; availableQuantity; version; updatedAt |
@@ -276,15 +277,15 @@ Admin acts through explicit actions, never arbitrary state override or mutation 
 | Method/path | Request | Response | Auth | Extra errors / tests |
 | --- | --- | --- | --- | --- |
 | GET /admin/users | q,status,page,pageSize | List<User> | A | Sprint6; no hashes/refresh/session secrets |
-| POST /admin/users/{id}/lock | ReasonVersion | User | A | Sprint6; revoke sessions; old tokens rejected |
-| POST /admin/users/{id}/unlock | ReasonVersion | User | A | Sprint6; does not revive revoked sessions |
+| POST /admin/users/{id}/lock | ReasonVersion + Idempotency-Key | User | A | expectedVersion = User.version (auth_version); Sprint6; revoke sessions; old tokens rejected; self-lock forbidden |
+| POST /admin/users/{id}/unlock | ReasonVersion + Idempotency-Key | User | A | expectedVersion = User.version (auth_version); Sprint6; does not revive revoked sessions |
 | GET /admin/shops | q,status,page,pageSize | List<Shop> | A | Sprint3; PENDING queue |
 | POST /admin/shops/{id}/approve | {expectedVersion} | Shop | A | Sprint3; PENDING->ACTIVE only |
 | POST /admin/shops/{id}/reject | ReasonVersion | Shop | A | Sprint3; PENDING->REJECTED; reason required |
 | POST /admin/shops/{id}/suspend | ReasonVersion | Shop | A | Sprint3 W018; ACTIVE->SUSPENDED; new checkout blocked |
 | POST /admin/shops/{id}/resume | ReasonVersion | Shop | A | Sprint3 W018; SUSPENDED->ACTIVE only |
 | GET /admin/products | q,shopId,adminHidden,page,pageSize | List<Product> | A | Sprint6; all moderation states |
-| POST /admin/products/{id}/hide | ReasonVersion | Product | A | Sprint6; hide blocks purchases, snapshots intact |
+| POST /admin/products/{id}/hide | ReasonVersion + Idempotency-Key | Product | A | expectedVersion = Product.version; Sprint6; hide blocks purchases, snapshots intact |
 | GET /admin/orders | q,buyerId,shopId,status,from,to,page,pageSize | List<OrderSummary> | A | Sprint6; shop filter searches parent with matching part |
 | GET /admin/orders/{id} | none | Order + audit reference IDs | A | Sprint6; read-only completed transactions |
 | GET /admin/stats | from,to | AdminStats | A | Sprint6; all row counts; revenue only completed seller parts |
@@ -298,14 +299,13 @@ per spec edge case; no general impersonation or arbitrary edit. No public role a
 
 ## OpenAPI, mocks và contract testing
 
-This Markdown is the readable Phase1 design contract. W004 has a reviewed OpenAPI 3.0.3 draft at
-`packages/contracts/openapi.yaml` with endpoint, DTO, auth and error shapes, plus commerce
-examples at `packages/contracts/examples/commerce.json`. These are design artifacts; no API
-implementation or runtime Swagger document exists yet. NestJS Swagger output must conform to the
-reviewed contract; CI will validate/normalize and compare shapes, ignoring description/order
-differences. Generated TypeScript clients/types live in `packages/api-client`; no hand-maintained
-duplicate DTOs across web/mobile/desktop. Breaking contract changes require review/versioned
-migration.
+This Markdown is the readable API contract. `packages/contracts/openapi.yaml` records its
+endpoint, DTO, auth and error shapes, with commerce examples at
+`packages/contracts/examples/commerce.json`. Runtime controllers and NestJS Swagger output are
+implemented incrementally and must conform to this contract; contract tests compare route,
+security, DTO and header shapes. Generated TypeScript clients/types live in `packages/api-client`;
+avoid hand-maintained duplicate DTOs across web/mobile/desktop. Breaking contract changes require
+review/versioned migration.
 
 Mock fixtures from contract examples: Guest, BuyerA/B, SellerA/B, Admin; two active shops,
 one pending/locked shop, one hidden category/product, final-unit variant, completed/partial

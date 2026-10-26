@@ -12,7 +12,9 @@ import { StructuredLogger } from "./common/logging/logger.js";
 import { RequestLoggerMiddleware } from "./common/logging/request-logger.middleware.js";
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { logger: new StructuredLogger() });
+  const app = await NestFactory.create(AppModule, {
+    logger: new StructuredLogger(),
+  });
 
   const config = app.get(ConfigService);
   const requestId = app.get(RequestIdMiddleware);
@@ -37,11 +39,19 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: (
       origin: string | undefined,
-      callback: (error: Error | null, allowed?: boolean | string | string[]) => void,
+      callback: (
+        error: Error | null,
+        allowed?: boolean | string | string[],
+      ) => void,
     ) => callback(null, !origin || allowedOrigins.has(origin)),
     credentials: true,
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token", "Idempotency-Key"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-CSRF-Token",
+      "Idempotency-Key",
+    ],
     exposedHeaders: ["X-Request-Id"],
     maxAge: 600,
   });
@@ -54,9 +64,15 @@ async function bootstrap(): Promise<void> {
     .setDescription("Versioned API for the multi-vendor marketplace MVP.")
     .setVersion("1.0.0")
     .setOpenAPIVersion("3.0.3")
+    .addBearerAuth(
+      { type: "http", scheme: "bearer", bearerFormat: "JWT" },
+      "BearerAuth",
+    )
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup("api/docs", app, swaggerDocument, { useGlobalPrefix: false });
+  SwaggerModule.setup("api/docs", app, swaggerDocument, {
+    useGlobalPrefix: false,
+  });
 
   const port = Number(process.env.API_PORT ?? 4000);
   await app.listen(port, "0.0.0.0");

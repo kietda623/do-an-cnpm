@@ -26,6 +26,7 @@ import {
   MinLength,
 } from "class-validator";
 import type { ApiRequest } from "../../common/http/request.types.js";
+import { RequireAdminPermission } from "../../common/auth/permissions.js";
 import type { AccessContext } from "../../common/auth/access-context.js";
 import { AccessGuard, currentAccessContext } from "../identity/access.guard.js";
 import { AdminGuard } from "./admin.guard.js";
@@ -135,9 +136,10 @@ export class ShopController {
 }
 
 @ApiTags("admin")
-@ApiBearerAuth()
+@ApiBearerAuth("BearerAuth")
 @Controller("admin/shops")
 @UseGuards(AccessGuard, AdminGuard)
+@RequireAdminPermission("approveShop")
 export class ShopModerationController {
   constructor(private readonly shops: ShopService) {}
 
@@ -163,6 +165,7 @@ export class ShopModerationController {
 
   @Post(":id/suspend")
   @HttpCode(HttpStatus.OK)
+  @RequireAdminPermission("suspendShop")
   @ApiOperation({ summary: "Suspend an active shop with a reason" })
   async suspend(@Req() req: ApiRequest, @Param("id") id: string, @Body() body: ReasonVersionDto) {
     return { data: await this.shops.moderate(this.context(req).userId, id, "suspend", body) };
@@ -170,6 +173,7 @@ export class ShopModerationController {
 
   @Post(":id/resume")
   @HttpCode(HttpStatus.OK)
+  @RequireAdminPermission("suspendShop")
   @ApiOperation({ summary: "Resume a suspended shop" })
   async resume(@Req() req: ApiRequest, @Param("id") id: string, @Body() body: ReasonVersionDto) {
     return { data: await this.shops.moderate(this.context(req).userId, id, "resume", body) };

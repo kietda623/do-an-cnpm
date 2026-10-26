@@ -6388,6 +6388,12 @@ paths:
       security:
       - BearerAuth: []
       parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uuid
       - name: id
         in: path
         required: true
@@ -6484,6 +6490,12 @@ paths:
       security:
       - BearerAuth: []
       parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uuid
       - name: id
         in: path
         required: true
@@ -7194,6 +7206,12 @@ paths:
       security:
       - BearerAuth: []
       parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uuid
       - name: id
         in: path
         required: true
@@ -8781,6 +8799,10 @@ components:
           type: boolean
         adminHidden:
           type: boolean
+        hiddenReason:
+          type: string
+          maxLength: 500
+          nullable: true
         minimumPrice:
           type: string
           pattern: ^[0-9]+$
@@ -9755,9 +9777,23 @@ components:
           minimum: 0
         countsByStatus:
           type: object
-          additionalProperties:
-            type: integer
-            minimum: 0
+          properties:
+            User:
+              type: object
+              additionalProperties: { type: integer, minimum: 0 }
+            Shop:
+              type: object
+              additionalProperties: { type: integer, minimum: 0 }
+            Product:
+              type: object
+              additionalProperties: { type: integer, minimum: 0 }
+            Order:
+              type: object
+              additionalProperties: { type: integer, minimum: 0 }
+            SellerOrder:
+              type: object
+              additionalProperties: { type: integer, minimum: 0 }
+          additionalProperties: false
         completedSellerOrderValue: *id020
         currency:
           type: string

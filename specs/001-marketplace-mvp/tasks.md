@@ -319,6 +319,10 @@ Phase là thứ tự capability, không tương đương Sprint. Gán lịch the
 
 **Checkpoint**: Chạy và review nghiệm thu của US9 theo spec; mọi ảnh hưởng story trước còn green, không có lỗi tiền/tồn/quyền.
 
+**Execution note (2026-10-27)**: US9 implementation and test evidence are recorded in
+`docs/testing/us9-evidence.md`. T121–T129 remain unchecked because their declared prerequisite
+T120 is still unchecked; this branch does not claim the US9 dependency chain or story checkpoint.
+
 ---
 
 ## Phase 12: User Story 10 — Trải nghiệm xuyên nền tảng (Priority: P2)

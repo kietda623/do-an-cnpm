@@ -1,10 +1,12 @@
 import {
   ConflictException,
+  BadRequestException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { randomUUID } from "node:crypto";
+import { ConfigService } from "@nestjs/config";
+import { createHash, randomUUID } from "node:crypto";
 import { DatabaseService } from "../../../database/prisma.service.js";
 import type { Prisma } from "../../../generated/prisma/client.js";
 
@@ -26,6 +28,56 @@ const canonical = (value: Record<string, unknown>) =>
         .map(([k, v]) => [k, String(v).trim()]),
     ),
   );
+const adminProductInclude = {
+  images: { include: { asset: true }, orderBy: { position: "asc" as const } },
+  variants: { include: { inventory: true }, orderBy: { skuNormalized: "asc" as const } },
+} satisfies Prisma.ProductInclude;
+type AdminProduct = Prisma.ProductGetPayload<{ include: typeof adminProductInclude }>;
+
+function projectAdminProduct(product: AdminProduct, publicBase: string) {
+  const activePrices = product.variants
+    .filter((variant) => variant.saleStatus === "ACTIVE")
+    .map((variant) => variant.price);
+  const minimumPrice = activePrices.length
+    ? activePrices.reduce((min, price) => price.lessThan(min) ? price : min)
+    : null;
+  return {
+    id: product.id,
+    shopId: product.shopId,
+    categoryId: product.categoryId,
+    name: product.name,
+    description: product.description,
+    images: product.images.map(({ asset }) => ({
+      id: asset.id,
+      url: publicBase ? `${publicBase}/${asset.objectKey}` : asset.objectKey,
+      mimeType: asset.mimeType,
+      byteSize: asset.byteSize,
+      width: asset.width,
+      height: asset.height,
+    })),
+    selling: product.saleStatus === "ACTIVE",
+    adminHidden: product.adminHidden,
+    hiddenReason: product.hiddenReason,
+    minimumPrice: minimumPrice?.toFixed(0) ?? null,
+    variants: product.variants.map((variant) => ({
+      id: variant.id,
+      productId: variant.productId,
+      sku: variant.skuNormalized,
+      attributes: variant.attributes,
+      price: variant.price.toFixed(0),
+      availableQuantity: variant.inventory?.availableQuantity ?? 0,
+      selling: variant.saleStatus === "ACTIVE",
+      version: variant.version,
+      createdAt: variant.createdAt,
+      updatedAt: variant.updatedAt,
+    })),
+    ratingAverage: null,
+    ratingCount: 0,
+    version: product.version,
+    createdAt: product.createdAt,
+    updatedAt: product.updatedAt,
+  };
+}
 type CategoryNode = {
   id: string;
   parentId: string | null;
@@ -36,7 +88,120 @@ type CategoryNode = {
 };
 @Injectable()
 export class CatalogService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly config: ConfigService,
+  ) {}
+
+  async adminListProducts(query: {
+    q?: string;
+    shopId?: string;
+    adminHidden?: boolean;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const q = query.q?.trim();
+    const where: Prisma.ProductWhereInput = {
+      ...(query.shopId ? { shopId: query.shopId } : {}),
+      ...(query.adminHidden !== undefined ? { adminHidden: query.adminHidden } : {}),
+      ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { shop: { name: { contains: q, mode: "insensitive" } } }] } : {}),
+    };
+    const { rows, total } = await this.db.prisma.$transaction(async (tx) => {
+      const [rows, total] = await Promise.all([
+        tx.product.findMany({
+          where,
+          include: {
+            images: { include: { asset: true }, orderBy: { position: "asc" } },
+            variants: { include: { inventory: true }, orderBy: { skuNormalized: "asc" } },
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        tx.product.count({ where }),
+      ]);
+      return { rows, total };
+    }, { isolationLevel: "RepeatableRead" });
+    const base = (this.config.get<string>("ASSET_PUBLIC_READ_BASE") ?? this.config.get<string>("S3_PUBLIC_READ_BASE") ?? "").replace(/\/$/, "");
+    const data = rows.map((product) => projectAdminProduct(product, base));
+    return { data, meta: { page, pageSize, total } };
+  }
+
+  async hideProductByAdmin(
+    actorUserId: string,
+    productId: string,
+    key: string,
+    input: { reason: string; expectedVersion: number },
+    requestId?: string,
+  ) {
+    const operation = "POST:/admin/products/{id}/hide";
+    const reason = input.reason.trim();
+    if (!reason)
+      throw new BadRequestException({ code: "REASON_REQUIRED", message: "A reason is required." });
+    const requestHash = createHash("sha256")
+      .update(JSON.stringify({ productId, reason, expectedVersion: input.expectedVersion }))
+      .digest("hex");
+    return this.db.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`
+        INSERT INTO idempotency_records
+          (actor_user_id, actor_scope, operation, idempotency_key, request_hash, state)
+        VALUES (${actorUserId}::uuid, ${actorUserId}, ${operation}, ${key}, ${requestHash}, 'IN_PROGRESS')
+        ON CONFLICT (actor_scope, operation, idempotency_key) DO NOTHING`;
+      const idem = await tx.idempotencyRecord.findUniqueOrThrow({
+        where: { actorScope_operation_idempotencyKey: { actorScope: actorUserId, operation, idempotencyKey: key } },
+      });
+      await tx.$queryRaw`SELECT id FROM idempotency_records WHERE id = ${idem.id}::uuid FOR UPDATE`;
+      const lockedIdem = await tx.idempotencyRecord.findUniqueOrThrow({ where: { id: idem.id } });
+      if (lockedIdem.requestHash !== requestHash)
+        throw new ConflictException({ code: "IDEMPOTENCY_CONFLICT", message: "This key was already used for a different request." });
+      if (lockedIdem.state === "COMPLETED" && lockedIdem.responseSummary)
+        return lockedIdem.responseSummary;
+
+      await tx.$queryRaw`SELECT id FROM products WHERE id = ${productId}::uuid FOR UPDATE`;
+      const current = await tx.product.findUnique({ where: { id: productId } });
+      if (!current) throw new NotFoundException();
+      if (current.version !== input.expectedVersion)
+        throw new ConflictException({ code: "VERSION_CONFLICT", message: "Product changed. Reload before moderating." });
+      if (current.adminHidden)
+        throw new ConflictException({ code: "PRODUCT_ALREADY_HIDDEN", message: "Product is already hidden." });
+      const now = new Date();
+      const changed = await tx.product.updateMany({
+        where: { id: productId, version: input.expectedVersion, adminHidden: false },
+        data: { adminHidden: true, hiddenReason: reason, version: { increment: 1 }, updatedAt: now },
+      });
+      if (changed.count !== 1)
+        throw new ConflictException({ code: "VERSION_CONFLICT", message: "Product changed. Reload before moderating." });
+      const result = await tx.product.findUniqueOrThrow({ where: { id: productId }, include: adminProductInclude });
+      await tx.auditEvent.create({
+        data: {
+          actorUserId,
+          actorKind: "USER",
+          action: "product.hidden",
+          targetType: "Product",
+          targetId: productId,
+          reason,
+          outcome: "SUCCESS",
+          requestId: requestId ?? randomUUID(),
+          safeMetadata: { shopId: result.shopId, version: result.version },
+        },
+      });
+      const base = (this.config.get<string>("ASSET_PUBLIC_READ_BASE") ?? this.config.get<string>("S3_PUBLIC_READ_BASE") ?? "").replace(/\/$/, "");
+      const response = projectAdminProduct(result, base);
+      await tx.idempotencyRecord.update({
+        where: { id: idem.id },
+        data: {
+          state: "COMPLETED",
+          responseStatus: 200,
+          resourceType: "Product",
+          resourceId: productId,
+          responseSummary: response as unknown as Prisma.InputJsonValue,
+        },
+      });
+      return response;
+    });
+  }
   async categories(parentId?: string, tree = false) {
     const rows = await this.db.prisma.$queryRaw<
       Array<{ id: string; parentId: string | null; name: string; version: number }>

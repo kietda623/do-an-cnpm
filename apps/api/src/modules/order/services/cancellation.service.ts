@@ -7,6 +7,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "../../../generated/prisma/client.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
 import { canFulfillExistingOrder } from "../../../common/auth/fulfillment-access.js";
+import { canRejectSellerOrder } from "../../../common/auth/permissions.js";
 import {
   buyerCancellationBlockers,
   canCancelSellerOrder,
@@ -234,7 +235,7 @@ export class CancellationService {
       key,
       preview.orderId,
       `${sellerOrderId}:${JSON.stringify(input)}`,
-      (tx) => this.rejectPart(tx, userId, sellerOrderId, input),
+      (tx) => this.rejectPart(tx, userId, sellerOrderId, input, undefined, true),
     );
   }
 
@@ -244,6 +245,7 @@ export class CancellationService {
     sellerOrderId: string,
     input: CancelInput,
     shopId?: string,
+    adminRecovery = false,
   ) {
     if (shopId) await canFulfillExistingOrder(tx, userId, shopId);
     const partPreview = await tx.sellerOrder.findUnique({
@@ -261,6 +263,23 @@ export class CancellationService {
     });
     const part = row.sellerOrders.find(({ id }) => id === sellerOrderId);
     if (!part) throw new NotFoundException();
+    if (adminRecovery) {
+      const actor = await tx.user.findUnique({
+        where: { id: userId },
+        select: { status: true, systemRole: true },
+      });
+      if (actor?.status !== "ACTIVE" || !canRejectSellerOrder(actor.systemRole))
+        throw new NotFoundException();
+      const shop = await tx.shop.findUnique({
+        where: { id: part.shopId },
+        select: { owner: { select: { status: true } } },
+      });
+      if (shop?.owner.status !== "LOCKED")
+        throw conflict(
+          "ADMIN_RECOVERY_NOT_REQUIRED",
+          "Admin rejection recovery is only available for a locked Seller.",
+        );
+    }
     if (part.version !== input.expectedVersion)
       throw conflict(
         "VERSION_CONFLICT",

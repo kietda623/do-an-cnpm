@@ -31,6 +31,70 @@ const orderInclude = {
 export class OrderQueryService {
   constructor(private readonly db: DatabaseService) {}
 
+  async listAdmin(query: {
+    q?: string;
+    buyerId?: string;
+    shopId?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const q = query.q?.trim();
+    const where = {
+      ...(query.buyerId ? { buyerUserId: query.buyerId } : {}),
+      ...(query.status ? { status: query.status as never } : {}),
+      ...(query.shopId ? { sellerOrders: { some: { shopId: query.shopId } } } : {}),
+      ...(query.from || query.to
+        ? {
+            createdAt: {
+              ...(query.from ? { gte: new Date(query.from) } : {}),
+              ...(query.to ? { lt: new Date(query.to) } : {}),
+            },
+          }
+        : {}),
+      ...(q
+        ? {
+            OR: [
+              { publicNumber: { contains: q, mode: "insensitive" as const } },
+              { buyer: { emailNormalized: { contains: q, mode: "insensitive" as const } } },
+              { buyer: { displayName: { contains: q, mode: "insensitive" as const } } },
+            ],
+          }
+        : {}),
+    };
+    const result = await this.db.prisma.$transaction(async (tx) => {
+      const [orders, total] = await Promise.all([
+        tx.marketplaceOrder.findMany({
+          where,
+          select: { id: true },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        tx.marketplaceOrder.count({ where }),
+      ]);
+      return { orders, total };
+    }, { isolationLevel: "RepeatableRead" });
+    const rows = await Promise.all(result.orders.map(({ id }) => this.get("", id, true)));
+    return {
+      data: rows.map((order) => ({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        partiallyCancelled: order.partiallyCancelled,
+        originalTotal: order.originalTotal,
+        outstandingAmount: order.outstandingAmount,
+        paymentStatus: order.paymentStatus,
+        createdAt: order.createdAt,
+      })),
+      meta: { page, pageSize, total: result.total },
+    };
+  }
+
   async list(
     userId: string,
     query: {

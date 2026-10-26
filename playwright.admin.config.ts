@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testMatch: "admin-return-confirmation.spec.ts",
+  testMatch: ["admin-return-confirmation.spec.ts", "admin-operations.spec.ts"],
   fullyParallel: false,
   use: {
     ...devices["Desktop Chrome"],

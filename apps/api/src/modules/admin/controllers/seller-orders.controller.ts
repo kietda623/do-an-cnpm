@@ -26,6 +26,7 @@ import {
   isUUID,
 } from "class-validator";
 import type { AccessContext } from "../../../common/auth/access-context.js";
+import { RequireAdminPermission } from "../../../common/auth/permissions.js";
 import type { ApiRequest } from "../../../common/http/request.types.js";
 import { AdminGuard } from "../../shop/admin.guard.js";
 import {
@@ -41,9 +42,10 @@ class AdminSellerOrderActionDto {
 }
 
 @ApiTags("admin")
-@ApiBearerAuth()
+@ApiBearerAuth("BearerAuth")
 @Controller("admin/seller-orders")
 @UseGuards(AccessGuard, AdminGuard)
+@RequireAdminPermission("recoverLockedSellerOrder")
 export class AdminSellerOrdersController {
   constructor(
     private readonly orders: OrderQueryService,

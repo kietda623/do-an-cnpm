@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   Headers,
   HttpCode,
   HttpStatus,
@@ -28,12 +27,13 @@ import {
   isUUID,
 } from "class-validator";
 import type { ApiRequest } from "../../../common/http/request.types.js";
-import { isAdmin } from "../../../common/auth/permissions.js";
+import { RequireAdminPermission } from "../../../common/auth/permissions.js";
 import type { AccessContext } from "../../../common/auth/access-context.js";
 import {
   AccessGuard,
   currentAccessContext,
 } from "../../identity/access.guard.js";
+import { AdminGuard } from "../../shop/admin.guard.js";
 import { CancellationService } from "../services/cancellation.service.js";
 import { OrderQueryService } from "../services/order-query.service.js";
 
@@ -43,7 +43,7 @@ class CancelOrderDto {
 }
 
 @ApiTags("orders")
-@ApiBearerAuth()
+@ApiBearerAuth("BearerAuth")
 @Controller()
 @UseGuards(AccessGuard)
 export class CancellationController {
@@ -147,6 +147,8 @@ export class CancellationController {
 
   @Post("admin/seller-orders/:id/reject")
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AdminGuard)
+  @RequireAdminPermission("rejectSellerOrder")
   @ApiHeader({
     name: "Idempotency-Key",
     required: true,
@@ -160,7 +162,6 @@ export class CancellationController {
     @Body() body: CancelOrderDto,
   ) {
     const context = this.context(req);
-    if (!isAdmin(context.systemRole)) throw new ForbiddenException();
     this.requireKey(key);
     const result = await this.cancellations.rejectAdmin(
       context.userId,

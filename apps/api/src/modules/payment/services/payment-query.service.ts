@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { SystemRole } from "../../../common/auth/access-context.js";
-import { isAdmin } from "../../../common/auth/permissions.js";
+import { canViewPayments } from "../../../common/auth/permissions.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
 
 const paymentInclude = {
@@ -18,7 +18,7 @@ export class PaymentQueryService {
     const order = await this.db.prisma.marketplaceOrder.findFirst({
       where: {
         id: orderId,
-        ...(!isAdmin(systemRole) ? { buyerUserId: userId } : {}),
+        ...(!canViewPayments(systemRole) ? { buyerUserId: userId } : {}),
       },
       include: { payment: { include: paymentInclude } },
     });

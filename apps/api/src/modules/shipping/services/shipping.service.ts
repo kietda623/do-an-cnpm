@@ -7,7 +7,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { ShipmentStatus } from "../../../generated/prisma/client.js";
 import type { SystemRole } from "../../../common/auth/access-context.js";
 import { canFulfillExistingOrder } from "../../../common/auth/fulfillment-access.js";
-import { isAdmin } from "../../../common/auth/permissions.js";
+import { canConfirmReturn as canConfirmReturnPermission, canManageShipments, canViewAllOrders } from "../../../common/auth/permissions.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
 import { deriveMarketplaceOrderStatus } from "../../order/services/order-aggregate.js";
 import {
@@ -46,7 +46,7 @@ export class ShippingService {
     });
     if (!shipment) throw new NotFoundException();
     if (
-      !isAdmin(systemRole) &&
+      !canViewAllOrders(systemRole) &&
       shipment.sellerOrder.order.buyerUserId !== userId
     ) {
       await this.db.prisma.$transaction((tx) =>
@@ -131,8 +131,8 @@ export class ShippingService {
       });
       if (user?.status !== "ACTIVE") throw new NotFoundException();
       if (action === "RETURN") {
-        if (!isAdmin(user.systemRole)) throw new NotFoundException();
-      } else if (!isAdmin(user.systemRole)) {
+        if (!canConfirmReturnPermission(user.systemRole)) throw new NotFoundException();
+      } else if (!canManageShipments(user.systemRole)) {
         await canFulfillExistingOrder(tx, userId, part.shopId);
       }
       if (shipment.version !== input.expectedVersion)
