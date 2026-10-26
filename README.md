@@ -4,7 +4,7 @@ Workspace cho đồ án nền tảng thương mại điện tử đa người b�
 
 ## Trạng thái hiện tại
 
-Repo đã có monorepo skeleton, package manifests, lockfile, cấu hình TypeScript dùng chung, lint/format, `.env.example` và NestJS API bootstrap với Swagger/health routes. Source nghiệp vụ, Docker Compose, database migrations và các lệnh test ứng dụng chưa được triển khai; tài liệu setup mô tả contract mục tiêu, không khẳng định marketplace đã sẵn sàng chạy.
+Repo đã có monorepo, NestJS API, PostgreSQL/Prisma migrations đến `0007_shipments`, Docker Compose, ba ứng dụng web và mã cho identity, shop, catalog, inventory, cart, checkout, thanh toán mô phỏng và hủy đơn. Giao hàng hiện có schema và policy; các route xử lý SellerOrder, shipment, review và phần lớn admin vẫn chưa hoàn tất. Tình trạng task và giới hạn kiểm thử được ghi trong [task list](specs/001-marketplace-mvp/tasks.md) và `docs/testing/`. Chưa có bằng chứng nghiệm thu toàn bộ marketplace trên môi trường local hiện tại.
 
 ## Bắt đầu
 
@@ -14,6 +14,6 @@ Repo đã có monorepo skeleton, package manifests, lockfile, cấu hình TypeSc
 
 ## Các lệnh đã cấu hình
 
-Dùng Node.js 24.18.0 và pnpm 12.14.0 theo `.nvmrc` và `package.json`. Hiện có thể dùng `pnpm lint`, `pnpm lint:workspaces`, `pnpm typecheck`, `pnpm format:check` và build/start API. Các workspace chưa có mã nguồn sẽ báo skip; API bootstrap có health/Swagger, còn test nghiệp vụ, database và native sẽ được bổ sung cùng implementation tương ứng.
+Dùng Node.js 24.18.0 và pnpm 12.14.0 theo `.nvmrc` và `package.json`. Repo cấu hình `pnpm lint:workspaces`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`, `pnpm build`, API integration test và Prisma schema check. Việc có script không đồng nghĩa các lệnh đã chạy thành công trên máy của bạn; xem kết quả thực tế trong CI và tài liệu bằng chứng từng story.
 
 Xem [hướng dẫn local](docs/development/local.md) trước khi cài dependencies hoặc chạy service.

@@ -1,7 +1,7 @@
 # Tasks: Multi-Vendor Marketplace MVP
 
 **Input**: Design documents from `specs/001-marketplace-mvp/`.
-**Created**: 2026-10-20 | **Git branch**: `codex/monorepo-t008` | **Status**: T001–T022 setup/foundation tasks complete; W008 resource access/provisioning remains open; story implementation not started.
+**Created**: 2026-10-20 | **Git branch**: `codex/monorepo-t008` | **Status**: Setup/foundation và US1–US5 đã có mã; US6 có schema, dịch vụ, route và UI thanh toán/hủy nhưng kiểm thử PostgreSQL, concurrency và nghiệm thu chưa có kết quả chạy local được ghi nhận. US7 hiện mới có schema và policy; US8–US10 chưa hoàn tất. Checkbox bên dưới là nguồn theo dõi từng task; W008 vẫn mở.
 **Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/api.md](contracts/api.md), [ui-plan.md](ui-plan.md), [quickstart.md](quickstart.md), [wbs.md](wbs.md) và [constitution](../../.specify/memory/constitution.md).
 
 **Tests**: Được yêu cầu rõ trong spec NFR-04, acceptance/SC và hiến chương. Có contract/unit/integration/E2E/security/concurrency phù hợp. Viết tests trước implementation tương ứng; lần chạy trước implementation phải thất bại vì hành vi chưa có sau khi harness compile, không xem lỗi dependency hoặc test giả là bằng chứng nghiệp vụ. Các test placeholder không được dùng để báo pass.
@@ -222,7 +222,7 @@ Phase là thứ tự capability, không tương đương Sprint. Gán lịch the
 ### Tests
 
 - [ ] T088 [P] [US6] Contract payments query/mock-attempt/mock-result,cod-collection và Buyer/Seller cancel/reject routes,scoped money/error enums trong tests/contracts/payments-cancellation.contract.spec.ts. [Owner: M2; Reviewer: M1; Sprint: S5; WBS: W036,W040; Allocation: W036=0.29PD(M2/S5), W040=0.00PD(reference); Depends: T087]
-- [ ] T089 [P] [US6] Unit exact pricing/status aggregates/attempt terminals và cancel state table,không float trong apps/api/src/modules/payment/services/payment-policy.spec.ts,apps/api/src/modules/order/services/cancellation-policy.spec.ts. [Owner: M1; Reviewer: M2; Sprint: S5; WBS: W034,W036; Allocation: W034=0.50PD(M1/S5), W036=0.00PD(reference); Depends: T087]
+- [x] T089 [P] [US6] Unit exact pricing/status aggregates/attempt terminals và cancel state table,không float trong apps/api/src/modules/payment/services/payment-policy.spec.ts,apps/api/src/modules/order/services/cancellation-policy.spec.ts. [Owner: M1; Reviewer: M2; Sprint: S5; WBS: W034,W036; Allocation: W034=0.50PD(M1/S5), W036=0.00PD(reference); Depends: T087]
 - [ ] T090 [P] [US6] DB tests success-vs-expiry/cancel,late compensation,repeatedCOD/refund,keyconflict,partialcancel invalidates pendingattempt,DBclock/restart sweep trong apps/api/test/integration/payment.integration.spec.ts,tests/concurrency/payment-cancellation.spec.ts. [Owner: M5; Reviewer: M2; Sprint: S5; WBS: W040; Allocation: W040=0.63PD(M5/S5); Depends: T087]
 
 ### Implementation
@@ -237,6 +237,8 @@ Phase là thứ tự capability, không tương đương Sprint. Gán lịch the
 - [ ] T098 [US6] Wire payment/mock/cod và Buyer/Seller cancel/reject endpoints/DTOs/expectedVersion/idempotency/audit trong apps/api/src/modules/payment/controllers/payments.controller.ts,apps/api/src/modules/order/controllers/cancellation.controller.ts. [Owner: M1; Reviewer: M2; Sprint: S5; WBS: W034,W036; Allocation: W034=0.50PD(M1/S5), W036=0.00PD(reference); Depends: T097]
 - [ ] T099 [US6] B08/B10mock outcome/retry/countdown,cancel-part/full dialog với blockingparts,refund/outstanding,COD unpaid labels trong apps/storefront/src/features/orders/payment-panel.tsx,cancel-dialog.tsx; timeout cùng key,never frontend authoritative deadline. [Owner: M3; Reviewer: M1; Sprint: S5; WBS: W038; Allocation: W038=1.00PD(M3/S5); Depends: T098]
 - [ ] T100 [US6] ChạyV06–08,race/restart/partialcancel/capture fixtures ở apps/api/prisma/seed/payments.seed.ts,docs/testing/us6-evidence.md; COD collection happy path chứng minh sauUS7 không giả shipment. [Owner: M5; Reviewer: M2; Sprint: S5; WBS: W040,W041; Allocation: W040=0.62PD(M5/S5), W041=0.00PD(reference); Depends: T099]
+
+**Đối chiếu 2026-10-26**: T089 được đánh dấu sau khi `corepack pnpm test` chạy xanh (7 suite, 30 test API, gồm hai file unit policy). T088 vẫn mở: `test:contracts` có 156/157 test đạt và thiếu khai báo `Idempotency-Key` ở một route. T090 vẫn mở vì integration cần `TEST_DATABASE_URL` disposable và `tests/concurrency/payment-cancellation.spec.ts` không tồn tại. T091–T093 và T095–T099 có mã/schema/migration/UI tương ứng như [US6 evidence](../../docs/testing/us6-evidence.md) mô tả, nhưng chưa đánh dấu hoàn tất khi contract/integration và nghiệm thu còn lỗi/chưa chạy. T094 còn thiếu `apps/api/src/modules/payment/repositories/payment.repository.ts` (logic hiện nằm trong `payment.service.ts`). T100 vẫn mở vì chưa có kết quả V06–V08, race/restart và COD sau giao hàng được chạy, dù file seed và evidence đã có. Các đường dẫn lệch cần được thống nhất trong task trước khi đóng chúng.
 
 **Checkpoint**: Chạy và review nghiệm thu của US6 theo spec; mọi ảnh hưởng story trước còn green, không có lỗi tiền/tồn/quyền.
 
