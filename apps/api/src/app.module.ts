@@ -12,6 +12,7 @@ import { CatalogModule } from "./modules/catalog/catalog.module.js";
 import { InventoryModule } from "./modules/inventory/inventory.module.js";
 import { CartModule } from "./modules/cart/cart.module.js";
 import { OrderModule } from "./modules/order/order.module.js";
+import { ShippingModule } from "./modules/shipping/shipping.module.js";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { OrderModule } from "./modules/order/order.module.js";
     InventoryModule,
     CartModule,
     OrderModule,
+    ShippingModule,
   ],
   providers: [
     RequestIdMiddleware,

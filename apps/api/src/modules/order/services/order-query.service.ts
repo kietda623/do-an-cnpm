@@ -1,11 +1,21 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { DatabaseService } from "../../../database/prisma.service.js";
+import { canFulfillExistingOrder } from "../../../common/auth/fulfillment-access.js";
 import { aggregateOrder } from "./order-aggregate.js";
 
 const orderInclude = {
   sellerOrders: {
     orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
-    include: { items: { orderBy: { createdAt: "asc" as const } } },
+    include: {
+      items: { orderBy: { createdAt: "asc" as const } },
+      shipment: {
+        include: {
+          events: {
+            orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
+          },
+        },
+      },
+    },
   },
   payment: {
     include: {
@@ -68,7 +78,8 @@ export class OrderQueryService {
         createdAt: order.createdAt,
       };
     });
-    if (query.paymentStatus) rows = rows.filter((row) => row.paymentStatus === query.paymentStatus);
+    if (query.paymentStatus)
+      rows = rows.filter((row) => row.paymentStatus === query.paymentStatus);
     const total = rows.length;
     const data = rows.slice((page - 1) * pageSize, page * pageSize);
     return { data, meta: { page, pageSize, total } };
@@ -93,20 +104,25 @@ export class OrderQueryService {
     return aggregateOrder(row);
   }
 
-  async getSellerPart(userId: string, shopId: string, id: string, admin = false) {
-    const row = await this.db.prisma.marketplaceOrder.findFirst({
-      where: {
-        sellerOrders: {
-          some: {
-            id,
-            shopId,
-            ...(admin
-              ? {}
-              : { shop: { status: "ACTIVE", members: { some: { userId, status: "ACTIVE" } } } }),
+  async getSellerPart(
+    userId: string,
+    shopId: string,
+    id: string,
+    admin = false,
+  ) {
+    const row = await this.db.prisma.$transaction(async (tx) => {
+      if (!admin) await canFulfillExistingOrder(tx, userId, shopId);
+      return tx.marketplaceOrder.findFirst({
+        where: {
+          sellerOrders: {
+            some: {
+              id,
+              shopId,
+            },
           },
         },
-      },
-      include: orderInclude,
+        include: orderInclude,
+      });
     });
     if (!row) throw new NotFoundException();
     const part = aggregateOrder(row).sellerOrders.find(
@@ -114,5 +130,50 @@ export class OrderQueryService {
     );
     if (!part) throw new NotFoundException();
     return part;
+  }
+
+  async listSellerParts(
+    userId: string,
+    shopId: string,
+    query: {
+      status?: string;
+      from?: string;
+      to?: string;
+      page?: number;
+      pageSize?: number;
+    },
+  ) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const where = {
+      shopId,
+      ...(query.status ? { status: query.status as never } : {}),
+      ...(query.from || query.to
+        ? {
+            createdAt: {
+              ...(query.from ? { gte: new Date(query.from) } : {}),
+              ...(query.to ? { lte: new Date(query.to) } : {}),
+            },
+          }
+        : {}),
+    };
+    const { parts, total } = await this.db.prisma.$transaction(async (tx) => {
+      await canFulfillExistingOrder(tx, userId, shopId);
+      const [parts, total] = await Promise.all([
+        tx.sellerOrder.findMany({
+          where,
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          select: { id: true },
+        }),
+        tx.sellerOrder.count({ where }),
+      ]);
+      return { parts, total };
+    });
+    const data = await Promise.all(
+      parts.map(({ id }) => this.getSellerPart(userId, shopId, id)),
+    );
+    return { data, meta: { page, pageSize, total } };
   }
 }

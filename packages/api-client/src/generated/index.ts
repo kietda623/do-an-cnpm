@@ -2228,6 +2228,7 @@ export interface components {
     CodCollection: {
       /** Format: uuid */
       eventId: string;
+      /** @description Current SellerOrder.version; a stale value returns HTTP 409. */
       expectedVersion: number;
     };
     ReviewCreate: {
@@ -7808,7 +7809,9 @@ export interface operations {
   post_shops_by_shopId_orders_by_id_confirm: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        "Idempotency-Key": string;
+      };
       path: {
         shopId: string;
         id: string;
@@ -7928,7 +7931,9 @@ export interface operations {
   post_shops_by_shopId_orders_by_id_pack: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        "Idempotency-Key": string;
+      };
       path: {
         shopId: string;
         id: string;
@@ -8048,7 +8053,9 @@ export interface operations {
   post_shops_by_shopId_orders_by_id_reject: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        "Idempotency-Key": string;
+      };
       path: {
         shopId: string;
         id: string;
@@ -11377,7 +11384,9 @@ export interface operations {
   post_admin_seller_orders_by_id_confirm: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        "Idempotency-Key": string;
+      };
       path: {
         id: string;
       };
@@ -11496,7 +11505,9 @@ export interface operations {
   post_admin_seller_orders_by_id_pack: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        "Idempotency-Key": string;
+      };
       path: {
         id: string;
       };
@@ -11615,7 +11626,9 @@ export interface operations {
   post_admin_seller_orders_by_id_reject: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        "Idempotency-Key": string;
+      };
       path: {
         id: string;
       };

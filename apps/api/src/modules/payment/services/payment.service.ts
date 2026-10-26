@@ -1,7 +1,13 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "../../../generated/prisma/client.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
+import { canFulfillExistingOrder } from "../../../common/auth/fulfillment-access.js";
+import { isAdmin } from "../../../common/auth/permissions.js";
 import { OrderTransaction } from "../../order/services/order-transaction.js";
 import { SettlementService } from "./settlement.service.js";
 import { sumVnd } from "./payment-policy.js";
@@ -14,7 +20,8 @@ type PaymentResult = {
 };
 const conflict = (code: string, message: string, details?: unknown) =>
   new ConflictException({ code, message, ...(details ? { details } : {}) });
-const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+const digest = (value: unknown) =>
+  createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
 const attemptInclude = {
   allocations: { include: { refund: true } },
@@ -38,7 +45,13 @@ export class PaymentService {
   async startMockAttempt(userId: string, orderId: string, key: string) {
     const requestHash = digest({ orderId });
     const result = await this.orderTx.run(async (tx) => {
-      const idem = await this.claim(tx, userId, "MOCK_ATTEMPT", key, requestHash);
+      const idem = await this.claim(
+        tx,
+        userId,
+        "MOCK_ATTEMPT",
+        key,
+        requestHash,
+      );
       if (idem.replay) return { attemptId: idem.resourceId! };
       const preview = await tx.marketplaceOrder.findFirst({
         where: { id: orderId, buyerUserId: userId },
@@ -46,8 +59,11 @@ export class PaymentService {
       });
       if (!preview) throw new NotFoundException();
       await this.orderTx.lockOrderGraph(tx, orderId);
-      const now = (await tx.$queryRaw<Array<{ now: Date }>>`SELECT clock_timestamp() AS now`)[0]!
-        .now;
+      const now = (
+        await tx.$queryRaw<
+          Array<{ now: Date }>
+        >`SELECT clock_timestamp() AS now`
+      )[0]!.now;
       const order = await tx.marketplaceOrder.findUniqueOrThrow({
         where: { id: orderId },
         include: {
@@ -58,18 +74,26 @@ export class PaymentService {
       const payment = order.payment;
       if (!payment) throw new NotFoundException();
       if (order.paymentMethod !== "MOCK")
-        throw conflict("PAYMENT_METHOD_MISMATCH", "This order does not use mock prepayment.");
+        throw conflict(
+          "PAYMENT_METHOD_MISMATCH",
+          "This order does not use mock prepayment.",
+        );
       if (!order.paymentDeadline || order.paymentDeadline <= now)
         throw conflict("ORDER_EXPIRED", "The mock payment window has expired.");
       if (
-        order.sellerOrders.some((part) => part.status !== "PENDING" && part.status !== "CANCELLED")
+        order.sellerOrders.some(
+          (part) => part.status !== "PENDING" && part.status !== "CANCELLED",
+        )
       )
         throw conflict(
           "ORDER_NOT_PAYABLE",
           "Mock payment is only available before fulfillment starts.",
         );
-      const liveParts = order.sellerOrders.filter((part) => part.status !== "CANCELLED");
-      if (!liveParts.length) throw conflict("ORDER_CANCELLED", "All seller orders are cancelled.");
+      const liveParts = order.sellerOrders.filter(
+        (part) => part.status !== "CANCELLED",
+      );
+      if (!liveParts.length)
+        throw conflict("ORDER_CANCELLED", "All seller orders are cancelled.");
       const succeeded = payment.attempts.some(
         (attempt) =>
           attempt.provider === "MOCK" &&
@@ -77,7 +101,10 @@ export class PaymentService {
           attempt.status === "SUCCEEDED",
       );
       if (succeeded)
-        throw conflict("ALREADY_PAID", "This order already has a successful mock payment.");
+        throw conflict(
+          "ALREADY_PAID",
+          "This order already has a successful mock payment.",
+        );
       const pending = payment.attempts.find(
         (attempt) =>
           attempt.provider === "MOCK" &&
@@ -85,7 +112,10 @@ export class PaymentService {
           attempt.status === "PENDING",
       );
       if (pending && pending.expiresAt && pending.expiresAt > now)
-        throw conflict("ATTEMPT_IN_PROGRESS", "A mock payment attempt is already pending.");
+        throw conflict(
+          "ATTEMPT_IN_PROGRESS",
+          "A mock payment attempt is already pending.",
+        );
       if (pending)
         await tx.paymentAttempt.update({
           where: { id: pending.id },
@@ -109,14 +139,18 @@ export class PaymentService {
           settlementKind: "NORMAL",
           originalAttemptId: previous?.id ?? null,
           status: "PENDING",
-          targetSellerOrdersSnapshot: snapshot as unknown as Prisma.InputJsonValue,
+          targetSellerOrdersSnapshot:
+            snapshot as unknown as Prisma.InputJsonValue,
           amount,
           expiresAt: order.paymentDeadline,
           operationKey: `mock-attempt:${key}`,
         },
         include: attemptInclude,
       });
-      await tx.payment.update({ where: { id: payment.id }, data: { version: { increment: 1 } } });
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: { version: { increment: 1 } },
+      });
       await tx.marketplaceOrder.update({
         where: { id: orderId },
         data: { version: { increment: 1 } },
@@ -127,7 +161,12 @@ export class PaymentService {
     return this.readAttempt(userId, result.attemptId);
   }
 
-  async mockResult(userId: string, attemptId: string, key: string, input: PaymentResult) {
+  async mockResult(
+    userId: string,
+    attemptId: string,
+    key: string,
+    input: PaymentResult,
+  ) {
     const preview = await this.db.prisma.paymentAttempt.findUnique({
       where: { id: attemptId },
       select: { payment: { select: { orderId: true } } },
@@ -136,8 +175,15 @@ export class PaymentService {
     const orderId = preview.payment.orderId;
     const requestHash = digest({ attemptId, ...input });
     const result = await this.orderTx.run(async (tx) => {
-      const idem = await this.claim(tx, userId, "MOCK_RESULT", key, requestHash);
-      if (idem.replay) return { attemptId: idem.resourceId!, terminalConflict: false };
+      const idem = await this.claim(
+        tx,
+        userId,
+        "MOCK_RESULT",
+        key,
+        requestHash,
+      );
+      if (idem.replay)
+        return { attemptId: idem.resourceId!, terminalConflict: false };
       const orderPreview = await tx.marketplaceOrder.findFirst({
         where: { id: orderId, buyerUserId: userId },
         select: { id: true },
@@ -162,18 +208,32 @@ export class PaymentService {
       };
       const payloadDigest = digest(eventPayload);
       const seen = await tx.paymentEvent.findUnique({
-        where: { provider_externalEventId: { provider: "MOCK", externalEventId: input.eventId } },
+        where: {
+          provider_externalEventId: {
+            provider: "MOCK",
+            externalEventId: input.eventId,
+          },
+        },
       });
       if (seen) {
         if (seen.payloadDigest !== payloadDigest)
-          throw conflict("EVENT_ID_REUSED", "This event ID was already used for different data.");
+          throw conflict(
+            "EVENT_ID_REUSED",
+            "This event ID was already used for different data.",
+          );
         await this.complete(tx, idem.id, "PaymentAttempt", attempt.id, 200);
         return { attemptId: attempt.id, terminalConflict: false };
       }
       if (payment.order.version !== input.expectedVersion)
-        throw conflict("VERSION_CONFLICT", "Payment changed. Reload before submitting the result.");
-      const now = (await tx.$queryRaw<Array<{ now: Date }>>`SELECT clock_timestamp() AS now`)[0]!
-        .now;
+        throw conflict(
+          "VERSION_CONFLICT",
+          "Payment changed. Reload before submitting the result.",
+        );
+      const now = (
+        await tx.$queryRaw<
+          Array<{ now: Date }>
+        >`SELECT clock_timestamp() AS now`
+      )[0]!.now;
       const deadline = payment.order.paymentDeadline;
       const late =
         input.outcome === "SUCCEEDED" &&
@@ -193,8 +253,12 @@ export class PaymentService {
             },
           });
           if (alreadySucceeded)
-            throw conflict("ALREADY_PAID", "Another mock attempt has already succeeded.");
-          const snapshot = attempt.targetSellerOrdersSnapshot as unknown as TargetPart[];
+            throw conflict(
+              "ALREADY_PAID",
+              "Another mock attempt has already succeeded.",
+            );
+          const snapshot =
+            attempt.targetSellerOrdersSnapshot as unknown as TargetPart[];
           await tx.paymentAttempt.update({
             where: { id: attempt.id },
             data: {
@@ -249,7 +313,8 @@ export class PaymentService {
           now,
         );
       } else {
-        const processingResult = attempt.status === input.outcome ? "DUPLICATE" : "IGNORED";
+        const processingResult =
+          attempt.status === input.outcome ? "DUPLICATE" : "IGNORED";
         await tx.paymentEvent.create({
           data: {
             paymentId: payment.id,
@@ -274,7 +339,10 @@ export class PaymentService {
           return { attemptId: attempt.id, terminalConflict: true };
         }
       }
-      await tx.payment.update({ where: { id: payment.id }, data: { version: { increment: 1 } } });
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: { version: { increment: 1 } },
+      });
       await tx.marketplaceOrder.update({
         where: { id: orderId },
         data: { version: { increment: 1 } },
@@ -299,13 +367,26 @@ export class PaymentService {
   ) {
     const preview = await this.db.prisma.sellerOrder.findUnique({
       where: { id: sellerOrderId },
-      select: { orderId: true },
+      select: { orderId: true, shopId: true },
     });
     if (!preview) throw new NotFoundException();
     const orderId = preview.orderId;
     const requestHash = digest({ sellerOrderId, eventId, expectedVersion });
     const result = await this.orderTx.run(async (tx) => {
-      const idem = await this.claim(tx, userId, "COD_COLLECTION", key, requestHash);
+      const idem = await this.claim(
+        tx,
+        userId,
+        "COD_COLLECTION",
+        key,
+        requestHash,
+      );
+      const replayActor = await tx.user.findUnique({
+        where: { id: userId },
+        select: { status: true, systemRole: true },
+      });
+      if (replayActor?.status !== "ACTIVE") throw new NotFoundException();
+      if (!isAdmin(replayActor.systemRole))
+        await canFulfillExistingOrder(tx, userId, preview.shopId);
       if (idem.replay) return { orderId, attemptId: idem.resourceId! };
       await this.orderTx.lockSellerOrderGraph(tx, sellerOrderId);
       const order = await tx.marketplaceOrder.findFirst({
@@ -317,45 +398,73 @@ export class PaymentService {
         where: { id: userId },
         select: { systemRole: true },
       });
-      if (actor?.systemRole !== "ADMIN") {
-        const part = await tx.sellerOrder.findFirst({
-          where: {
-            id: sellerOrderId,
-            shop: { status: "ACTIVE", members: { some: { userId, status: "ACTIVE" } } },
-          },
-          select: { id: true },
+      if (!isAdmin(actor?.systemRole)) {
+        const partShop = await tx.sellerOrder.findUnique({
+          where: { id: sellerOrderId },
+          select: { shopId: true },
         });
-        if (!part) throw new NotFoundException();
+        if (!partShop) throw new NotFoundException();
+        await canFulfillExistingOrder(tx, userId, partShop.shopId);
       }
-      const part = await tx.sellerOrder.findUniqueOrThrow({ where: { id: sellerOrderId } });
+      const part = await tx.sellerOrder.findUniqueOrThrow({
+        where: { id: sellerOrderId },
+      });
       const eventDigest = digest({ sellerOrderId, eventId, expectedVersion });
       const seen = await tx.paymentEvent.findUnique({
         where: {
-          provider_externalEventId: { provider: "COD_SIMULATION", externalEventId: eventId },
+          provider_externalEventId: {
+            provider: "COD_SIMULATION",
+            externalEventId: eventId,
+          },
         },
       });
       if (seen) {
         if (seen.payloadDigest !== eventDigest)
-          throw conflict("EVENT_ID_REUSED", "This event ID was already used for different data.");
-        await this.complete(tx, idem.id, "PaymentAttempt", seen.attemptId!, 200);
+          throw conflict(
+            "EVENT_ID_REUSED",
+            "This event ID was already used for different data.",
+          );
+        await this.complete(
+          tx,
+          idem.id,
+          "PaymentAttempt",
+          seen.attemptId!,
+          200,
+        );
         return { orderId, attemptId: seen.attemptId! };
       }
-      if (order.version !== expectedVersion)
-        throw conflict("VERSION_CONFLICT", "Payment changed. Reload before collecting COD.");
+      if (part.version !== expectedVersion)
+        throw conflict(
+          "VERSION_CONFLICT",
+          "Seller order changed. Reload before collecting COD.",
+        );
       if (part.status !== "DELIVERED")
-        throw conflict("ORDER_NOT_DELIVERED", "COD can be collected only after delivery.");
+        throw conflict(
+          "ORDER_NOT_DELIVERED",
+          "COD can be collected only after delivery.",
+        );
       if (order.paymentMethod !== "COD")
-        throw conflict("PAYMENT_METHOD_MISMATCH", "This order does not use COD.");
+        throw conflict(
+          "PAYMENT_METHOD_MISMATCH",
+          "This order does not use COD.",
+        );
       if (
-        await tx.paymentAllocation.findFirst({ where: { sellerOrderId, kind: "COD_COLLECTION" } })
+        await tx.paymentAllocation.findFirst({
+          where: { sellerOrderId, kind: "COD_COLLECTION" },
+        })
       )
         throw conflict(
           "COD_ALREADY_COLLECTED",
           "COD has already been collected for this seller order.",
         );
-      const now = (await tx.$queryRaw<Array<{ now: Date }>>`SELECT clock_timestamp() AS now`)[0]!
-        .now;
-      const number = await tx.paymentAttempt.count({ where: { paymentId: order.payment.id } });
+      const now = (
+        await tx.$queryRaw<
+          Array<{ now: Date }>
+        >`SELECT clock_timestamp() AS now`
+      )[0]!.now;
+      const number = await tx.paymentAttempt.count({
+        where: { paymentId: order.payment.id },
+      });
       const attempt = await tx.paymentAttempt.create({
         data: {
           paymentId: order.payment.id,
@@ -363,13 +472,19 @@ export class PaymentService {
           provider: "COD_SIMULATION",
           settlementKind: "NORMAL",
           status: "SUCCEEDED",
-          targetSellerOrdersSnapshot: [{ sellerOrderId, amount: part.originalTotal.toString() }],
+          targetSellerOrdersSnapshot: [
+            { sellerOrderId, amount: part.originalTotal.toString() },
+          ],
           amount: part.originalTotal,
           externalTransactionId: `COD-${eventId}`,
           settledAt: now,
           operationKey: `cod-collection:${key}`,
           allocations: {
-            create: { sellerOrderId, amount: part.originalTotal, kind: "COD_COLLECTION" },
+            create: {
+              sellerOrderId,
+              amount: part.originalTotal,
+              kind: "COD_COLLECTION",
+            },
           },
         },
       });
@@ -400,14 +515,18 @@ export class PaymentService {
       include: { payment: { include: paymentInclude } },
     });
     if (!payment?.payment) throw new NotFoundException();
-    const attempt = payment.payment.attempts.find((item) => item.id === result.attemptId);
+    const attempt = payment.payment.attempts.find(
+      (item) => item.id === result.attemptId,
+    );
     if (!attempt) return this.presentBase(payment.payment, payment);
     return this.presentAttempt(payment, attempt);
   }
 
   async expireDueOrders() {
     const dbNow = (
-      await this.db.prisma.$queryRaw<Array<{ now: Date }>>`SELECT clock_timestamp() AS now`
+      await this.db.prisma.$queryRaw<
+        Array<{ now: Date }>
+      >`SELECT clock_timestamp() AS now`
     )[0]!.now;
     const due = await this.db.prisma.marketplaceOrder.findMany({
       where: {
@@ -424,8 +543,11 @@ export class PaymentService {
       const didExpire = await this.orderTx.run(async (tx) => {
         const locked = await this.orderTx.lockOrderGraph(tx, order.id);
         await this.orderTx.lockInventory(tx, locked.sellerOrderIds);
-        const now = (await tx.$queryRaw<Array<{ now: Date }>>`SELECT clock_timestamp() AS now`)[0]!
-          .now;
+        const now = (
+          await tx.$queryRaw<
+            Array<{ now: Date }>
+          >`SELECT clock_timestamp() AS now`
+        )[0]!.now;
         const row = await tx.marketplaceOrder.findUniqueOrThrow({
           where: { id: order.id },
           include: {
@@ -433,11 +555,17 @@ export class PaymentService {
             payment: { include: { attempts: true } },
           },
         });
-        if (!row.paymentDeadline || row.paymentDeadline > now || row.paymentMethod !== "MOCK")
+        if (
+          !row.paymentDeadline ||
+          row.paymentDeadline > now ||
+          row.paymentMethod !== "MOCK"
+        )
           return false;
         if (
           row.payment?.attempts.some(
-            (attempt) => attempt.settlementKind === "NORMAL" && attempt.status === "SUCCEEDED",
+            (attempt) =>
+              attempt.settlementKind === "NORMAL" &&
+              attempt.status === "SUCCEEDED",
           )
         )
           return false;
@@ -481,8 +609,9 @@ export class PaymentService {
             outcome: "SUCCESS",
             requestId: randomUUID(),
             safeMetadata: {
-              restoredSellerOrderCount: row.sellerOrders.filter((part) => part.status === "PENDING")
-                .length,
+              restoredSellerOrderCount: row.sellerOrders.filter(
+                (part) => part.status === "PENDING",
+              ).length,
             },
           },
         });
@@ -599,12 +728,19 @@ export class PaymentService {
       ON CONFLICT (actor_scope, operation, idempotency_key) DO NOTHING`;
     const row = await tx.idempotencyRecord.findUnique({
       where: {
-        actorScope_operation_idempotencyKey: { actorScope: userId, operation, idempotencyKey: key },
+        actorScope_operation_idempotencyKey: {
+          actorScope: userId,
+          operation,
+          idempotencyKey: key,
+        },
       },
     });
-    if (!row) throw new Error("Payment idempotency record could not be loaded.");
+    if (!row)
+      throw new Error("Payment idempotency record could not be loaded.");
     await tx.$queryRaw`SELECT id FROM idempotency_records WHERE id = ${row.id}::uuid FOR UPDATE`;
-    const locked = await tx.idempotencyRecord.findUniqueOrThrow({ where: { id: row.id } });
+    const locked = await tx.idempotencyRecord.findUniqueOrThrow({
+      where: { id: row.id },
+    });
     if (locked.requestHash !== requestHash)
       throw conflict(
         "IDEMPOTENCY_KEY_REUSED",

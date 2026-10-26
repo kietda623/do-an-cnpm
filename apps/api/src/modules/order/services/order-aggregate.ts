@@ -26,6 +26,24 @@ type SellerOrderRow = {
   createdAt: Date;
   updatedAt: Date;
   items: OrderItemRow[];
+  shipment?: {
+    id: string;
+    sellerOrderId: string;
+    status: string;
+    trackingCode: string;
+    deliveryAttempt: number;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date;
+    events: Array<{
+      id: string;
+      fromStatus: string | null;
+      toStatus: string;
+      deliveryAttempt: number;
+      reason: string | null;
+      createdAt: Date;
+    }>;
+  } | null;
 };
 export type OrderRow = {
   id: string;
@@ -67,21 +85,32 @@ export type OrderRow = {
   } | null;
 };
 
+const fulfillmentStages = [
+  "PENDING",
+  "CONFIRMED",
+  "PACKING",
+  "SHIPPING",
+  "DELIVERED",
+] as const;
+
+export function deriveMarketplaceOrderStatus(
+  statuses: readonly string[],
+): string {
+  const live = statuses.filter((status) => status !== "CANCELLED");
+  if (!live.length) return "CANCELLED";
+  if (live.every((status) => status === "COMPLETED")) return "COMPLETED";
+  return fulfillmentStages.find((stage) => live.includes(stage)) ?? "COMPLETED";
+}
+
 export function aggregateOrder(order: OrderRow) {
   const originalTotal = BigInt(order.originalTotal.toString());
   const cancelledAmount = order.sellerOrders
     .filter((part) => part.status === "CANCELLED")
     .reduce((sum, part) => sum + BigInt(part.originalTotal.toString()), 0n);
   const live = order.sellerOrders.filter((part) => part.status !== "CANCELLED");
-  const statuses = new Set(live.map((part) => part.status));
-  let status = "PENDING";
-  if (live.length && statuses.size === 1) status = live[0]!.status;
-  else if (statuses.has("SHIPPING")) status = "SHIPPING";
-  else if (statuses.has("PACKING")) status = "PACKING";
-  else if (statuses.has("CONFIRMED")) status = "CONFIRMED";
-  else if (statuses.has("DELIVERED")) status = "DELIVERED";
-  else if (statuses.has("COMPLETED")) status = "COMPLETED";
-  if (!live.length) status = "CANCELLED";
+  const status = deriveMarketplaceOrderStatus(
+    order.sellerOrders.map((part) => part.status),
+  );
   const successfulAllocations = (order.payment?.attempts ?? [])
     .filter((attempt) => attempt.status === "SUCCEEDED")
     .flatMap((attempt) => attempt.allocations);
@@ -92,7 +121,10 @@ export function aggregateOrder(order: OrderRow) {
   const refunds = successfulAllocations.flatMap((allocation) =>
     allocation.refund ? [allocation.refund] : [],
   );
-  const refundedTotal = refunds.reduce((sum, refund) => sum + BigInt(refund.amount.toString()), 0n);
+  const refundedTotal = refunds.reduce(
+    (sum, refund) => sum + BigInt(refund.amount.toString()),
+    0n,
+  );
   const paymentTotals = derivePaymentAmounts({
     originalTotal: originalTotal.toString(),
     cancelledTotal: cancelledAmount.toString(),
@@ -146,7 +178,26 @@ export function aggregateOrder(order: OrderRow) {
       ).toString(),
       currency: "VND" as const,
       addressSnapshot: order.recipientSnapshot,
-      shipment: null,
+      shipment: part.shipment
+        ? {
+            id: part.shipment.id,
+            sellerOrderId: part.shipment.sellerOrderId,
+            status: part.shipment.status,
+            trackingCode: part.shipment.trackingCode,
+            attemptNumber: part.shipment.deliveryAttempt,
+            version: part.shipment.version,
+            history: part.shipment.events.map((event) => ({
+              id: event.id,
+              fromStatus: event.fromStatus,
+              toStatus: event.toStatus,
+              attemptNumber: event.deliveryAttempt,
+              reason: event.reason,
+              createdAt: event.createdAt,
+            })),
+            createdAt: part.shipment.createdAt,
+            updatedAt: part.shipment.updatedAt,
+          }
+        : null,
       version: part.version,
       completedAt: part.completedAt,
       cancelledAt: part.cancelledAt,

@@ -3,7 +3,11 @@ import { expect, test } from "@playwright/test";
 const productId = "00000000-0000-4000-8000-000000000030";
 const variantId = "00000000-0000-4000-8000-000000000040";
 const shopId = "00000000-0000-4000-8000-000000000010";
+const secondProductId = "00000000-0000-4000-8000-000000000031";
+const secondVariantId = "00000000-0000-4000-8000-000000000041";
+const secondShopId = "00000000-0000-4000-8000-000000000011";
 const itemId = "00000000-0000-4000-8000-000000000050";
+const secondItemId = "00000000-0000-4000-8000-000000000051";
 const addressId = "00000000-0000-4000-8000-000000000060";
 const orderId = "00000000-0000-4000-8000-000000000070";
 const buyer = {
@@ -35,13 +39,32 @@ const product = {
     },
   ],
 };
+const secondProduct = {
+  id: secondProductId,
+  name: "Ceramic Cup",
+  description: "Handmade ceramic cup",
+  minimumPrice: "250000",
+  shop: { id: secondShopId, name: "Ceramic Shop", slug: "ceramic-shop" },
+  images: [],
+  variants: [
+    {
+      id: secondVariantId,
+      sku: "CUP-1",
+      attributes: {},
+      price: "250000",
+      availableQuantity: 2,
+    },
+  ],
+};
 const order = {
   id: orderId,
   orderNumber: "ORD-E2E-070",
   status: "PENDING",
   paymentStatus: "UNPAID",
   paymentMethod: "COD",
-  originalTotal: "250000",
+  originalTotal: "500000",
+  outstandingAmount: "500000",
+  version: 0,
   createdAt: "2026-10-23T00:00:00.000Z",
   paymentDeadline: null,
   sellerOrders: [
@@ -73,13 +96,41 @@ const order = {
         },
       ],
     },
+    {
+      id: "00000000-0000-4000-8000-000000000072",
+      shopId: secondShopId,
+      shopNameSnapshot: "Ceramic Shop",
+      status: "PENDING",
+      originalTotal: "250000",
+      addressSnapshot: {
+        recipientName: "E2E Buyer",
+        phone: "0901234567",
+        line1: "1 Test Street",
+        ward: "Ward 1",
+        district: "District 1",
+        province: "HCMC",
+        country: "VN",
+        postalCode: null,
+      },
+      items: [
+        {
+          productId: secondProductId,
+          productName: secondProduct.name,
+          sku: "CUP-1",
+          attributes: {},
+          quantity: 1,
+          unitPrice: "250000",
+          lineTotal: "250000",
+        },
+      ],
+    },
   ],
 };
 
 test("buyer adds a product, confirms a quote, places an order and sees its snapshot", async ({
   page,
 }) => {
-  let cartHasItem = false;
+  const cartVariantIds: string[] = [];
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -88,45 +139,67 @@ test("buyer adds a product, confirms a quote, places an order and sees its snaps
       return route.fulfill({ json: { data: { csrfToken: "csrf" } } });
     if (path.endsWith("/auth/login"))
       return route.fulfill({
-        json: { data: { accessToken: "access", refreshToken: "refresh", user: buyer } },
+        json: {
+          data: { accessToken: "access", refreshToken: "refresh", user: buyer },
+        },
       });
     if (path.endsWith("/auth/refresh"))
-      return route.fulfill({ json: { data: { accessToken: "access", user: buyer } } });
-    if (path.endsWith("/users/me")) return route.fulfill({ json: { data: buyer } });
-    if (path.endsWith(`/products/${productId}`)) return route.fulfill({ json: { data: product } });
+      return route.fulfill({
+        json: { data: { accessToken: "access", user: buyer } },
+      });
+    if (path.endsWith("/users/me"))
+      return route.fulfill({ json: { data: buyer } });
+    if (path.endsWith(`/products/${productId}`))
+      return route.fulfill({ json: { data: product } });
+    if (path.endsWith(`/products/${secondProductId}`))
+      return route.fulfill({ json: { data: secondProduct } });
     if (path.endsWith("/cart/items") && request.method() === "POST") {
-      cartHasItem = true;
+      cartVariantIds.push(request.postDataJSON().variantId);
       return route.fulfill({ status: 201, json: { data: {} } });
     }
     if (path.endsWith("/cart") || path.endsWith("/cart/items")) {
-      const items = cartHasItem
-        ? [
-            {
-              id: itemId,
-              variantId,
-              productId,
-              shopId,
-              productName: product.name,
-              sku: "LINEN-M",
-              attributes: { size: "M" },
-              currentUnitPrice: "250000",
-              quantity: 1,
-              selected: true,
-              availableQuantity: 3,
-              purchasable: true,
-              unavailableReason: null,
-            },
-          ]
-        : [];
+      const items = cartVariantIds.map((id, index) => {
+        const second = id === secondVariantId;
+        const currentProduct = second ? secondProduct : product;
+        return {
+          id: index === 0 ? itemId : secondItemId,
+          variantId: id,
+          productId: currentProduct.id,
+          shopId: currentProduct.shop.id,
+          productName: currentProduct.name,
+          sku: second ? "CUP-1" : "LINEN-M",
+          attributes: second ? {} : { size: "M" },
+          currentUnitPrice: "250000",
+          quantity: 1,
+          selected: true,
+          availableQuantity: 3,
+          purchasable: true,
+          unavailableReason: null,
+        };
+      });
+      const groups = [
+        { id: shopId, name: "Linen Shop" },
+        { id: secondShopId, name: "Ceramic Shop" },
+      ].flatMap((shop) => {
+        const groupItems = items.filter((item) => item.shopId === shop.id);
+        return groupItems.length
+          ? [
+              {
+                shopId: shop.id,
+                shopName: shop.name,
+                items: groupItems,
+                selectedSubtotal: "250000",
+              },
+            ]
+          : [];
+      });
       return route.fulfill({
         json: {
           data: {
             id: "cart",
             version: 1,
-            groups: items.length
-              ? [{ shopId, shopName: "Linen Shop", items, selectedSubtotal: "250000" }]
-              : [],
-            selectedTotal: items.length ? "250000" : "0",
+            groups,
+            selectedTotal: String(items.length * 250000),
             currency: "VND",
           },
         },
@@ -169,7 +242,7 @@ test("buyer adds a product, confirms a quote, places an order and sees its snaps
               country: "VN",
               postalCode: null,
             },
-            total: "250000",
+            total: "500000",
             currency: "VND",
             valid: true,
             issues: [],
@@ -177,32 +250,53 @@ test("buyer adds a product, confirms a quote, places an order and sees its snaps
           },
         },
       });
+    if (path === "/api/v1/payments")
+      return route.fulfill({ json: { data: [] } });
     if (path.endsWith("/checkout")) {
       expect(request.headers()["idempotency-key"]).toMatch(/^[0-9a-f-]{36}$/i);
       return route.fulfill({ status: 201, json: { data: { id: orderId } } });
     }
-    if (path.endsWith(`/orders/${orderId}`)) return route.fulfill({ json: { data: order } });
+    if (path.endsWith(`/orders/${orderId}`))
+      return route.fulfill({ json: { data: order } });
     return route.fulfill({
       status: 404,
       json: { error: { code: "NOT_FOUND", message: "Not found" } },
     });
   });
 
-  await page.goto(`/login?returnTo=${encodeURIComponent(`/products/${productId}`)}`);
+  await page.goto(
+    `/login?returnTo=${encodeURIComponent(`/products/${productId}`)}`,
+  );
   await page.getByLabel("Email").fill("buyer@example.test");
   await page.getByLabel(/mật khẩu/i).fill("Correct horse battery staple 9!");
   await page.getByRole("button", { name: "Đăng nhập" }).click();
   await expect(page.getByRole("heading", { name: product.name })).toBeVisible();
   await page.getByRole("button", { name: "Thêm vào giỏ hàng" }).click();
   await expect(page.getByText("Đã thêm vào giỏ")).toBeVisible();
+  await page.goto(`/products/${secondProductId}`);
+  await expect(
+    page.getByRole("heading", { name: secondProduct.name }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Thêm vào giỏ hàng" }).click();
+  await expect(page.getByText("Đã thêm vào giỏ")).toBeVisible();
   await page.goto("/cart");
   await expect(page.getByRole("link", { name: product.name })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: secondProduct.name }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Tiến hành đặt hàng" }).click();
-  await expect(page.getByRole("heading", { name: "Thanh toán", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Thanh toán", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Kiểm tra giá và tồn kho" }).click();
-  await expect(page.getByText("250.000₫").first()).toBeVisible();
+  await expect(page.getByText("500.000₫").first()).toBeVisible();
   await page.getByRole("button", { name: "Đặt hàng" }).click();
-  await expect(page.getByRole("heading", { name: order.orderNumber })).toBeVisible();
-  await expect(page.getByText("1 Test Street, Ward 1, District 1, HCMC")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: order.orderNumber }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("1 Test Street, Ward 1, District 1, HCMC"),
+  ).toBeVisible();
   await expect(page.getByText("Linen Shop", { exact: true })).toBeVisible();
+  await expect(page.getByText("Ceramic Shop", { exact: true })).toBeVisible();
 });
