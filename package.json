@@ -22,7 +22,9 @@
     "test:e2e:discovery": "playwright test --config=playwright.discovery.config.ts",
     "test:e2e:checkout": "playwright test --config=playwright.checkout.config.ts",
     "clean": "turbo run clean",
-    "test:e2e:fulfillment": "pnpm --filter @marketplace/api build && playwright test --config=playwright.fulfillment.config.ts"
+    "test:e2e:fulfillment": "pnpm --filter @marketplace/api build && playwright test --config=playwright.fulfillment.config.ts",
+    "test:e2e:us8": "playwright test --config=playwright.us8.config.ts",
+    "test:e2e:us8-live": "corepack pnpm --filter @marketplace/api build && playwright test --config=playwright.us8-live.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",

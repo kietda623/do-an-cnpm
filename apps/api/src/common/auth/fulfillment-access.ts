@@ -2,7 +2,7 @@ import { NotFoundException } from "@nestjs/common";
 import type { Prisma } from "../../generated/prisma/client.js";
 
 /** Recheck current membership on every existing-order operation. */
-export async function canFulfillExistingOrder(
+export async function assertCanReadExistingShopData(
   tx: Prisma.TransactionClient,
   userId: string,
   shopId: string,
@@ -19,3 +19,5 @@ export async function canFulfillExistingOrder(
   });
   if (!membership) throw new NotFoundException();
 }
+
+export const canFulfillExistingOrder = assertCanReadExistingShopData;

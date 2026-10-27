@@ -11,6 +11,7 @@ type OrderItemRow = {
   unitPrice: { toString(): string };
   quantity: number;
   lineTotal: { toString(): string };
+  review?: { id: string; rating: number; comment: string; createdAt: Date } | null;
 };
 type SellerOrderRow = {
   id: string;
@@ -164,7 +165,8 @@ export function aggregateOrder(order: OrderRow) {
         unitPrice: item.unitPrice.toString(),
         quantity: item.quantity,
         lineTotal: item.lineTotal.toString(),
-        reviewId: null,
+        reviewId: item.review?.id ?? null,
+        review: item.review ? { rating: item.review.rating, comment: item.review.comment, createdAt: item.review.createdAt } : null,
       })),
       originalTotal: partTotal.toString(),
       cancelledAmount: part.status === "CANCELLED" ? partTotal.toString() : "0",

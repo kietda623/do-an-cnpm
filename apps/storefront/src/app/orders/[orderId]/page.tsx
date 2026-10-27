@@ -14,6 +14,7 @@ import {
   type Tracking,
 } from "../../../features/orders/tracking-timeline";
 import { ReceiveButton } from "../../../features/orders/receive-button";
+import { ReviewForm } from "../../../features/reviews/review-form";
 
 type Order = {
   orderNumber: string;
@@ -46,6 +47,9 @@ type Order = {
       province: string;
     };
     items: Array<{
+      id: string;
+      reviewId?: string | null;
+      review?: { rating: number; comment: string; createdAt: string } | null;
       productId: string;
       productName: string;
       sku: string;
@@ -153,6 +157,7 @@ export default function OrderDetailPage() {
                     {Object.values(item.attributes).join(" / ") || item.sku} ·{" "}
                     {formatVnd(item.unitPrice)} × {item.quantity}
                   </p>
+                  {seller.status === "COMPLETED" && item.id && <ReviewForm orderItemId={item.id} reviewId={item.reviewId} review={item.review} onDone={refreshOrder} />}
                 </div>
                 <strong>{formatVnd(item.lineTotal)}</strong>
               </article>

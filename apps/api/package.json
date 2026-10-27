@@ -57,6 +57,7 @@
     "seed:identity": "node --experimental-loader ./scripts/resolve-prisma-generated-ts.mjs --experimental-strip-types prisma/seed/identity.seed.ts",
     "seed:shops": "node --experimental-loader ./scripts/resolve-prisma-generated-ts.mjs --experimental-strip-types prisma/seed/shops.seed.ts",
     "seed:catalog": "node --experimental-loader ./scripts/resolve-prisma-generated-ts.mjs --experimental-strip-types prisma/seed/catalog.seed.ts",
-    "seed:payments": "node --experimental-loader ./scripts/resolve-prisma-generated-ts.mjs --experimental-strip-types prisma/seed/payments.seed.ts"
+    "seed:payments": "node --experimental-loader ./scripts/resolve-prisma-generated-ts.mjs --experimental-strip-types prisma/seed/payments.seed.ts",
+    "seed:reviews-statistics": "node --experimental-loader ./scripts/resolve-prisma-generated-ts.mjs --experimental-strip-types prisma/seed/reviews-statistics.seed.ts"
   }
 }

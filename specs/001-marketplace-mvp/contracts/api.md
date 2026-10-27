@@ -104,7 +104,7 @@ Read DTO có `id`, `createdAt`, `updatedAt` trừ projection/command ghi khác.
 | CheckoutQuoteRequest | cartItemIds unique UUID[] length1–100; addressId; paymentMethod:`COD|MOCK` |
 | CheckoutQuote | quoteId; expiresAt; lines:{cartItemId,variantId,shopId,quantity,unitPrice,lineTotal}[]; groups:{shopId,subtotal,shippingFee,total}[]; addressSnapshot:AddressWrite; total; currency; valid boolean; issues:{cartItemId?,code,message}[] |
 | CheckoutCreate | quoteId; no price/address/owner override; selected quantities and address bound into quote |
-| OrderItem | id; productId; variantId; productName; sku; attributes; imageUrl?; unitPrice; quantity; lineTotal; reviewId?; immutable snapshots |
+| OrderItem | id; productId; variantId; productName; sku; attributes; imageUrl?; unitPrice; quantity; lineTotal; reviewId?; review?:{rating,comment,createdAt} read-only; immutable snapshots |
 | SellerOrder | id; orderId; shopId; shopNameSnapshot; status; items:OrderItem[]; originalTotal; cancelledAmount; capturedAmount; refundedAmount; outstandingAmount; currency; addressSnapshot; shipment:Shipment?; version; completedAt?; cancelledAt?; cancelReason?; timestamps |
 | Order | id; buyerId; orderNumber; sellerOrders:SellerOrder[]; status; partiallyCancelled boolean; originalTotal; cancelledAmount; capturedAmount; refundedAmount; outstandingAmount; paymentMethod; paymentStatus; currency; paymentDeadline?; payments:Payment[]; version; timestamps |
 | OrderSummary | id; orderNumber; status; partiallyCancelled; originalTotal; outstandingAmount; paymentStatus; createdAt |
@@ -263,6 +263,9 @@ a separate simulated action; Buyer receive requires collection/payment before CO
 Admin acts through explicit actions, never arbitrary state override or mutation of completed order.
 
 ### Reviews/statistics — Sprint 6, FR-40–46
+
+Shop reviews, stats và revenue cho phép tài khoản ACTIVE có membership ACTIVE của shop
+ACTIVE hoặc SUSPENDED; shop PENDING/REJECTED bị từ chối.
 
 | Method/path | Request | Response | Auth | Extra errors / tests |
 | --- | --- | --- | --- | --- |
