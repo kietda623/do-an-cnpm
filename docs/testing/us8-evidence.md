@@ -13,7 +13,7 @@
 
 | Behavior | Red before implementation | Green |
 | --- | --- | --- |
-| Runtime/OpenAPI routes | `test:contracts --testPathPatterns=reviews-revenue.contract.spec.ts`: 5 failures because the five contract routes had no runtime handler. | Contract suite: 9 suites / 206 tests passed, including 5 US8 route/auth/filter/error checks. |
+| Runtime/OpenAPI routes | `test:contracts --testPathPatterns=reviews-revenue.contract.spec.ts`: 5 failures because the five contract routes had no runtime handler. | Contract suite: 9 suites / 221 tests passed, including US8 route/auth/filter/error and required-range checks. |
 | Review and reporting | US8 integration initially returned 404 for incomplete-item review (expected 422), both parallel reviews (expected 201/409), suspended Seller reads and reports. Fixture setup errors were corrected before capturing this red result. | Targeted US8 PostgreSQL integration: 11 tests passed. It checks ownership, 422, rating bounds, trimmed comments, 201/409 duplicate requests, two-connection barrier and unique violation, public visibility, cross-shop isolation, revoked/locked users and shop status rules. |
 | Timezone | API PostgreSQL session was `Asia/Bangkok`, and `2026-10-26T16:59:59Z` persisted as `09:59:59Z`. A regression with a non-UTC connection URL then failed when URL options overrode the pool setting. | Targeted integration confirms API session UTC and verifies both ORM readback and stored UTC; DAY/MONTH groups across 31 October/1 November Vietnam time yield 101 and 202 VND, total 303. A cancelled and refunded 999 VND SellerOrder and another shop's 9999 VND do not enter the result. |
 | Buyer locking race | With an uncommitted concurrent account lock, review submission finished before the lock committed. | A real row-lock wait and subsequent 401 are verified after rechecking ACTIVE under the User lock before Order and SellerOrder. |
@@ -34,11 +34,14 @@
 | `corepack pnpm test:e2e:us8` | Passed, 2 browser tests with mocked API responses. |
 | Confirmed disposable DB; `corepack pnpm test:e2e:us8-live` | Passed, 1 browser test using real API and PostgreSQL. The completed OrderItem is a database fixture; the test covers Buyer login/review/persistence/public list and Seller login/dashboard, not checkout or fulfillment. |
 | Upgrade rehearsal | On a second isolated DB `marketplace_us8_upgrade_disposable`, Prisma deployed 0001–0007, a User fixture was inserted, then 0008 was deployed. The User remained, and the rating CHECK and both Review indexes were verified. |
-| `corepack pnpm test`, full integration, full build | Passed earlier in the work; rerun after the final source changes is pending. |
-| `corepack pnpm format:check` | Most recent Windows run failed with 94 warnings; it will be rerun after final changes. Only new files were formatted individually; no repository-wide formatting was performed. |
+| `corepack pnpm test` | Passed: 9 API unit suites / 46 tests and 5 API-client tests. |
+| `corepack pnpm --filter @marketplace/api test:contracts` | Passed: 9 suites / 221 tests. |
+| Confirmed disposable DB; `corepack pnpm --filter @marketplace/api test:integration` | Passed: 11 suites / 55 tests. |
+| `corepack pnpm build` | Passed: 4 build tasks. |
+| `corepack pnpm format:check` | Windows run failed with 95 file warnings; most are pre-existing, and some touched files are also flagged. Only new files were formatted individually; no repository-wide formatting was performed. |
 
 ## Limits and task paths
 
 - Mock E2E is not database evidence; the additional live test uses an actual API and database. The live fixture creates a completed order directly and does not prove the checkout-to-completion lifecycle.
 - The Seller reports use repeatable-read, read-only transactions and only sum completed SellerOrder amounts; cancelled/refunded parts and other shops are excluded. VND amounts remain integer decimal strings.
-- Task file paths T112–T120 match the created implementation and test paths, including the real seed. T121–T129 remain unchanged until T120 is ticked and US9 evidence is rerun.
+- Task file paths T112–T120 match the created implementation and test paths, including the real seed. T120 was ticked before US9 evidence was rerun; T121–T129 are recorded separately with the rerun evidence.

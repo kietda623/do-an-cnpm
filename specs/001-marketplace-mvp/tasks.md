@@ -1,7 +1,7 @@
 # Tasks: Multi-Vendor Marketplace MVP
 
 **Input**: Design documents from `specs/001-marketplace-mvp/`.
-**Created**: 2026-10-20 | **Git branch**: `codex/monorepo-t008` | **Status**: Setup/foundation và US1–US7 hoàn tất theo evidence hiện hành; US8–US10 chưa hoàn tất. Checkbox bên dưới là nguồn theo dõi từng task; W008 vẫn mở.
+**Created**: 2026-10-20 | **Git branch**: `codex/monorepo-t008` | **Status**: Setup/foundation và US1–US9 hoàn tất theo evidence hiện hành; US10 chưa hoàn tất. Checkbox bên dưới là nguồn theo dõi từng task; W008 vẫn mở.
 **Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/api.md](contracts/api.md), [ui-plan.md](ui-plan.md), [quickstart.md](quickstart.md), [wbs.md](wbs.md) và [constitution](../../.specify/memory/constitution.md).
 
 **Tests**: Được yêu cầu rõ trong spec NFR-04, acceptance/SC và hiến chương. Có contract/unit/integration/E2E/security/concurrency phù hợp. Viết tests trước implementation tương ứng; lần chạy trước implementation phải thất bại vì hành vi chưa có sau khi harness compile, không xem lỗi dependency hoặc test giả là bằng chứng nghiệp vụ. Các test placeholder không được dùng để báo pass.
@@ -304,24 +304,24 @@ Phase là thứ tự capability, không tương đương Sprint. Gán lịch the
 
 ### Tests
 
-- [ ] T121 [P] [US9] Contract admin/users lockunlock/products hide/orders/query/stats/audit và explicit recoveryconfirm/pack/reject,role checks,projectionsecrets trong tests/contracts/admin-operations.contract.spec.ts. [Owner: M1; Reviewer: M4; Sprint: S6; WBS: W042,W045; Allocation: W042=0.40PD(M1/S6), W045=0.00PD(reference); Depends: T120]
-- [ ] T122 [P] [US9] DB tests lockeduser revocation/no revivedsessions,hiddennewpurchaseblocked,Admin completedimmutability/audit/số liệu mẫu biết trước/recovery domain guards trong apps/api/test/integration/admin-operations.integration.spec.ts. [Owner: M1; Reviewer: M4; Sprint: S6; WBS: W042,W045,W050; Allocation: W042=0.40PD(M1/S6), W045=0.00PD(reference), W050=0.00PD(reference); Depends: T120]
+- [x] T121 [P] [US9] Contract admin/users lockunlock/products hide/orders/query/stats/audit và explicit recoveryconfirm/pack/reject,role checks,projectionsecrets trong tests/contracts/admin-operations.contract.spec.ts. [Owner: M1; Reviewer: M4; Sprint: S6; WBS: W042,W045; Allocation: W042=0.40PD(M1/S6), W045=0.00PD(reference); Depends: T120]
+- [x] T122 [P] [US9] DB tests lockeduser revocation/no revivedsessions,hiddennewpurchaseblocked,Admin completedimmutability/audit/số liệu mẫu biết trước/recovery domain guards trong apps/api/test/integration/admin-operations.integration.spec.ts. [Owner: M1; Reviewer: M4; Sprint: S6; WBS: W042,W045,W050; Allocation: W042=0.40PD(M1/S6), W045=0.00PD(reference), W050=0.00PD(reference); Depends: T120]
 
 ### Implementation
 
-- [ ] T123 [US9] Admin usersearch/lockunlock,auth_version/session revoke transaction,no restoresessions;audit safe metadata/reason trong apps/api/src/modules/admin/services/account-management.service.ts. [Owner: M1; Reviewer: M4; Sprint: S6; WBS: W042; Allocation: W042=0.40PD(M1/S6); Depends: T121, T122]
-- [ ] T124 [US9] Product hide viaCatalog publicservice,newcheckout eligibility lock coordination,allorder inquiry/filters,explicit lockedaccount recoveryactions reuse state guards trong apps/api/src/modules/admin/services/moderation.service.ts,order-inquiry.service.ts; no generic db editor. [Owner: M1; Reviewer: M4; Sprint: S6; WBS: W042; Allocation: W042=0.40PD(M1/S6); Depends: T123]
-- [ ] T125 [US9] Allrowcounts bystatus,completedSellerOrdervalue only/consistent reads,immutable audit query/role scoped trong apps/api/src/modules/admin/services/admin-statistics.service.ts,audit-query.service.ts. [Owner: M2; Reviewer: M1; Sprint: S6; WBS: W045; Allocation: W045=1.00PD(M2/S6); Depends: T124]
-- [ ] T126 [US9] Admin controllers/DTO validation/version/actions/read-onlyfinal route restrictions trong apps/api/src/modules/admin/controllers/users.controller.ts,products.controller.ts,orders.controller.ts,statistics.controller.ts,audit.controller.ts. [Owner: M1; Reviewer: M4; Sprint: S6; WBS: W042,W045; Allocation: W042=0.40PD(M1/S6), W045=0.00PD(reference); Depends: T125]
-- [ ] T127 [P] [US9] A02usersearch/lockunlock,A06productmoderation withreason/version/conflict handling trong apps/admin-panel/src/app/users/page.tsx,products/page.tsx;no hash/token UI. [Owner: M4; Reviewer: M5; Sprint: S6; WBS: W047; Allocation: W047=1.00PD(M4/S6); Depends: T126]
-- [ ] T128 [P] [US9] A01/A07 stats+orderfilters/details/parts/payment/audit/read-onlyfinal/recovery/return widget integration trong apps/admin-panel/src/app/page.tsx,orders/page.tsx,orders/[orderId]/page.tsx. [Owner: M4; Reviewer: M5; Sprint: S6; WBS: W047; Allocation: W047=1.00PD(M4/S6); Depends: T126]
-- [ ] T129 [US9] Admin lifecycle/security/E2E totals/audit/fullFR46–50 tests trong tests/e2e/admin-operations.spec.ts và docs/testing/us9-evidence.md; không đánh dấu bằng screenshot đơn thuần. [Owner: M1; Reviewer: M5; Sprint: S7; WBS: W050,W051,W056; Allocation: W050=1.25PD(M1/S7), W051=0.00PD(reference), W056=0.00PD(reference); Depends: T127, T128]
+- [x] T123 [US9] Admin usersearch/lockunlock,auth_version/session revoke transaction,no restoresessions;audit safe metadata/reason trong apps/api/src/modules/admin/services/account-management.service.ts. [Owner: M1; Reviewer: M4; Sprint: S6; WBS: W042; Allocation: W042=0.40PD(M1/S6); Depends: T121, T122]
+- [x] T124 [US9] Product hide viaCatalog publicservice,newcheckout eligibility lock coordination,allorder inquiry/filters,explicit lockedaccount recoveryactions reuse state guards trong apps/api/src/modules/admin/services/moderation.service.ts,order-inquiry.service.ts; no generic db editor. [Owner: M1; Reviewer: M4; Sprint: S6; WBS: W042; Allocation: W042=0.40PD(M1/S6); Depends: T123]
+- [x] T125 [US9] Allrowcounts bystatus,completedSellerOrdervalue only/consistent reads,immutable audit query/role scoped trong apps/api/src/modules/admin/services/admin-statistics.service.ts,audit-query.service.ts. [Owner: M2; Reviewer: M1; Sprint: S6; WBS: W045; Allocation: W045=1.00PD(M2/S6); Depends: T124]
+- [x] T126 [US9] Admin controllers/DTO validation/version/actions/read-onlyfinal route restrictions trong apps/api/src/modules/admin/controllers/users.controller.ts,products.controller.ts,orders.controller.ts,statistics.controller.ts,audit.controller.ts. [Owner: M1; Reviewer: M4; Sprint: S6; WBS: W042,W045; Allocation: W042=0.40PD(M1/S6), W045=0.00PD(reference); Depends: T125]
+- [x] T127 [P] [US9] A02usersearch/lockunlock,A06productmoderation withreason/version/conflict handling trong apps/admin-panel/src/app/users/page.tsx,products/page.tsx;no hash/token UI. [Owner: M4; Reviewer: M5; Sprint: S6; WBS: W047; Allocation: W047=1.00PD(M4/S6); Depends: T126]
+- [x] T128 [P] [US9] A01/A07 stats+orderfilters/details/parts/payment/audit/read-onlyfinal/recovery/return widget integration trong apps/admin-panel/src/app/page.tsx,orders/page.tsx,orders/[orderId]/page.tsx. [Owner: M4; Reviewer: M5; Sprint: S6; WBS: W047; Allocation: W047=1.00PD(M4/S6); Depends: T126]
+- [x] T129 [US9] Admin lifecycle/security/E2E totals/audit/fullFR46–50 tests trong tests/e2e/admin-operations.spec.ts và docs/testing/us9-evidence.md; không đánh dấu bằng screenshot đơn thuần. [Owner: M1; Reviewer: M5; Sprint: S7; WBS: W050,W051,W056; Allocation: W050=1.25PD(M1/S7), W051=0.00PD(reference), W056=0.00PD(reference); Depends: T127, T128]
 
 **Checkpoint**: Chạy và review nghiệm thu của US9 theo spec; mọi ảnh hưởng story trước còn green, không có lỗi tiền/tồn/quyền.
 
-**Execution note (2026-10-27)**: US9 implementation and test evidence are recorded in
-`docs/testing/us9-evidence.md`. T121–T129 remain unchecked because their declared prerequisite
-T120 is still unchecked; this branch does not claim the US9 dependency chain or story checkpoint.
+**Execution note (2026-10-27)**: T120 was ticked before the US9 checks were rerun.
+US9 implementation and rerun evidence are recorded in `docs/testing/us9-evidence.md`;
+T121–T129 are recorded in a separate follow-up commit.
 
 ---
 

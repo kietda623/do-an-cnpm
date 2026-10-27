@@ -43,7 +43,24 @@
 
 ## Task dependency and limits
 
-- The US9 implementation artifacts and test evidence are present in this branch. T121–T129 remain unchecked in `tasks.md` because they explicitly depend on T120, which is still unchecked. US8 is outside this PR; therefore this evidence does not claim the US9 task dependency chain or story checkpoint is complete.
-- No Review model exists in the current Prisma schema. Admin Product projection uses the contract’s neutral empty rating fields; review implementation remains US8.
+- T120 was ticked in the US8 implementation commit before the US9 checks below were rerun. T121–T129 are recorded in a separate follow-up commit.
+- US8 now adds the Review model and real rating aggregates to Admin Product projection; the neutral rating fields described in the original US9 implementation are no longer the current behavior.
 - No `MODERATOR` role, shop-staff role, or generic order editor was added.
 - Local full integration used PostgreSQL 18; CI’s PostgreSQL 17.11 remains the cross-version check.
+
+## US9 rerun after US8 (2026-10-27)
+
+The following checks ran on the US8 branch after T120 was ticked and after the required reporting range change. PostgreSQL 18 used `marketplace_us8_disposable` on port 55435 with an exact database-name confirmation; no shared database was used.
+
+| Command | Observed result |
+| --- | --- |
+| `corepack pnpm lint:workspaces` / `corepack pnpm typecheck` | Passed: 11 tasks each. |
+| `corepack pnpm test` | Passed: 9 API suites / 46 tests and 5 API-client tests. |
+| `corepack pnpm --filter @marketplace/api test:contracts` | Passed: 9 suites / 221 tests. |
+| `corepack pnpm --filter @marketplace/api test:integration` | Passed: 11 suites / 55 tests on the confirmed disposable database. |
+| `corepack pnpm --filter @marketplace/api prisma:schema:check` | Passed: no difference detected. |
+| `corepack pnpm build` | Passed: 4 build tasks. |
+| `corepack pnpm test:e2e:admin` | Passed: 2 browser tests with mocked API responses. |
+| `corepack pnpm format:check` | Failed: 95 file warnings on Windows; no repository-wide formatting was performed. |
+
+CI uses PostgreSQL 17.11; this local rerun does not establish the CI result.
