@@ -152,5 +152,7 @@ test("buyer reviews a completed item and sees the public review (mock API)", asy
   });
   await page.goto(`/products/${id}`);
   await expect(page.getByText("Rất tốt")).toBeVisible();
-  await expect(page.getByText(/5.*1 đánh giá/)).toBeVisible();
+  await expect(
+    page.getByText("5/5 · 1 đánh giá", { exact: true }),
+  ).toBeVisible();
 });

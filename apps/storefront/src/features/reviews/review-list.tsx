@@ -52,7 +52,12 @@ export function ReviewList({
     >
       <h2 className="text-xl font-semibold">Đánh giá sản phẩm</h2>
       <p>
-        {ratingAverage ?? "Chưa có điểm"} · {ratingCount} đánh giá
+        {ratingAverage != null
+          ? `${Number(ratingAverage).toLocaleString("vi-VN", {
+              maximumFractionDigits: 1,
+            })}/5`
+          : "Chưa có điểm"}{" "}
+        · {ratingCount} đánh giá
       </p>
       {loading ? (
         <p role="status">Đang tải đánh giá…</p>

@@ -124,8 +124,15 @@ test.afterAll(async () => {
     child.kill();
     await ended;
   }
-  await pool?.end();
-  await api?.dispose();
+  try {
+    await pool?.query("DELETE FROM reviews WHERE order_item_id=$1", [itemId]);
+    await pool?.query("DELETE FROM order_items WHERE id=$1", [itemId]);
+    await pool?.query("DELETE FROM seller_orders WHERE order_id=$1", [orderId]);
+    await pool?.query("DELETE FROM marketplace_orders WHERE id=$1", [orderId]);
+  } finally {
+    await pool?.end();
+    await api?.dispose();
+  }
 });
 
 async function login(page: Page, port: number, email: string) {
