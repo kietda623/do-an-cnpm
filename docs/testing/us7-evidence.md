@@ -48,3 +48,12 @@ The checkout Playwright config initially failed to start its web server because 
 ## Task path notes
 
 T105/T106 name `shipment.repository.ts`, `receive-order.service.ts` and `cod-collection.service.ts`, which are not present in this checkout. The behavior is implemented in the existing `ShippingService`, `FulfillmentService` and `PaymentService` modules and is covered by the integration evidence above; no repository/service placeholder files were added.
+
+
+## Live acceptance follow-up (2026-10-27)
+
+Validated on main 5ca198b with the fulfillment UI/session follow-up. `pnpm test:e2e:fulfillment` builds the API and starts actual Buyer, Seller and Admin Next apps with PostgreSQL. Final result: 1/1 passed (59.1s test body). No request interception is used. The prior intercepted journey is retained in commerce-fulfillment-ui.spec.ts.
+
+Covers two-shop MOCK/COD checkout, partial cancellation, delivery failure/retry using the same shipment, API process restart, Buyer receipt, delivered-only COD and Admin physical-return confirmation. Assertions verify MOCK captured 2500/refunded 1250/outstanding 0; COD captured 1250/refunded 0/outstanding 0; final stocks A=8 and B=10 from 10 each. Screenshots: test-results/fulfillment-live-buyer.png and fulfillment-live-admin.png.
+
+Requires migrated TEST_DATABASE_URL with database suffix _test or _disposable and exact TEST_DATABASE_NAME_CONFIRMATION. Fixtures are unique and do not reset the database. Shared WebSession restoration prevents concurrent refresh; unmounted checkout effects no longer clear sessions. Workspace typecheck passed.

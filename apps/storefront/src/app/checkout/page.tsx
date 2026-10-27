@@ -90,8 +90,10 @@ export default function CheckoutPage() {
           }
         }
       } catch {
-        await webSession.clear();
-        router.replace("/login?returnTo=%2Fcheckout");
+        if (active) {
+          await webSession.clear();
+          router.replace("/login?returnTo=%2Fcheckout");
+        }
       } finally {
         if (active) setLoading(false);
       }

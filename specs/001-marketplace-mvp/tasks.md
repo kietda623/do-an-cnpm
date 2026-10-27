@@ -377,7 +377,7 @@ T120 is still unchecked; this branch does not claim the US9 dependency chain or 
 - [ ] T157 Chạy đầy đủlint/type/unit/build/integration/contracts/E2E/concurrency/security/perf/native,50FR/10SC và cleancloneSC010<=30phút sau khi đủ prerequisites; ghi commands/exits/blockers/reviewer trong docs/testing/final-acceptance.md. [Owner: M5; Reviewer: M3; Sprint: S7; WBS: W056,W064; Allocation: W056=2.50PD(M5/S7), W064=0.00PD(reference); Depends: T156]
 - [ ] T158 Bàn giao release/source/schema/API/tests/artifacts native/report/demo,không còn lỗi P0 và vấn đề còn lại rõ; cập nhật README.md,docs/releases/handover.md và specs/001-marketplace-mvp/quickstart.md; chưa có evidence thì đểtask unchecked. [Owner: M5; Reviewer: M1; Sprint: S8; WBS: W064; Allocation: W064=1.50PD(M5/S8); Depends: T157]
 ## Proposed follow-up (not in the approved allocation)
-- [ ] T159 E2E full-stack trình duyệt <-> API thật <-> PostgreSQL thật cho luồng US7 fulfillment/cancel/receive; ghi evidence và lệnh chạy tại docs/testing/us7-evidence.md. Đây là đề xuất follow-up, chưa thuộc phân bổ đã duyệt. [Owner: chờ phân bổ; Reviewer: chờ phân bổ; Sprint: chờ phân bổ; WBS: chờ phân bổ; Allocation: đề xuất, không cộng vào tổng 157 PD đã duyệt; Depends: T111]
+- [x] T159 E2E full-stack trình duyệt <-> API thật <-> PostgreSQL thật cho luồng US7 fulfillment/cancel/receive; ghi evidence và lệnh chạy tại docs/testing/us7-evidence.md. Đây là đề xuất follow-up, chưa thuộc phân bổ đã duyệt. [Owner: chờ phân bổ; Reviewer: chờ phân bổ; Sprint: chờ phân bổ; WBS: chờ phân bổ; Allocation: đề xuất, không cộng vào tổng 157 PD đã duyệt; Depends: T111]
 
 
 **Checkpoint**: Không chuyển gate nếu còn dependency hoặc bằng chứng bắt buộc chưa đạt.
