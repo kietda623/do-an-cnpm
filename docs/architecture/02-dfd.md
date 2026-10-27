@@ -70,7 +70,7 @@ flowchart LR
 
 ## 2. DFD mức 1 — 10 tiến trình chính
 
-### Danh mục tiến trình và kho dữ liệu
+### Danh mục tiến trình
 
 | Mã | Tiến trình | Module |
 | --- | --- | --- |
@@ -84,6 +84,8 @@ flowchart LR
 | P8 | Vận chuyển mô phỏng | `shipping` |
 | P9 | Đánh giá và thống kê | `review` |
 | P10 | Quản trị và nhật ký | `admin` |
+
+### Danh mục kho dữ liệu
 
 | Mã | Kho dữ liệu | Bảng PostgreSQL |
 | --- | --- | --- |

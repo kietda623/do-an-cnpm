@@ -15,13 +15,13 @@ Bộ tài liệu này hoàn thành phần tài liệu phân tích/thiết kế c
 - **Nghiệp vụ:** `specs/001-marketplace-mvp/spec.md` (FR-01–50, BR-01–10), `docs/requirements/srs.md`. Mã UC-01…UC-11 giữ nguyên theo SRS; tài liệu use case phân rã thêm thành UC-xx.y.
 - **Dữ liệu:** ERD lấy từ `apps/api/prisma/schema.prisma` (28 model thực tế; `Review` còn thiết kế) cộng `Review` từ `data-model.md`.
 - **Luồng API:** lấy từ `contracts/api.md`; trạng thái "có/chưa có code" đối chiếu với 77 route thực tế trong `*.controller.ts`.
-- Các tài liệu chỉ mô tả hành vi đã chốt trong spec/contract; không thêm nghiệp vụ mới.
+- Các tài liệu truy vết hành vi trong spec/contract; không thêm nghiệp vụ mới. `spec.md` hiện có trạng thái **Draft**: các quyết định từ nguồn Draft là đề xuất, cần rà soát và xác nhận trạng thái nguồn trước khi dùng làm cơ sở triển khai.
 
 ## Đối chiếu và điểm lệch phát hiện khi viết tài liệu
 
 1. **`reviews` chưa có trong `schema.prisma`** dù đã thiết kế ở `data-model.md` (Sprint 6).
 2. **Chưa có route** cho 5 endpoint US8: `POST /reviews`, `GET /products/{id}/reviews`, `GET /shops/{id}/reviews`, `GET /shops/{id}/stats`, `GET /shops/{id}/revenue`. Module `review` còn trống. Các route US7 (xử lý đơn, shipment) và US9 (admin) **đã có** tại `main` (commit `8ee488a`).
-3. **Quyền Admin** gom về `apps/api/src/common/auth/permissions.ts` (bảng `adminPermissionChecks`); hiện mọi quyền trả về `isAdmin`. Thêm vai trò mới chỉ cần sửa bảng này.
+3. **Quyền Admin** gom về `apps/api/src/common/auth/permissions.ts` (bảng `adminPermissionChecks`); hiện mọi quyền dùng `isAdmin`. Thêm vai trò hệ thống mới cần cập nhật cả `isAdmin` và bảng quyền `adminPermissionChecks` cho vai trò đó.
 4. **T121–T129 (US9) chưa tick có chủ đích:** các task này `Depends: T120` (nghiệm thu US8). Mã và evidence US9 đã có tại `docs/testing/us9-evidence.md`; chỉ tick sau khi US8 xong.
 5. Trạng thái "có route" chỉ nghĩa là endpoint tồn tại trong mã, **không** chứng minh đã chạy hoặc đạt nghiệm thu (xem `docs/testing/*-evidence.md` cho bằng chứng kiểm thử).
 

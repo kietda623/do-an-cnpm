@@ -13,9 +13,9 @@
 | `PK` | Khóa chính |
 | `FK` | Khóa ngoại |
 | `UK` | Có ràng buộc UNIQUE (đơn lẻ hoặc là một phần của unique tổ hợp, ghi chú ở bảng) |
-| `||--o{` | 1 – nhiều (0..n) |
-| `||--o|` | 1 – 0..1 |
-| `||--|{` | 1 – nhiều (1..n) |
+| `\|\|--o{` | 1 – nhiều (0..n) |
+| `\|\|--o\|` | 1 – 0..1 |
+| `\|\|--\|{` | 1 – nhiều (1..n) |
 
 Tên cột dùng `snake_case` như trong DB. Chỉ liệt kê các cột quan trọng (khóa, trạng thái, tiền, version, snapshot); danh sách đầy đủ xem `schema.prisma`.
 
@@ -32,7 +32,7 @@ erDiagram
   USER ||--o| CART : "có"
   USER ||--o{ MARKETPLACE_ORDER : "đặt"
   USER ||--o{ CHECKOUT_QUOTE : "yêu cầu"
-  USER ||--o{ AUDIT_EVENT : "thực hiện"
+  USER |o--o{ AUDIT_EVENT : "thực hiện"
 
   SHOP ||--o{ SHOP_MEMBER : "cấp quyền"
   SHOP ||--o{ PRODUCT : "bán"
@@ -83,8 +83,8 @@ erDiagram
   USER ||--o{ ADDRESS : "sở hữu"
   USER ||--o{ ASSET : "tải lên"
   USER |o--o| ASSET : "avatar"
-  USER ||--o{ AUDIT_EVENT : "thực hiện"
-  USER ||--o{ IDEMPOTENCY_RECORD : "gửi"
+  USER |o--o{ AUDIT_EVENT : "thực hiện"
+  USER |o--o{ IDEMPOTENCY_RECORD : "gửi"
   SESSION |o--o| SESSION : "thay thế bởi"
 
   USER {
@@ -296,7 +296,7 @@ erDiagram
   PRODUCT_VARIANT ||--o{ ORDER_ITEM : "tham chiếu"
   ASSET |o--o{ ORDER_ITEM : "ảnh snapshot"
   MARKETPLACE_ORDER ||--o{ ORDER_EVENT : "ghi sự kiện"
-  SELLER_ORDER ||--o{ ORDER_EVENT : "ghi sự kiện"
+  SELLER_ORDER |o--o{ ORDER_EVENT : "ghi sự kiện"
 
   CART {
     uuid id PK
@@ -401,6 +401,7 @@ erDiagram
   PAYMENT ||--o{ PAYMENT_ATTEMPT : "thử"
   PAYMENT ||--o{ PAYMENT_EVENT : "nhận sự kiện"
   PAYMENT_ATTEMPT |o--o{ PAYMENT_ATTEMPT : "bù trừ cho"
+  PAYMENT_ATTEMPT |o--o{ PAYMENT_EVENT : "nhận sự kiện (attempt_id)"
   PAYMENT_EVENT |o--o| PAYMENT_ATTEMPT : "sinh bù trừ"
   PAYMENT_ATTEMPT ||--o{ PAYMENT_ALLOCATION : "phân bổ"
   SELLER_ORDER ||--o{ PAYMENT_ALLOCATION : "nhận tiền"

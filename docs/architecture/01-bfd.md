@@ -5,7 +5,7 @@
 **Phạm vi:** Phân rã hệ thống từ mức gốc xuống các chức năng lá. Mỗi chức năng lá gắn mã FR để truy vết.
 
 > Quy ước mã: **F0** = hệ thống, **F1…F10** = nhóm chức năng cấp 1, **F1.1…** = chức năng cấp 2.
-> Nhóm chức năng cấp 1 ánh xạ 1-1 với module backend trong `apps/api/src/modules/*` (xem bảng cuối tài liệu).
+> Nhóm chức năng cấp 1 ánh xạ logic với module backend trong `apps/api/src/modules/*`: một nhóm có thể dùng nhiều module, và một module có thể phục vụ nhiều nhóm (xem bảng cuối tài liệu).
 
 ---
 

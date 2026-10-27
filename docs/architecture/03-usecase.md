@@ -671,7 +671,7 @@ flowchart LR
 
 | Mục | Nội dung |
 | --- | --- |
-| Actor | Guest (công khai), Seller (của shop) |
+| Actor | Guest, Buyer (công khai); Seller kế thừa quyền Buyer |
 | Yêu cầu | FR-41 |
 | API | `GET /products/{id}/reviews`, `GET /shops/{id}/reviews` |
 | Luồng chính | Guest xem đánh giá theo sản phẩm (chỉ hiển thị tên hiển thị của Buyer, không email/địa chỉ). Seller xem và lọc theo sản phẩm của shop mình. |

@@ -15,6 +15,8 @@
 | Storage | Object storage S3-compatible |
 | Scheduler | Job nền trong `modules/payment/jobs` |
 
+**Metadata request dùng chung:** Các POST thuộc nhóm lệnh chống lặp sau trong các sơ đồ đều gửi HTTP header `Idempotency-Key: <UUID>`: checkout (S05–S06), payment attempt/result (S07–S08, gồm `POST /payments/:id/mock-result`), điều chỉnh tồn, hủy/xác nhận/đóng gói/từ chối/nhận hàng, shipment events/retry/return, thu COD (S10–S13), khóa tài khoản và Admin recovery (S15). Quy ước này áp dụng cả khi nhãn lời gọi chỉ ghi body; `Idempotency-Key` là header. Mỗi lệnh mới dùng key mới; gửi lại cùng lệnh giữ nguyên key và body.
+
 **Trạng thái code** (đối chiếu 77 route thực tế tại `main`, commit `8ee488a`; không phải kết quả test): S01–S13 và S15 có route tương ứng. S14 (đánh giá) và S16 (dashboard, doanh thu Seller) thuộc US8, **chưa có mã** và là thiết kế theo contract.
 
 | # | Luồng | UC | Trạng thái |
@@ -423,7 +425,7 @@ sequenceDiagram
   participant DB as PostgreSQL
 
   Note over DB: Order đã hết hạn, các SellerOrder đã CANCELLED, tồn đã hoàn
-  C->>API: POST /payments/id/mock-result (eventId, SUCCEEDED)
+  C->>API: POST /payments/id/mock-result (eventId, outcome=SUCCEEDED, expectedVersion)
   API->>PAY: applyResult(...)
   PAY->>DB: BEGIN, khóa Order rồi Payment
   PAY->>DB: INSERT payment_events (observed SUCCEEDED, receivedAt)
@@ -515,7 +517,7 @@ sequenceDiagram
   rect rgb(240, 255, 240)
     Note over B,DB: B. Buyer hủy riêng một SellerOrder
     B->>C: Chọn Hủy phần của shop
-    C->>API: POST /orders/id/seller-orders/sid/cancel
+    C->>API: POST /orders/id/seller-orders/sid/cancel (reason, expectedVersion)
     API->>ORD: cancelPart(userId, sellerOrderId)
     ORD->>ORD: Chỉ chấp nhận phần đang PENDING của chính Buyer
   end
@@ -622,11 +624,11 @@ sequenceDiagram
   SHP-->>C: 200 Shipment
 
   S->>C: Cập nhật Đang vận chuyển
-  C->>API: POST /shipments/id/events (IN_TRANSIT)
+  C->>API: POST /shipments/id/events (eventId, event=IN_TRANSIT, expectedVersion)
   SHP->>DB: shipments thành IN_TRANSIT
 
   S->>C: Cập nhật Đã giao
-  C->>API: POST /shipments/id/events (DELIVERED)
+  C->>API: POST /shipments/id/events (eventId, event=DELIVERED, expectedVersion)
   SHP->>DB: shipments thành DELIVERED, delivered_at
   SHP->>ORD: markDelivered(sellerOrderId, txContext)
   ORD->>DB: seller_orders SHIPPING thành DELIVERED
@@ -680,7 +682,7 @@ sequenceDiagram
   participant DB as PostgreSQL
 
   S->>C: Báo giao thất bại kèm lý do
-  C->>API: POST /shipments/id/events (FAILED, reason)
+  C->>API: POST /shipments/id/events (eventId, event=FAILED, reason, expectedVersion)
   SHP->>DB: shipments thành FAILED, INSERT shipment_events
   Note over SHP,ORD: SellerOrder giữ nguyên SHIPPING, UI hiển thị cảnh báo. Tồn chưa tăng.
 
@@ -691,7 +693,7 @@ sequenceDiagram
     SHP-->>C: 200 Shipment, lịch sử được giữ, không trừ tồn thêm
   else Hàng hoàn về kho
     A->>C: Xác nhận hàng hoàn về kèm lý do
-    C->>API: POST /admin/shipments/id/return-confirmation
+    C->>API: POST /admin/shipments/id/return-confirmation (reason, expectedVersion)
     API->>API: Guard: ADMIN
     API->>SHP: confirmReturn(shipmentId)
     SHP->>DB: BEGIN, khóa Order rồi Payment rồi SellerOrder
@@ -786,8 +788,10 @@ sequenceDiagram
   Note over A,DB: Seller bị khóa nhưng còn đơn đang xử lý
   A->>C: Xử lý đơn thay Seller
   C->>API: POST /admin/seller-orders/id/confirm hoặc pack hoặc reject (reason, expectedVersion)
-  API->>API: Guard: ADMIN
-  API->>ORD: Gọi cùng domain action và guard như Seller
+  API->>API: AdminGuard, quyền recoverLockedSellerOrder (confirm/pack) hoặc rejectSellerOrder (reject)
+  API->>ORD: confirmAdmin / packAdmin / rejectAdmin
+  ORD->>DB: Kiểm tra lại quyền Admin và chủ shop có status LOCKED
+  Note over API,ORD: Luồng phân quyền Admin riêng. Chỉ transaction chuyển trạng thái dùng chung với thao tác Seller
   ORD->>DB: Chuyển trạng thái hợp lệ, INSERT order_events
   ADM->>DB: INSERT audit_events (actor Admin, lý do)
   ORD-->>C: 200 SellerOrder
