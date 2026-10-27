@@ -9,6 +9,11 @@ import { webSession } from "../../auth-form";
 import { formatVnd } from "../../../features/money";
 import { PaymentPanel } from "../../../features/orders/payment-panel";
 import { CancelDialog } from "../../../features/orders/cancel-dialog";
+import {
+  TrackingTimeline,
+  type Tracking,
+} from "../../../features/orders/tracking-timeline";
+import { ReceiveButton } from "../../../features/orders/receive-button";
 
 type Order = {
   orderNumber: string;
@@ -31,15 +36,7 @@ type Order = {
     capturedAmount: string;
     refundedAmount: string;
     outstandingAmount: string;
-    shipment: {
-      status: string;
-      trackingCode: string;
-      history: Array<{
-        toStatus: string;
-        reason: string | null;
-        createdAt: string;
-      }>;
-    } | null;
+    shipment: Tracking | null;
     addressSnapshot: {
       recipientName: string;
       phone: string;
@@ -66,8 +63,6 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [actionError, setActionError] = useState("");
-  const [receiving, setReceiving] = useState("");
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -95,28 +90,6 @@ export default function OrderDetailPage() {
       `/orders/${orderId}` as ApiPath,
     );
     setOrder(value);
-  }
-  async function receive(sellerId: string, version: number) {
-    setReceiving(sellerId);
-    setActionError("");
-    try {
-      await webSession.api.request(
-        `/orders/${orderId}/seller-orders/${sellerId}/receive` as ApiPath,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": crypto.randomUUID() },
-          body: JSON.stringify({ expectedVersion: version }),
-        },
-      );
-      await refreshOrder();
-    } catch {
-      setActionError(
-        "Chưa thể xác nhận nhận hàng. Hãy tải lại đơn và kiểm tra trạng thái giao, thanh toán.",
-      );
-      await refreshOrder();
-    } finally {
-      setReceiving("");
-    }
   }
   if (loading)
     return (
@@ -185,6 +158,16 @@ export default function OrderDetailPage() {
               </article>
             ))}
           </div>
+          <TrackingTimeline shipment={seller.shipment} />
+          {seller.status === "DELIVERED" &&
+            seller.outstandingAmount === "0" && (
+              <ReceiveButton
+                orderId={orderId}
+                sellerOrderId={seller.id}
+                version={seller.version}
+                onDone={refreshOrder}
+              />
+            )}
           <p className="text-right font-semibold">
             Tổng cửa hàng: {formatVnd(seller.originalTotal)}
           </p>
@@ -199,45 +182,8 @@ export default function OrderDetailPage() {
               Đã hủy{seller.cancelReason ? `: ${seller.cancelReason}` : ""}
             </p>
           )}
-          {seller.shipment && (
-            <section
-              className="mt-4 border-t pt-4"
-              aria-label={`Vận chuyển ${seller.shopNameSnapshot}`}
-            >
-              <h3 className="font-semibold">
-                Vận chuyển · {seller.shipment.status}
-              </h3>
-              <p className="text-sm">
-                Mã theo dõi: {seller.shipment.trackingCode}
-              </p>
-              <ol className="mt-2 list-inside list-decimal text-sm">
-                {seller.shipment.history.map((event, index) => (
-                  <li key={index}>
-                    {event.toStatus} ·{" "}
-                    {new Date(event.createdAt).toLocaleString("vi-VN")}
-                    {event.reason ? ` · ${event.reason}` : ""}
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
-          {seller.status === "DELIVERED" &&
-            seller.outstandingAmount === "0" && (
-              <button
-                disabled={receiving === seller.id}
-                onClick={() => void receive(seller.id, seller.version)}
-                className="mt-4 rounded border px-4 py-2 disabled:opacity-50"
-              >
-                Xác nhận đã nhận hàng
-              </button>
-            )}
         </section>
       ))}
-      {actionError && (
-        <p role="alert" className="text-red-700">
-          {actionError}
-        </p>
-      )}
       <PaymentPanel
         orderId={orderId}
         method={order.paymentMethod}

@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.tsx",
     "./seller/catalog/product-editor": "./src/seller/catalog/product-editor.tsx",
+    "./seller/orders/order-list": "./src/seller/orders/order-list.tsx",
     "./styles.css": "./src/styles.css"
   },
   "peerDependencies": {

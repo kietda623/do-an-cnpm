@@ -39,6 +39,9 @@ export default function HomePage() {
         <RoleGate role="ADMIN">
           <h1 className="text-3xl font-semibold">Marketplace Admin</h1>
           <p>Không gian quản trị Marketplace.</p>
+          <Link className="underline" href="/shipments">
+            Tra cứu và xác nhận hàng hoàn
+          </Link>
           {stats && (
             <section
               aria-label="Thống kê nền tảng"

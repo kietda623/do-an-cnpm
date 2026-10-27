@@ -2,14 +2,47 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MemoryTokenStore } from "../src/auth/types.ts";
 import { ApiClientError, ApiTransport } from "../src/transport.ts";
+import { SessionRestore } from "../src/auth/session-restore.ts";
 
 const unauthorized = () =>
   Response.json(
-    { error: { code: "UNAUTHORIZED", message: "Sign in again", requestId: "test" } },
+    {
+      error: {
+        code: "UNAUTHORIZED",
+        message: "Sign in again",
+        requestId: "test",
+      },
+    },
     { status: 401 },
   );
 
 describe("API transport auth behavior", () => {
+  it("allows a fresh restore after a failed in-flight restoration", async () => {
+    const session = new SessionRestore();
+    const failed = () => Promise.reject(new Error("session expired"));
+    await assert.rejects(session.run(failed), /session expired/);
+    assert.deepEqual(
+      await session.run(async () => ({ id: "signed-in-again" })),
+      { id: "signed-in-again" },
+    );
+  });
+  it("restores one browser session for concurrent mount effects", async () => {
+    let refreshCalls = 0;
+    const session = new SessionRestore();
+    const restore = async () => {
+      refreshCalls += 1;
+      await new Promise((done) => setTimeout(done, 10));
+      return { id: "buyer" };
+    };
+    const users = await Promise.all([
+      session.run(restore),
+      session.run(restore),
+    ]);
+    assert.deepEqual(users, [{ id: "buyer" }, { id: "buyer" }]);
+    assert.equal(refreshCalls, 1);
+    await session.run(restore);
+    assert.equal(refreshCalls, 2);
+  });
   it("keeps memory token reads isolated and clears them", async () => {
     const store = new MemoryTokenStore();
     const input = { accessToken: "access", refreshToken: "refresh" };
@@ -37,12 +70,18 @@ describe("API transport auth behavior", () => {
         refreshCalls += 1;
         await new Promise((resolve) => setTimeout(resolve, 10));
         return Response.json({
-          data: { accessToken: "fresh", expiresIn: 600, user: {}, sessionId: "session" },
+          data: {
+            accessToken: "fresh",
+            expiresIn: 600,
+            user: {},
+            sessionId: "session",
+          },
         });
       }
 
       readCalls += 1;
-      if (new Headers(init?.headers).get("Authorization") !== "Bearer fresh") return unauthorized();
+      if (new Headers(init?.headers).get("Authorization") !== "Bearer fresh")
+        return unauthorized();
       return Response.json({ data: { ok: true } });
     };
     const client = new ApiTransport({
@@ -75,7 +114,12 @@ describe("API transport auth behavior", () => {
       if (url.pathname.endsWith("/auth/refresh")) {
         refreshCalls += 1;
         return Response.json({
-          data: { accessToken: "fresh", expiresIn: 600, user: {}, sessionId: "session" },
+          data: {
+            accessToken: "fresh",
+            expiresIn: 600,
+            user: {},
+            sessionId: "session",
+          },
         });
       }
       mutationCalls += 1;
@@ -89,8 +133,12 @@ describe("API transport auth behavior", () => {
     });
 
     await assert.rejects(
-      client.request("/orders", { method: "POST", body: JSON.stringify({ item: "one" }) }),
-      (error: unknown) => error instanceof ApiClientError && error.status === 401,
+      client.request("/orders", {
+        method: "POST",
+        body: JSON.stringify({ item: "one" }),
+      }),
+      (error: unknown) =>
+        error instanceof ApiClientError && error.status === 401,
     );
     assert.equal(mutationCalls, 1);
     assert.equal(refreshCalls, 1);
