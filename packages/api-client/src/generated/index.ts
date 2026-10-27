@@ -1137,7 +1137,7 @@ export interface paths {
     };
     /**
      * GET /shops/{id}/stats
-     * @description Auth scope: active shop member. ACTIVE and SUSPENDED shops may read; PENDING and REJECTED are denied. Counts follow BR-10 and exclude other shops.
+     * @description Auth scope: active shop member. ACTIVE and SUSPENDED shops may read; PENDING and REJECTED are denied. from and to are required UTC instants with from < to, from inclusive and to exclusive; counts follow BR-10 and exclude other shops.
      */
     get: operations["get_shops_by_id_stats"];
     put?: never;
@@ -1157,7 +1157,7 @@ export interface paths {
     };
     /**
      * GET /shops/{id}/revenue
-     * @description Auth scope: active shop member. ACTIVE and SUSPENDED shops may read; PENDING and REJECTED are denied. DAY/MONTH uses the Asia/Saigon completion instant; amounts are simulated.
+     * @description Auth scope: active shop member. ACTIVE and SUSPENDED shops may read; PENDING and REJECTED are denied. from and to are required UTC instants with from < to, from inclusive and to exclusive; DAY/MONTH groups completion instants in Asia/Saigon. Amounts are simulated.
      */
     get: operations["get_shops_by_id_revenue"];
     put?: never;
@@ -9506,9 +9506,9 @@ export interface operations {
   };
   get_shops_by_id_stats: {
     parameters: {
-      query?: {
-        from?: string;
-        to?: string;
+      query: {
+        from: string;
+        to: string;
       };
       header?: never;
       path: {
@@ -9625,8 +9625,8 @@ export interface operations {
   get_shops_by_id_revenue: {
     parameters: {
       query: {
-        from?: string;
-        to?: string;
+        from: string;
+        to: string;
         groupBy: "DAY" | "MONTH";
       };
       header?: never;

@@ -14,20 +14,24 @@ type Series = {
 export function RevenueView({
   api,
   shopId,
+  range,
 }: {
   api: ApiTransport;
   shopId: string;
+  range: { from: string; to: string } | null;
 }) {
   const [groupBy, setGroupBy] = useState<"DAY" | "MONTH">("DAY");
   const [series, setSeries] = useState<Series | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   useEffect(() => {
+    if (!range) return;
     let live = true;
     setLoading(true);
     setError("");
+    const params = new URLSearchParams({ ...range, groupBy });
     void api
-      .request<Series>(`/shops/${shopId}/revenue?groupBy=${groupBy}` as ApiPath)
+      .request<Series>(`/shops/${shopId}/revenue?${params}` as ApiPath)
       .then((value) => {
         if (live) setSeries(value);
       })
@@ -40,7 +44,7 @@ export function RevenueView({
     return () => {
       live = false;
     };
-  }, [api, shopId, groupBy]);
+  }, [api, shopId, groupBy, range]);
   return (
     <section className="space-y-3 rounded border p-4">
       <h2 className="text-xl font-semibold">Doanh thu mô phỏng</h2>

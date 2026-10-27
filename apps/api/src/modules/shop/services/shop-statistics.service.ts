@@ -2,14 +2,27 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { assertCanReadExistingShopData } from "../../../common/auth/fulfillment-access.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
 
-type DateRange = { from?: string; to?: string };
+type DateRange = { from: string; to: string };
 type RevenuePoint = { period: string; completedCount: number; revenue: string };
 const range = (query: DateRange) => {
-  const to = query.to ? new Date(query.to) : new Date();
-  const from = query.from
-    ? new Date(query.from)
-    : new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
-  if (from >= to) throw new BadRequestException({ code: "INVALID_DATE_RANGE" });
+  const from = new Date(query.from);
+  const to = new Date(query.to);
+  if (
+    !Number.isFinite(from.getTime()) ||
+    !Number.isFinite(to.getTime()) ||
+    from >= to
+  )
+    throw new BadRequestException({
+      code: "VALIDATION_ERROR",
+      message: "Request validation failed.",
+      details: [
+        {
+          field: "to",
+          code: "isAfterFrom",
+          message: "The to timestamp must be later than from.",
+        },
+      ],
+    });
   return { from, to };
 };
 

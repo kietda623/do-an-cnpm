@@ -266,14 +266,17 @@ Admin acts through explicit actions, never arbitrary state override or mutation 
 
 Shop reviews, stats và revenue cho phép tài khoản ACTIVE có membership ACTIVE của shop
 ACTIVE hoặc SUSPENDED; shop PENDING/REJECTED bị từ chối.
+Stats và revenue đều bắt buộc `from` và `to` (RFC3339 UTC, `from` inclusive,
+`to` exclusive, `from < to`); revenue còn bắt buộc `groupBy`. Không giới hạn độ dài
+khoảng thời gian. Giao diện có thể chọn mặc định 30 ngày, API không tự điền.
 
 | Method/path | Request | Response | Auth | Extra errors / tests |
 | --- | --- | --- | --- | --- |
 | POST /reviews | ReviewCreate | Review 201 | B(order item owner) | COMPLETED required 422; unique orderItem 409; range1–5 |
 | GET /products/{id}/reviews | rating,page,pageSize | List<Review> | G | only public product; safe buyer projection |
 | GET /shops/{id}/reviews | productId,rating,page,pageSize | List<Review> | S | cross-shop product filter rejected |
-| GET /shops/{id}/stats | from,to | SellerStats | S | count definitions BR-10; no hidden revenue from other shop |
-| GET /shops/{id}/revenue | from,to,groupBy required | RevenueSeries | S | day/month at Asia/Saigon completion instant; simulate label |
+| GET /shops/{id}/stats | from,to required | SellerStats | S | count definitions BR-10; no hidden revenue from other shop |
+| GET /shops/{id}/revenue | from,to,groupBy all required | RevenueSeries | S | day/month at Asia/Saigon completion instant; simulate label |
 
 ### Admin — Sprint 3 / 6, FR-08,10,15,46–50
 

@@ -6,6 +6,8 @@ test("seller sees simulated statistics and filters reviews (mock API)", async ({
   page,
 }) => {
   let filter = "";
+  let statsRange = new URLSearchParams();
+  let revenueRange = new URLSearchParams();
   await page.route("**/api/v1/**", async (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname.replace("/api/v1", "");
@@ -27,7 +29,18 @@ test("seller sees simulated statistics and filters reviews (mock API)", async ({
           },
         },
       });
-    if (path === `/shops/${shopId}/stats`)
+    if (path === `/shops/${shopId}/stats`) {
+      statsRange = url.searchParams;
+      if (!statsRange.has("from") || !statsRange.has("to"))
+        return route.fulfill({
+          status: 400,
+          json: {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "from and to required",
+            },
+          },
+        });
       return route.fulfill({
         json: {
           data: {
@@ -43,7 +56,23 @@ test("seller sees simulated statistics and filters reviews (mock API)", async ({
           },
         },
       });
-    if (path === `/shops/${shopId}/revenue`)
+    }
+    if (path === `/shops/${shopId}/revenue`) {
+      revenueRange = url.searchParams;
+      if (
+        !revenueRange.has("from") ||
+        !revenueRange.has("to") ||
+        !revenueRange.has("groupBy")
+      )
+        return route.fulfill({
+          status: 400,
+          json: {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "from, to and groupBy required",
+            },
+          },
+        });
       return route.fulfill({
         json: {
           data: {
@@ -66,6 +95,7 @@ test("seller sees simulated statistics and filters reviews (mock API)", async ({
           },
         },
       });
+    }
     if (path === `/shops/${shopId}/reviews`) {
       filter = url.search;
       return route.fulfill({
@@ -92,6 +122,17 @@ test("seller sees simulated statistics and filters reviews (mock API)", async ({
   await page.goto(`/shops/${shopId}/dashboard`);
   await expect(page.getByText(/mô phỏng/i).first()).toBeVisible();
   await expect(page.getByText("303", { exact: false }).first()).toBeVisible();
+  expect(statsRange.has("from") && statsRange.has("to")).toBe(true);
+  expect(revenueRange.has("from") && revenueRange.has("to")).toBe(true);
+  await page.getByLabel("Từ (giờ Việt Nam)").fill("2026-10-01T00:00");
+  await page.getByLabel("Đến trước (giờ Việt Nam)").fill("2026-11-01T00:00");
+  await page.getByRole("button", { name: "Áp dụng khoảng thời gian" }).click();
+  await expect
+    .poll(() => statsRange.get("from"))
+    .toBe("2026-09-30T17:00:00.000Z");
+  await expect
+    .poll(() => revenueRange.get("to"))
+    .toBe("2026-10-31T17:00:00.000Z");
   await page.getByLabel("Nhóm doanh thu").selectOption("MONTH");
   await expect(page.getByText("2026-10", { exact: true })).toBeVisible();
   await page.getByLabel("Mã sản phẩm").fill(productId);

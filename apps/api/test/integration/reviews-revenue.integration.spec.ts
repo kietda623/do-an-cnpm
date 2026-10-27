@@ -17,6 +17,7 @@ import {
 import { Barrier } from "../helpers/concurrency.js";
 
 type Actor = { id: string; token: string };
+const reportRange = "from=2026-10-01T00%3A00%3A00Z&to=2026-12-01T00%3A00%3A00Z";
 describe("US8 reviews and revenue on PostgreSQL", () => {
   const originalDatabaseUrl = process.env.DATABASE_URL;
   let app: INestApplication;
@@ -436,14 +437,16 @@ describe("US8 reviews and revenue on PostgreSQL", () => {
     expect(
       (
         await request(app.getHttpServer())
-          .get(`/api/v1/shops/${shopId}/stats`)
+          .get(`/api/v1/shops/${shopId}/stats?${reportRange}`)
           .set("Authorization", `Bearer ${otherSeller.token}`)
       ).status,
     ).toBe(404);
     expect(
       (
         await request(app.getHttpServer())
-          .get(`/api/v1/shops/${otherShopId}/revenue?groupBy=DAY`)
+          .get(
+            `/api/v1/shops/${otherShopId}/revenue?${reportRange}&groupBy=DAY`,
+          )
           .set("Authorization", `Bearer ${seller.token}`)
       ).status,
     ).toBe(404);
@@ -540,7 +543,7 @@ describe("US8 reviews and revenue on PostgreSQL", () => {
     });
   });
 
-  it("rejects malformed, reversed and future-only date ranges", async () => {
+  it("requires every report parameter, rejects invalid ranges and permits long ranges", async () => {
     const get = (query: string) =>
       request(app.getHttpServer())
         .get(`/api/v1/shops/${shopId}/revenue?${query}`)
@@ -559,13 +562,25 @@ describe("US8 reviews and revenue on PostgreSQL", () => {
       (await get("groupBy=DAY&from=2999-01-01T00%3A00%3A00Z")).status,
     ).toBe(400);
     expect((await get("from=2026-10-26T00%3A00%3A00Z")).status).toBe(400);
+    const withoutFrom = await get("to=2026-11-01T00%3A00%3A00Z&groupBy=DAY");
+    expect(withoutFrom.status).toBe(400);
+    expect(withoutFrom.body.error.details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "from" })]),
+    );
+    expect(
+      (
+        await get(
+          "from=1900-01-01T00%3A00%3A00Z&to=2999-01-01T00%3A00%3A00Z&groupBy=MONTH",
+        )
+      ).status,
+    ).toBe(200);
   });
 
   it("denies revoked members, locked users and pending or rejected shops", async () => {
     const paths = [
       `/api/v1/shops/${shopId}/reviews`,
-      `/api/v1/shops/${shopId}/stats`,
-      `/api/v1/shops/${shopId}/revenue?groupBy=DAY`,
+      `/api/v1/shops/${shopId}/stats?${reportRange}`,
+      `/api/v1/shops/${shopId}/revenue?${reportRange}&groupBy=DAY`,
     ];
     expect((await request(app.getHttpServer()).get(paths[0]!)).status).toBe(
       401,

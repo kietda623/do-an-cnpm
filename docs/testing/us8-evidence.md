@@ -6,6 +6,7 @@
 - Windows 11, Node.js 24, pnpm 12 through Corepack. PostgreSQL 18 runs in an isolated local cluster on `127.0.0.1:55435`; integration uses `marketplace_us8_disposable` and exact `TEST_DATABASE_NAME_CONFIRMATION`. No shared database is used. CI uses PostgreSQL 17.11.
 - Review adds migration `0008_reviews`, UNIQUE(order_item_id), CHECK rating 1–5 and `(product_id, created_at, id)` index. Previous migrations remain unchanged.
 - The user confirmed that ACTIVE users with ACTIVE memberships may read reviews, stats and revenue for an ACTIVE or SUSPENDED shop; PENDING/REJECTED shops are denied. This clarification is in BR-10 and the API contract.
+- The user resolved the reporting range ambiguity: both Seller stats and revenue require UTC `from` and `to` with `from < to`; revenue also requires `groupBy=DAY|MONTH`. The API has no default or range-length limit. Seller Center supplies an editable 30-day default and converts Vietnam local time to UTC.
 - The API PostgreSQL pool forces UTC, including when connection URL options request a different timezone. This corrects future reads/writes; previously mis-stored timestamps are not repaired or backfilled.
 
 ## Red and green evidence
@@ -18,6 +19,7 @@
 | Buyer locking race | With an uncommitted concurrent account lock, review submission finished before the lock committed. | A real row-lock wait and subsequent 401 are verified after rechecking ACTIVE under the User lock before Order and SellerOrder. |
 | Read-only existing review | Product detail returned `ratingAverage=null`/`ratingCount=0`; OrderItem omitted review contents; the browser lacked read-only review text. | Targeted integration and mocked browser tests confirm real rating aggregate, `reviewId` and read-only rating/comment on OrderItem, including Admin Product projection. |
 | Seed | The seed integration test failed because `reviews-statistics.seed.ts` did not exist. | It runs twice idempotently on the confirmed disposable DB and checks 101/202 completed, 999 cancelled/refunded, one review and midnight instants; mismatched confirmation is rejected. |
+| Required reporting parameters | After the contract decision, targeted contract tests reported 8 failures: runtime Swagger still marked `from`/`to` optional and missing parameters returned 200. Seller browser test also failed because it sent no range. | Targeted contract tests passed 20/20, including missing `from`, `to`, `groupBy`, malformed dates, invalid grouping and reversed/equal ranges with field-specific 400 details. Seller browser test passed with explicit UTC query values and editable Vietnam-time inputs. Integration accepts a range from 1900 to 2999 without an arbitrary length limit. |
 
 ## Commands and observed results
 
@@ -25,7 +27,7 @@
 | --- | --- |
 | `corepack pnpm lint:workspaces` | Passed, 11 tasks. |
 | `corepack pnpm typecheck` | Passed, 11 tasks. |
-| `corepack pnpm --filter @marketplace/api test:contracts` | Passed, 9 suites / 206 tests. |
+| `corepack pnpm --filter @marketplace/api test:contracts --testPathPatterns=reviews-revenue.contract.spec.ts` | Passed, 20 tests after the required-range change. |
 | Confirmed disposable DB; `corepack pnpm --filter @marketplace/api test:integration --testPathPatterns=reviews-revenue.integration.spec.ts` | Passed, 11 tests. |
 | Confirmed disposable DB; `corepack pnpm --filter @marketplace/api prisma:schema:check` | Passed, `No difference detected`. |
 | `corepack pnpm --filter @marketplace/api-client generate:types` | Passed after OpenAPI changes. |

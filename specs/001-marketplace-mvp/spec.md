@@ -758,6 +758,8 @@ Admin có thể truy vấn đơn hàng để phục vụ quản trị và xử l
   Seller dashboard đếm sản phẩm chưa ngừng bán, đơn PENDING, đang xử lý
   (CONFIRMED/PACKING/SHIPPING/DELIVERED), COMPLETED. Doanh thu mô phỏng = tổng giá trị các
   Seller Orders COMPLETED theo ngày hoàn thành, timezone Asia/Saigon; không tính đơn hủy/chưa xong.
+  Truy vấn thống kê và doanh thu Seller bắt buộc `from`, `to` với `from < to`; truy vấn doanh thu
+  còn bắt buộc nhóm DAY hoặc MONTH. Không áp giới hạn độ dài khoảng thời gian.
   Dashboard Admin đếm mọi bản ghi người dùng/shop/sản phẩm/Order tổng, có nhãn trạng thái;
   giá trị giao dịch mô phỏng lấy tổng Seller Orders COMPLETED, không đếm kép Order tổng.
   Admin không sửa trực tiếp snapshot, tiền hoặc giao dịch đã hoàn tất. MVP không có quy trình
