@@ -148,7 +148,7 @@ export class AuthService {
     });
     if (!result)
       throw new UnauthorizedException({
-        code: reused ? "REFRESH_REUSE" : "INVALID_REFRESH",
+        code: reused ? "SESSION_REVOKED" : "INVALID_REFRESH",
         message: "Refresh credential is invalid.",
       });
     return this.tokenResponse(result.user, result.session.id, result.refreshToken);
