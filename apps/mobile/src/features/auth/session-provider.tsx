@@ -10,6 +10,7 @@ import { Button, Platform, Text, View } from "react-native";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ExpoSession } from "@marketplace/api-client/auth/expo-session";
 import { ApiClientError } from "@marketplace/api-client";
 import type { components } from "@marketplace/api-client";
@@ -29,6 +30,14 @@ export function useSession() {
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
+  const recoveryStyle = {
+    flex: 1,
+    paddingTop: insets.top + 20,
+    paddingBottom: insets.bottom + 20,
+    paddingLeft: insets.left + 20,
+    paddingRight: insets.right + 20,
+  };
   const [user, setUser] = useState<User | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "retry">("loading");
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -86,13 +95,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
   if (state === "loading")
     return (
-      <View>
+      <View style={recoveryStyle}>
         <Text>Đang khôi phục phiên…</Text>
       </View>
     );
   if (state === "retry")
     return (
-      <View>
+      <View style={recoveryStyle}>
         <Text>Không thể khôi phục phiên. Kiểm tra kết nối rồi thử lại.</Text>
         <Button title="Thử lại" onPress={() => void restore()} />
       </View>
