@@ -48,6 +48,7 @@
     "test": "node scripts/run-tests.mjs unit",
     "test:unit": "node scripts/run-tests.mjs unit",
     "test:integration": "node scripts/run-tests.mjs integration",
+    "test:expiry": "node scripts/run-tests.mjs integration --testPathPatterns=payment.integration.spec.ts --testNamePattern=expires",
     "test:contracts": "node scripts/run-tests.mjs contracts",
     "prisma:generate": "prisma generate --schema prisma/schema.prisma",
     "prisma:migrate:dev": "node scripts/prisma-migrate.mjs dev",
