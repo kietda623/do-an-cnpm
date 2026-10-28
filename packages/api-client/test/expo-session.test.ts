@@ -4,6 +4,86 @@ import { ExpoSession } from "../src/auth/expo-session.ts";
 import { ApiClientError } from "../src/transport.ts";
 
 describe("native session", () => {
+  for (const mode of ["login", "restore", "automatic refresh"] as const)
+    for (const deletionFails of [false, true])
+      it(`invalidates on ${mode} storage write failure (delete fails: ${deletionFails})`, async () => {
+        let stored: string | null = null;
+        let failWrite = false;
+        let notices = 0;
+        let serial = 0;
+        let refreshCalls = 0;
+        let allowProtected = false;
+        let lastAuthorization: string | null = null;
+        const session = new ExpoSession({
+          baseUrl: "https://example.test/api/v1",
+          clientPlatform: "ANDROID",
+          secureStore: {
+            getItemAsync: async () => stored,
+            setItemAsync: async (_, value) => {
+              if (failWrite) throw new Error("storage unavailable");
+              stored = value;
+            },
+            deleteItemAsync: async () => {
+              if (deletionFails) throw new Error("delete unavailable");
+              stored = null;
+            },
+          },
+          fetcher: async (input, init) => {
+            const path = new URL(String(input)).pathname;
+            if (
+              path.endsWith("/auth/login") ||
+              path.endsWith("/auth/refresh")
+            ) {
+              if (path.endsWith("/auth/refresh")) refreshCalls++;
+              serial++;
+              return Response.json({
+                data: {
+                  accessToken: `a${serial}`,
+                  refreshToken: `r${serial}`,
+                  user: {},
+                },
+              });
+            }
+            lastAuthorization = new Headers(init?.headers).get("Authorization");
+            return allowProtected || path.endsWith("/products")
+              ? Response.json({ data: [] })
+              : Response.json(
+                  { error: { code: "UNAUTHORIZED" } },
+                  { status: 401 },
+                );
+          },
+          onSessionInvalid: () => {
+            notices++;
+          },
+        });
+        await session.login("buyer@example.test", "fixture-password");
+        failWrite = true;
+        const operation =
+          mode === "login"
+            ? session.login("buyer@example.test", "fixture-password")
+            : mode === "restore"
+              ? session.restore()
+              : session.api.request("/users/me");
+        let failure: unknown;
+        await assert.rejects(operation, (error) => {
+          failure = error;
+          return true;
+        });
+        assert.equal(notices, 1);
+        assert.equal((failure as Error).name, "SessionStorageError");
+        assert.equal(stored, deletionFails ? "r1" : null);
+        const callsBefore = refreshCalls;
+        assert.equal(await session.restore(), null);
+        assert.equal(refreshCalls, callsBefore);
+        allowProtected = true;
+        await session.api.request("/products");
+        assert.equal(lastAuthorization, null);
+        failWrite = false;
+        await session.login("buyer@example.test", "fixture-password");
+        await session.api.request("/products");
+        assert.equal(lastAuthorization, `Bearer a${serial}`);
+        assert.equal(stored, `r${serial}`);
+      });
   it("invalidates UI even when SecureStore deletion fails", async () => {
     let notices = 0;
     const session = new ExpoSession({
@@ -236,7 +316,11 @@ describe("native session", () => {
     let stored: string | null = "r0";
     let cleared = 0;
     let notices = 0;
-    const requests: Array<{ path: string; refreshToken: string; authorization: string | null }> = [];
+    const requests: Array<{
+      path: string;
+      refreshToken: string;
+      authorization: string | null;
+    }> = [];
     const session = new ExpoSession({
       baseUrl: "https://example.test/api/v1",
       clientPlatform: "ANDROID",
@@ -256,7 +340,9 @@ describe("native session", () => {
         const authorization = new Headers(init?.headers).get("Authorization");
         requests.push({ path, refreshToken: body.refreshToken, authorization });
         if (path.endsWith("/auth/refresh"))
-          return Response.json({ data: { accessToken: "a1", refreshToken: "r1" } });
+          return Response.json({
+            data: { accessToken: "a1", refreshToken: "r1" },
+          });
         return body.refreshToken === "r1" && authorization === "Bearer a1"
           ? new Response(null, { status: 204 })
           : Response.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 });
@@ -270,7 +356,11 @@ describe("native session", () => {
     assert.deepEqual(requests, [
       { path: "/api/v1/auth/logout", refreshToken: "r0", authorization: null },
       { path: "/api/v1/auth/refresh", refreshToken: "r0", authorization: null },
-      { path: "/api/v1/auth/logout", refreshToken: "r1", authorization: "Bearer a1" },
+      {
+        path: "/api/v1/auth/logout",
+        refreshToken: "r1",
+        authorization: "Bearer a1",
+      },
     ]);
     assert.equal(stored, null);
     assert.equal(cleared, 1);

@@ -19,6 +19,13 @@ type Options = {
 type Tokens = components["schemas"]["Tokens"];
 const key = "marketplace.refresh.v1";
 
+export class SessionStorageError extends Error {
+  constructor() {
+    super("Session could not be stored securely. Sign in again.");
+    this.name = "SessionStorageError";
+  }
+}
+
 export class ExpoSession {
   readonly api: ApiTransport;
   private accessToken = "";
@@ -33,7 +40,9 @@ export class ExpoSession {
     this.options = options;
     this.tokens = {
       read: async () => {
+        if (this.invalidated) return null;
         const refreshToken = await options.secureStore.getItemAsync(key);
+        if (this.invalidated) return null;
         return this.accessToken || refreshToken
           ? {
               accessToken: this.accessToken,
@@ -43,13 +52,25 @@ export class ExpoSession {
       },
       write: async (tokens: TokenSet) => {
         const generation = this.generation;
-        await this.enqueueStorage(async () => {
-          if (this.invalidated || generation !== this.generation) return;
-          if (tokens.refreshToken)
-            await options.secureStore.setItemAsync(key, tokens.refreshToken);
-          if (!this.invalidated && generation === this.generation)
-            this.accessToken = tokens.accessToken;
-        });
+        try {
+          await this.enqueueStorage(async () => {
+            if (this.invalidated || generation !== this.generation) return;
+            if (tokens.refreshToken)
+              await options.secureStore.setItemAsync(key, tokens.refreshToken);
+            if (!this.invalidated && generation === this.generation)
+              this.accessToken = tokens.accessToken;
+          });
+        } catch {
+          // Run cleanup outside the storage queue to avoid waiting on itself.
+          if (!this.invalidated && generation === this.generation) {
+            try {
+              await this.tokens.clear();
+            } catch {
+              // UI and memory are invalidated even if physical deletion fails.
+            }
+          }
+          throw new SessionStorageError();
+        }
       },
       clear: async () => {
         this.generation++;

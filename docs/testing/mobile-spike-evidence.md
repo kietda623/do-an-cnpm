@@ -83,7 +83,21 @@ Kiểm tra cuối cho quyết định này: api-client 24/24, mobile 5/5 (2 suit
 
 ## Điểm lệch phát hiện
 
-Main trả REFRESH_REUSE khi dùng lại refresh trong khi contract yêu cầu SESSION_REVOKED; INVALID_REFRESH cần được mô tả rõ cho token sai/hết hạn. Sửa riêng ở [PR #23](https://github.com/kietda623/do-an-cnpm/pull/23), không thay backend/contract trong PR T130. Native xử lý theo status 401 nên độc lập việc merge PR đó.
+### Ghi SecureStore thất bại sau rotation — quyết định 2026-10-29
+
+Đã đối chiếu finding ngoài diff của CodeRabbit và tái hiện: server trả refresh mới, `setItemAsync` lỗi, lần restore kế tiếp gửi lại refresh cũ rồi nhận 401. Người dùng chọn **xóa phiên local, yêu cầu đăng nhập lại**, không dùng đề xuất giữ `retainedTokens` dự phòng trong memory; vẫn giữ quy tắc refresh chỉ persist trong SecureStore.
+
+Sửa tại TokenStore.write dùng chung cho login, restore và automatic refresh: khi ghi lỗi, chạy cleanup ngoài storage queue để tránh tự deadlock, xóa access trong memory, invalidation callback, thử xóa refresh trong SecureStore và ném `SessionStorageError` với thông báo sạch. Đây là lỗi client storage, không giả thành HTTP401. Provider nhận lỗi này thì mount navigator và điều hướng login; không mắc ở màn network retry. Generation guard tránh cleanup nhầm phiên đã thay đổi; read bỏ qua credentials đã invalidation cả trước/sau đọc bất đồng bộ.
+
+Red evidence trước sửa: cả 6 ca login/restore/automatic refresh × deletion success/failure đều nhận callback count0 thay vì1; component không gọi router.replace('/login'). Green sau sửa: api-client **30/30**, mobile **6/6**, lint/typecheck của cả hai package pass, Prettier file thay đổi và git diff --check pass. Test còn chứng minh không gọi refresh cũ lần hai trong tiến trình, không gửi bearer cũ, và đăng nhập mới phục hồi bình thường. Các test network/timeout/429/5xx giữ token và mọi refresh401 clear vẫn xanh. Reviewer độc lập không có finding quan trọng.
+
+Android Metro/Hermes export sau sửa pass (2.7 MB). Lần đầu thiếu EXPO_PUBLIC_API_URL bị config từ chối; chạy lại với `EXPO_PUBLIC_API_URL=https://example.test/api/v1` qua process env thành công. URL này chỉ dùng kiểm tra bundle, không gọi API và không chứng minh HTTPS journey. Root test pass: API59 qua Turbo cache, api-client30 và mobile6 chạy mới.
+
+Giới hạn: các lỗi IO mới được fault-inject trong unit/component, chưa tái hiện lỗi phần cứng trên emulator. Nếu hệ điều hành từ chối cả thao tác xóa, ciphertext cũ có thể vẫn còn trên đĩa; không tuyên bố đã xóa vật lý thành công. Tiến trình hiện tại không dùng lại nó; sau restart vẫn phụ thuộc SecureStore và kiểm tra 401 của server. Cleanup local không được báo là đã thu hồi session server thành công.
+
+### Mã lỗi refresh backend
+
+Main tại thời điểm tạo nhánh trả REFRESH_REUSE khi dùng lại refresh trong khi contract yêu cầu SESSION_REVOKED; INVALID_REFRESH cần được mô tả rõ cho token sai/hết hạn. Sửa riêng ở [PR #23](https://github.com/kietda623/do-an-cnpm/pull/23), không thay backend/contract trong PR T130. Native xử lý theo status 401 nên độc lập việc merge PR đó.
 
 ## Giới hạn và việc chưa kiểm chứng
 

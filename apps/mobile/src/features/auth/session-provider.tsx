@@ -11,7 +11,10 @@ import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ExpoSession } from "@marketplace/api-client/auth/expo-session";
+import {
+  ExpoSession,
+  SessionStorageError,
+} from "@marketplace/api-client/auth/expo-session";
 import { ApiClientError } from "@marketplace/api-client";
 import type { components } from "@marketplace/api-client";
 
@@ -65,7 +68,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setState("ready");
     } catch (error) {
       setState(
-        error instanceof ApiClientError && error.status === 401
+        error instanceof SessionStorageError ||
+          (error instanceof ApiClientError && error.status === 401)
           ? "ready"
           : "retry",
       );

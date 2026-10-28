@@ -9,12 +9,18 @@ import {
 import { SessionProvider } from "../src/features/auth/session-provider";
 
 const mockRestore = jest.fn();
+const mockReplace = jest.fn();
+let mockInvalidate: () => void;
 jest.mock("@marketplace/api-client/auth/expo-session", () => ({
-  ExpoSession: jest
-    .fn()
-    .mockImplementation(() => ({ api: {}, restore: mockRestore })),
+  SessionStorageError: class SessionStorageError extends Error {},
+  ExpoSession: jest.fn().mockImplementation((options) => {
+    mockInvalidate = options.onSessionInvalid;
+    return { api: {}, restore: mockRestore };
+  }),
 }));
-jest.mock("expo-router", () => ({ useRouter: () => ({ replace: jest.fn() }) }));
+jest.mock("expo-router", () => ({
+  useRouter: () => ({ replace: mockReplace }),
+}));
 jest.mock("expo-constants", () => ({
   expoConfig: { extra: { apiBaseUrl: "https://example.test/api/v1" } },
 }));
@@ -22,6 +28,33 @@ jest.mock("expo-secure-store", () => ({}));
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 96, bottom: 24, left: 0, right: 0 }),
 }));
+
+beforeEach(() => {
+  mockRestore.mockReset();
+  mockReplace.mockReset();
+});
+
+it("returns to login instead of network retry after storage invalidation", async () => {
+  const { SessionStorageError } = jest.requireMock(
+    "@marketplace/api-client/auth/expo-session",
+  );
+  mockRestore.mockImplementation(async () => {
+    mockInvalidate();
+    throw new SessionStorageError();
+  });
+  render(
+    <SessionProvider>
+      <Text>Navigator mounted</Text>
+    </SessionProvider>,
+  );
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/login"));
+  expect(screen.getByText("Navigator mounted")).toBeTruthy();
+  expect(
+    screen.queryByText(
+      "Không thể khôi phục phiên. Kiểm tra kết nối rồi thử lại.",
+    ),
+  ).toBeNull();
+});
 
 it("keeps session recovery below system bars and allows retry", async () => {
   mockRestore
