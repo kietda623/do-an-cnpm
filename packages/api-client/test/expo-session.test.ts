@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ExpoSession } from "../src/auth/expo-session.ts";
+import { ApiClientError } from "../src/transport.ts";
 
 describe("native session", () => {
   it("invalidates UI even when SecureStore deletion fails", async () => {
@@ -181,6 +182,91 @@ describe("native session", () => {
     assert.equal(requests[1]?.body.refreshToken, "first-refresh");
     assert.equal(requests[2]?.body.refreshToken, "rotated-refresh");
     assert.equal(requests[0]?.body.clientPlatform, "IOS");
+  });
+  for (const deletionFails of [false, true])
+    it(`does not retry logout or clear twice after refresh invalidates the session (deletion fails: ${deletionFails})`, async () => {
+      let stored: string | null = "r0";
+      let cleared = 0;
+      let notices = 0;
+      const paths: string[] = [];
+      const storageError = new Error("storage unavailable");
+      const session = new ExpoSession({
+        baseUrl: "https://example.test/api/v1",
+        clientPlatform: "ANDROID",
+        secureStore: {
+          getItemAsync: async () => stored,
+          setItemAsync: async () => {},
+          deleteItemAsync: async () => {
+            cleared++;
+            if (deletionFails) throw storageError;
+            stored = null;
+          },
+        },
+        fetcher: async (input) => {
+          paths.push(new URL(String(input)).pathname);
+          return Response.json(
+            { error: { code: "UNAUTHORIZED" } },
+            { status: 401 },
+          );
+        },
+        onSessionInvalid: () => {
+          notices++;
+        },
+      });
+
+      await assert.rejects(session.logout(), (error: unknown) =>
+        deletionFails
+          ? error === storageError
+          : error instanceof ApiClientError && error.status === 401,
+      );
+      assert.deepEqual(paths, ["/api/v1/auth/logout", "/api/v1/auth/refresh"]);
+      assert.equal(cleared, 1);
+      assert.equal(notices, 1);
+      assert.equal(stored, deletionFails ? "r0" : null);
+    });
+  it("retries logout with rotated credentials after a successful refresh", async () => {
+    let stored: string | null = "r0";
+    let cleared = 0;
+    let notices = 0;
+    const requests: Array<{ path: string; refreshToken: string; authorization: string | null }> = [];
+    const session = new ExpoSession({
+      baseUrl: "https://example.test/api/v1",
+      clientPlatform: "ANDROID",
+      secureStore: {
+        getItemAsync: async () => stored,
+        setItemAsync: async (_, value) => {
+          stored = value;
+        },
+        deleteItemAsync: async () => {
+          stored = null;
+          cleared++;
+        },
+      },
+      fetcher: async (input, init) => {
+        const path = new URL(String(input)).pathname;
+        const body = JSON.parse(String(init?.body)) as { refreshToken: string };
+        const authorization = new Headers(init?.headers).get("Authorization");
+        requests.push({ path, refreshToken: body.refreshToken, authorization });
+        if (path.endsWith("/auth/refresh"))
+          return Response.json({ data: { accessToken: "a1", refreshToken: "r1" } });
+        return body.refreshToken === "r1" && authorization === "Bearer a1"
+          ? new Response(null, { status: 204 })
+          : Response.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 });
+      },
+      onSessionInvalid: () => {
+        notices++;
+      },
+    });
+
+    await session.logout();
+    assert.deepEqual(requests, [
+      { path: "/api/v1/auth/logout", refreshToken: "r0", authorization: null },
+      { path: "/api/v1/auth/refresh", refreshToken: "r0", authorization: null },
+      { path: "/api/v1/auth/logout", refreshToken: "r1", authorization: "Bearer a1" },
+    ]);
+    assert.equal(stored, null);
+    assert.equal(cleared, 1);
+    assert.equal(notices, 1);
   });
   for (const status of [401, 429, 503] as const)
     it(`handles automatic refresh ${status} without losing recoverable sessions`, async () => {

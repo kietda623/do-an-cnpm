@@ -190,12 +190,16 @@ export class ExpoSession {
       try {
         await send();
       } catch (error) {
-        if (!(error instanceof ApiClientError) || error.status !== 401)
+        if (
+          this.invalidated ||
+          !(error instanceof ApiClientError) ||
+          error.status !== 401
+        )
           throw error;
         await send();
       }
     } finally {
-      await this.tokens.clear();
+      if (!this.invalidated) await this.tokens.clear();
     }
   }
 
