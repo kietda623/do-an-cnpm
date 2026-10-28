@@ -162,5 +162,6 @@ export class SettlementService {
         },
       });
     }
+    return compensation;
   }
 }

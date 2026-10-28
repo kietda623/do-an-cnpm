@@ -221,8 +221,13 @@ export class PaymentService {
             "EVENT_ID_REUSED",
             "This event ID was already used for different data.",
           );
-        await this.complete(tx, idem.id, "PaymentAttempt", attempt.id, 200);
-        return { attemptId: attempt.id, terminalConflict: false };
+        const compensation = await tx.paymentAttempt.findUnique({
+          where: { compensatesEventId: seen.id },
+          select: { id: true },
+        });
+        const responseAttemptId = compensation?.id ?? attempt.id;
+        await this.complete(tx, idem.id, "PaymentAttempt", responseAttemptId, 200);
+        return { attemptId: responseAttemptId, terminalConflict: false };
       }
       if (payment.order.version !== input.expectedVersion)
         throw conflict(
@@ -242,6 +247,7 @@ export class PaymentService {
           !deadline ||
           deadline <= now ||
           Boolean(attempt.expiresAt && attempt.expiresAt <= now));
+      let responseAttemptId = attempt.id;
       if (attempt.status === "PENDING" && !late) {
         if (input.outcome === "SUCCEEDED") {
           const alreadySucceeded = await tx.paymentAttempt.findFirst({
@@ -304,7 +310,7 @@ export class PaymentService {
             where: { id: attempt.id },
             data: { status: "CANCELLED", settledAt: now },
           });
-        await this.settlement.compensateLate(
+        const compensation = await this.settlement.compensateLate(
           tx,
           payment.id,
           attempt,
@@ -312,6 +318,7 @@ export class PaymentService {
           payloadDigest,
           now,
         );
+        responseAttemptId = compensation.id;
       } else {
         const processingResult =
           attempt.status === input.outcome ? "DUPLICATE" : "IGNORED";
@@ -347,8 +354,8 @@ export class PaymentService {
         where: { id: orderId },
         data: { version: { increment: 1 } },
       });
-      await this.complete(tx, idem.id, "PaymentAttempt", attempt.id, 200);
-      return { attemptId: attempt.id, terminalConflict: false };
+      await this.complete(tx, idem.id, "PaymentAttempt", responseAttemptId, 200);
+      return { attemptId: responseAttemptId, terminalConflict: false };
     });
     if (result.terminalConflict)
       throw conflict(

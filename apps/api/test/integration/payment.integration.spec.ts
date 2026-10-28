@@ -291,12 +291,40 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
         .findUniqueOrThrow({ where: { variantId: test.variantId } })
         .then((row) => row.availableQuantity),
     ).toBe(6);
+    const lateKey = randomUUID();
+    const lateBody = { eventId: randomUUID(), outcome: "SUCCEEDED", expectedVersion: order.version };
     const late = await request(app.getHttpServer())
       .post(`/api/v1/payments/${started.body.data.id}/mock-result`)
       .set("Authorization", buyer)
-      .set("Idempotency-Key", randomUUID())
-      .send({ eventId: randomUUID(), outcome: "SUCCEEDED", expectedVersion: order.version });
+      .set("Idempotency-Key", lateKey)
+      .send(lateBody);
     expect(late.status).toBe(200);
+    expect(late.body.data).toMatchObject({
+      settlementKind: "LATE_COMPENSATION", status: "SUCCEEDED",
+      originalAttemptId: started.body.data.id, amount: "2500",
+    });
+    expect(late.body.data.id).not.toBe(started.body.data.id);
+    for (const key of [lateKey, randomUUID()]) {
+      const replay = await request(app.getHttpServer())
+        .post(`/api/v1/payments/${started.body.data.id}/mock-result`)
+        .set("Authorization", buyer).set("Idempotency-Key", key).send(lateBody);
+      expect(replay.status).toBe(200);
+      expect(replay.body.data).toEqual(late.body.data);
+    }
+    const history = await request(app.getHttpServer())
+      .get(`/api/v1/payments?orderId=${test.orderId}`).set("Authorization", buyer);
+    expect(history.status).toBe(200);
+    expect(history.body.data.map((item: { id: string }) => item.id)).toEqual(
+      expect.arrayContaining([started.body.data.id, late.body.data.id]),
+    );
+    const source = await db.prisma.paymentEvent.findFirstOrThrow({ where: { externalEventId: lateBody.eventId } });
+    expect(source.attemptId).toBe(started.body.data.id);
+    const compensation = await db.prisma.paymentAttempt.findUniqueOrThrow({
+      where: { compensatesEventId: source.id }, include: { allocations: { include: { refund: true } } },
+    });
+    expect(compensation.id).toBe(late.body.data.id);
+    expect(compensation.allocations).toHaveLength(1);
+    expect(compensation.allocations[0]?.refund?.amount.toString()).toBe("2500");
     order = (
       await request(app.getHttpServer())
         .get(`/api/v1/orders/${test.orderId}`)
