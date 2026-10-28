@@ -34,7 +34,7 @@ const adminProductInclude = {
 } satisfies Prisma.ProductInclude;
 type AdminProduct = Prisma.ProductGetPayload<{ include: typeof adminProductInclude }>;
 
-function projectAdminProduct(product: AdminProduct, publicBase: string) {
+function projectAdminProduct(product: AdminProduct, publicBase: string, rating?: { _avg: { rating: number | null }; _count: { _all: number } }) {
   const activePrices = product.variants
     .filter((variant) => variant.saleStatus === "ACTIVE")
     .map((variant) => variant.price);
@@ -71,8 +71,8 @@ function projectAdminProduct(product: AdminProduct, publicBase: string) {
       createdAt: variant.createdAt,
       updatedAt: variant.updatedAt,
     })),
-    ratingAverage: null,
-    ratingCount: 0,
+    ratingAverage: rating?._avg.rating?.toString() ?? null,
+    ratingCount: rating?._count._all ?? 0,
     version: product.version,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
@@ -108,7 +108,7 @@ export class CatalogService {
       ...(query.adminHidden !== undefined ? { adminHidden: query.adminHidden } : {}),
       ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { shop: { name: { contains: q, mode: "insensitive" } } }] } : {}),
     };
-    const { rows, total } = await this.db.prisma.$transaction(async (tx) => {
+    const { rows, total, ratings } = await this.db.prisma.$transaction(async (tx) => {
       const [rows, total] = await Promise.all([
         tx.product.findMany({
           where,
@@ -122,10 +122,12 @@ export class CatalogService {
         }),
         tx.product.count({ where }),
       ]);
-      return { rows, total };
+      const ratings = await tx.review.groupBy({ by: ["productId"], where: { productId: { in: rows.map((row) => row.id) } }, _avg: { rating: true }, _count: { _all: true } });
+      return { rows, total, ratings };
     }, { isolationLevel: "RepeatableRead" });
     const base = (this.config.get<string>("ASSET_PUBLIC_READ_BASE") ?? this.config.get<string>("S3_PUBLIC_READ_BASE") ?? "").replace(/\/$/, "");
-    const data = rows.map((product) => projectAdminProduct(product, base));
+    const byProduct = new Map(ratings.map((rating) => [rating.productId, rating]));
+    const data = rows.map((product) => projectAdminProduct(product, base, byProduct.get(product.id)));
     return { data, meta: { page, pageSize, total } };
   }
 
@@ -188,7 +190,8 @@ export class CatalogService {
         },
       });
       const base = (this.config.get<string>("ASSET_PUBLIC_READ_BASE") ?? this.config.get<string>("S3_PUBLIC_READ_BASE") ?? "").replace(/\/$/, "");
-      const response = projectAdminProduct(result, base);
+      const rating = await tx.review.aggregate({ where: { productId }, _avg: { rating: true }, _count: { _all: true } });
+      const response = projectAdminProduct(result, base, rating);
       await tx.idempotencyRecord.update({
         where: { id: idem.id },
         data: {

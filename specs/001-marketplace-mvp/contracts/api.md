@@ -104,7 +104,7 @@ Read DTO có `id`, `createdAt`, `updatedAt` trừ projection/command ghi khác.
 | CheckoutQuoteRequest | cartItemIds unique UUID[] length1–100; addressId; paymentMethod:`COD|MOCK` |
 | CheckoutQuote | quoteId; expiresAt; lines:{cartItemId,variantId,shopId,quantity,unitPrice,lineTotal}[]; groups:{shopId,subtotal,shippingFee,total}[]; addressSnapshot:AddressWrite; total; currency; valid boolean; issues:{cartItemId?,code,message}[] |
 | CheckoutCreate | quoteId; no price/address/owner override; selected quantities and address bound into quote |
-| OrderItem | id; productId; variantId; productName; sku; attributes; imageUrl?; unitPrice; quantity; lineTotal; reviewId?; immutable snapshots |
+| OrderItem | id; productId; variantId; productName; sku; attributes; imageUrl?; unitPrice; quantity; lineTotal; reviewId?; review?:{rating,comment,createdAt} read-only; immutable snapshots |
 | SellerOrder | id; orderId; shopId; shopNameSnapshot; status; items:OrderItem[]; originalTotal; cancelledAmount; capturedAmount; refundedAmount; outstandingAmount; currency; addressSnapshot; shipment:Shipment?; version; completedAt?; cancelledAt?; cancelReason?; timestamps |
 | Order | id; buyerId; orderNumber; sellerOrders:SellerOrder[]; status; partiallyCancelled boolean; originalTotal; cancelledAmount; capturedAmount; refundedAmount; outstandingAmount; paymentMethod; paymentStatus; currency; paymentDeadline?; payments:Payment[]; version; timestamps |
 | OrderSummary | id; orderNumber; status; partiallyCancelled; originalTotal; outstandingAmount; paymentStatus; createdAt |
@@ -264,13 +264,19 @@ Admin acts through explicit actions, never arbitrary state override or mutation 
 
 ### Reviews/statistics — Sprint 6, FR-40–46
 
+Shop reviews, stats và revenue cho phép tài khoản ACTIVE có membership ACTIVE của shop
+ACTIVE hoặc SUSPENDED; shop PENDING/REJECTED bị từ chối.
+Stats và revenue đều bắt buộc `from` và `to` (RFC3339 UTC, `from` inclusive,
+`to` exclusive, `from < to`); revenue còn bắt buộc `groupBy`. Không giới hạn độ dài
+khoảng thời gian. Giao diện có thể chọn mặc định 30 ngày, API không tự điền.
+
 | Method/path | Request | Response | Auth | Extra errors / tests |
 | --- | --- | --- | --- | --- |
 | POST /reviews | ReviewCreate | Review 201 | B(order item owner) | COMPLETED required 422; unique orderItem 409; range1–5 |
 | GET /products/{id}/reviews | rating,page,pageSize | List<Review> | G | only public product; safe buyer projection |
 | GET /shops/{id}/reviews | productId,rating,page,pageSize | List<Review> | S | cross-shop product filter rejected |
-| GET /shops/{id}/stats | from,to | SellerStats | S | count definitions BR-10; no hidden revenue from other shop |
-| GET /shops/{id}/revenue | from,to,groupBy required | RevenueSeries | S | day/month at Asia/Saigon completion instant; simulate label |
+| GET /shops/{id}/stats | from,to required | SellerStats | S | count definitions BR-10; no hidden revenue from other shop |
+| GET /shops/{id}/revenue | from,to,groupBy all required | RevenueSeries | S | day/month at Asia/Saigon completion instant; simulate label |
 
 ### Admin — Sprint 3 / 6, FR-08,10,15,46–50
 

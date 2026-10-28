@@ -7,6 +7,7 @@
     ".": "./src/index.tsx",
     "./seller/catalog/product-editor": "./src/seller/catalog/product-editor.tsx",
     "./seller/orders/order-list": "./src/seller/orders/order-list.tsx",
+    "./seller/dashboard/shop-dashboard": "./src/seller/dashboard/shop-dashboard.tsx",
     "./styles.css": "./src/styles.css"
   },
   "peerDependencies": {

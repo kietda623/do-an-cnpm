@@ -7,7 +7,7 @@ const orderInclude = {
   sellerOrders: {
     orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
     include: {
-      items: { orderBy: { createdAt: "asc" as const } },
+      items: { orderBy: { createdAt: "asc" as const }, include: { review: { select: { id: true, rating: true, comment: true, createdAt: true } } } },
       shipment: {
         include: {
           events: {

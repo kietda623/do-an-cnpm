@@ -191,9 +191,7 @@ export default function ShopsPage() {
         <p>Tài khoản mua hàng cũng có thể đăng ký trở thành người bán.</p>
       </div>
       {shop && ["ACTIVE", "SUSPENDED"].includes(shop.status) && (
-        <Link className="underline" href={`/shops/${shop.id}/orders`}>
-          Đơn của cửa hàng
-        </Link>
+        <><Link className="underline" href={`/shops/${shop.id}/orders`}>Đơn của cửa hàng</Link><Link className="underline" href={`/shops/${shop.id}/dashboard`}>Thống kê và đánh giá</Link></>
       )}
       {shop?.status === "ACTIVE" && (
         <Link className="underline" href={`/shops/${shop.id}/products`}>

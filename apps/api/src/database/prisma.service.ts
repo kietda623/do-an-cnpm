@@ -15,8 +15,13 @@ export class DatabaseService implements OnModuleDestroy {
       return;
     }
 
+    // Prisma's PostgreSQL adapter encodes UTC timestamps without an offset.
+    // URL options override Pool options in pg, so append UTC inside the URL.
+    const databaseUrl = new URL(connectionString);
+    const existingOptions = databaseUrl.searchParams.getAll("options").join(" ");
+    databaseUrl.searchParams.set("options", `${existingOptions} -c timezone=UTC`.trim());
     const pool = new Pool({
-      connectionString,
+      connectionString: databaseUrl.toString(),
       max: 10,
       connectionTimeoutMillis: 1_000,
       idleTimeoutMillis: 10_000,

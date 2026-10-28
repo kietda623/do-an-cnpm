@@ -8,12 +8,15 @@ import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
 import { useSession, type SessionUser } from "@marketplace/ui-web";
 import { webSession } from "../../auth-form";
 import { formatVnd } from "../../../features/money";
+import { ReviewList } from "../../../features/reviews/review-list";
 
 type Product = {
   id: string;
   name: string;
   description: string;
   minimumPrice: string;
+  ratingAverage?: string | null;
+  ratingCount: number;
   shop: { id: string; name: string; slug: string };
   images: { url: string }[];
   variants: {
@@ -187,6 +190,7 @@ export default function ProductDetailPage() {
           <p className="whitespace-pre-wrap leading-7">{product.description}</p>
         </section>
       </section>
+      <ReviewList productId={product.id} ratingAverage={product.ratingAverage} ratingCount={product.ratingCount ?? 0} />
     </main>
   );
 }

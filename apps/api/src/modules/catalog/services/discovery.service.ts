@@ -32,6 +32,11 @@ export class DiscoveryService {
       where: { id: { in: items.map((item) => item.id) } },
       include: { images: { include: { asset: true }, orderBy: { position: "asc" } } },
     });
+    const ratings = await this.db.prisma.review.groupBy({
+      by: ["productId"], where: { productId: { in: items.map((item) => item.id) } },
+      _avg: { rating: true }, _count: { _all: true },
+    });
+    const ratingsById = new Map(ratings.map((rating) => [rating.productId, rating]));
     const byId = new Map(products.map((product) => [product.id, product]));
     return {
       data: items.flatMap((item) => {
@@ -46,8 +51,8 @@ export class DiscoveryService {
             image: product.images[0] ? this.asset(product.images[0].asset) : null,
             minimumPrice: item.minimumPrice,
             available: item.available,
-            ratingAverage: null,
-            ratingCount: 0,
+            ratingAverage: ratingsById.get(product.id)?._avg.rating?.toString() ?? null,
+            ratingCount: ratingsById.get(product.id)?._count._all ?? 0,
             createdAt: item.createdAt.toISOString(),
           },
         ];
@@ -83,6 +88,7 @@ export class DiscoveryService {
       },
     });
     if (!product || !product.variants.length) throw new NotFoundException();
+    const rating = await this.db.prisma.review.aggregate({ where: { productId: id }, _avg: { rating: true }, _count: { _all: true } });
     const variants = product.variants.map((variant) => ({
       id: variant.id,
       sku: variant.skuNormalized,
@@ -102,8 +108,8 @@ export class DiscoveryService {
       images: product.images.map((image) => this.asset(image.asset)),
       minimumPrice: variants[0]!.price,
       variants,
-      ratingAverage: null,
-      ratingCount: 0,
+      ratingAverage: rating._avg.rating?.toString() ?? null,
+      ratingCount: rating._count._all,
     };
   }
 

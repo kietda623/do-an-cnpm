@@ -1117,7 +1117,7 @@ export interface paths {
     };
     /**
      * GET /shops/{id}/reviews
-     * @description Auth scope: S. Source constraint: cross-shop product filter rejected
+     * @description Auth scope: active shop member. ACTIVE and SUSPENDED shops may read; PENDING and REJECTED are denied. Cross-shop product filters are rejected.
      */
     get: operations["get_shops_by_id_reviews"];
     put?: never;
@@ -1137,7 +1137,7 @@ export interface paths {
     };
     /**
      * GET /shops/{id}/stats
-     * @description Auth scope: S. Source constraint: count definitions BR-10; no hidden revenue from other shop
+     * @description Auth scope: active shop member. ACTIVE and SUSPENDED shops may read; PENDING and REJECTED are denied. from and to are required UTC instants with from < to, from inclusive and to exclusive; counts follow BR-10 and exclude other shops.
      */
     get: operations["get_shops_by_id_stats"];
     put?: never;
@@ -1157,7 +1157,7 @@ export interface paths {
     };
     /**
      * GET /shops/{id}/revenue
-     * @description Auth scope: S. Source constraint: day/month at Asia/Saigon completion instant; simulate label
+     * @description Auth scope: active shop member. ACTIVE and SUSPENDED shops may read; PENDING and REJECTED are denied. from and to are required UTC instants with from < to, from inclusive and to exclusive; DAY/MONTH groups completion instants in Asia/Saigon. Amounts are simulated.
      */
     get: operations["get_shops_by_id_revenue"];
     put?: never;
@@ -2047,6 +2047,12 @@ export interface components {
       lineTotal: string;
       /** Format: uuid */
       reviewId?: string | null;
+      review?: {
+        rating: number;
+        comment: string;
+        /** Format: date-time */
+        createdAt: string;
+      } | null;
     };
     Shipment: {
       /** Format: uuid */
@@ -9500,9 +9506,9 @@ export interface operations {
   };
   get_shops_by_id_stats: {
     parameters: {
-      query?: {
-        from?: string;
-        to?: string;
+      query: {
+        from: string;
+        to: string;
       };
       header?: never;
       path: {
@@ -9619,8 +9625,8 @@ export interface operations {
   get_shops_by_id_revenue: {
     parameters: {
       query: {
-        from?: string;
-        to?: string;
+        from: string;
+        to: string;
         groupBy: "DAY" | "MONTH";
       };
       header?: never;

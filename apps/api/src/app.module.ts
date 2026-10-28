@@ -14,6 +14,7 @@ import { CartModule } from "./modules/cart/cart.module.js";
 import { OrderModule } from "./modules/order/order.module.js";
 import { ShippingModule } from "./modules/shipping/shipping.module.js";
 import { AdminModule } from "./modules/admin/admin.module.js";
+import { ReviewModule } from "./modules/review/review.module.js";
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AdminModule } from "./modules/admin/admin.module.js";
     OrderModule,
     ShippingModule,
     AdminModule,
+    ReviewModule,
   ],
   providers: [
     RequestIdMiddleware,

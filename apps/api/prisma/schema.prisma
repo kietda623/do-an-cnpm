@@ -247,6 +247,7 @@ model User {
   cart               Cart?
   checkoutQuotes     CheckoutQuote[]
   marketplaceOrders  MarketplaceOrder[]
+  reviews            Review[]
 
   @@index([status, createdAt, id], map: "users_status_created_at_id_idx")
   @@map("users")
@@ -448,6 +449,7 @@ model Product {
   images       ProductImage[]
   variants     ProductVariant[]
   orderItems   OrderItem[]
+  reviews      Review[]
   createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -663,11 +665,28 @@ model OrderItem {
   quantity            Int
   lineTotal           Decimal            @map("line_total") @db.Decimal(18, 0)
   movements           InventoryMovement[]
+  review              Review?
   createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@unique([sellerOrderId, variantId], map: "order_items_seller_variant_key")
   @@index([productId, id], map: "order_items_product_id_idx")
   @@map("order_items")
+}
+
+model Review {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  buyerUserId String    @map("buyer_user_id") @db.Uuid
+  buyer       User      @relation(fields: [buyerUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orderItemId String    @unique(map: "reviews_order_item_id_key") @map("order_item_id") @db.Uuid
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  productId   String    @map("product_id") @db.Uuid
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  rating      Int       @db.SmallInt
+  comment     String    @db.VarChar(2000)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([productId, createdAt, id], map: "reviews_product_created_id_idx")
+  @@map("reviews")
 }
 
 model OrderEvent {
