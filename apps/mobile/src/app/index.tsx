@@ -11,6 +11,15 @@ export default function Home() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [state, setState] = useState<"loading" | "error" | "ready">("loading");
+  const [logoutError, setLogoutError] = useState(false);
+  const handleLogout = useCallback(async () => {
+    setLogoutError(false);
+    try {
+      await logout();
+    } catch {
+      setLogoutError(true);
+    }
+  }, [logout]);
   const load = useCallback(async () => {
     setState("loading");
     try {
@@ -27,7 +36,17 @@ export default function Home() {
     <View style={{ flex: 1, padding: 20, gap: 12 }}>
       <Text accessibilityRole="header">Sản phẩm</Text>
       {user ? (
-        <Button title="Đăng xuất" onPress={() => void logout()} />
+        <View>
+          <Button title="Đăng xuất" onPress={() => void handleLogout()} />
+          {logoutError ? (
+            <View>
+              <Text accessibilityRole="alert">
+                Không thể đăng xuất. Kiểm tra kết nối rồi thử lại.
+              </Text>
+              <Button title="Thử lại" onPress={() => void handleLogout()} />
+            </View>
+          ) : null}
+        </View>
       ) : (
         <Button title="Đăng nhập" onPress={() => router.push("/login")} />
       )}

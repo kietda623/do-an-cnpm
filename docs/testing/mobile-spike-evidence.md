@@ -71,7 +71,15 @@ Android emulator dev: đặt `EXPO_PUBLIC_API_URL=http://10.0.2.2:4000/api/v1`, 
 
 ExpoSession dùng ApiTransport hiện có và kiểu sinh từ OpenAPI. Native gửi clientPlatform ANDROID/IOS và refresh trong body, credentials omit, không cookie/CSRF. Access chỉ nằm trong bộ nhớ; refresh chỉ persist qua SecureStore, không AsyncStorage/plaintext. TTL 10 phút/7 ngày do API quản lý. Refresh rotation ghi token mới; restore được gộp cho các lần mount đồng thời.
 
-Mọi refresh 401 xóa token local và báo provider xóa user, điều hướng login; không rẽ nhánh theo error code. Test riêng chứng minh network/timeout/429/5xx giữ refresh để thử lại, gồm automatic refresh. Logger chỉ nhận mã lỗi thuộc allowlist, không truyền message/body/token. Logout gọi API rồi clear trong finally. Không thêm cache persistent; state danh sách được bỏ khi màn hình unmount.
+Mọi refresh 401 xóa token local và báo provider xóa user, điều hướng login; không rẽ nhánh theo error code. Test riêng chứng minh network/timeout/429/5xx giữ refresh để thử lại, gồm automatic refresh. Logger chỉ nhận mã lỗi thuộc allowlist, không truyền message/body/token. Logout chỉ clear sau khi API xác nhận thành công; lỗi tạm thời giữ phiên và UI báo lỗi/cho thử lại. Nếu refresh trong luồng logout trả 401, phiên đã bị invalidation và không retry logout hoặc clear lần hai. Không thêm cache persistent; state danh sách được bỏ khi màn hình unmount.
+
+## Chốt review logout — 2026-10-29
+
+Đối chiếu FR-03 và contracts/api.md Identity: logout thành công phải vô hiệu phiên server (204). Vì vậy chấp nhận finding [CodeRabbit](https://github.com/kietda623/do-an-cnpm/pull/24#discussion_r4404239585): không biến network/timeout/429/5xx thành logout local thành công trong khi session server có thể còn hoạt động. Đây là làm rõ điều kiện thành công của logout, không thay đổi yêu cầu mọi refresh401 phải clear local.
+
+CodeRabbit đã sửa service trong commit `48cc2a2`: clear sau remote success, giữ credentials khi lỗi tạm thời. Kiểm tra vẫn thấy Home gọi `void logout()` không catch; người dùng không được báo lỗi/thử lại và có unhandled rejection. Test component được viết/chạy trước sửa: đỏ với `TypeError: network unavailable` và không tìm được thông báo lỗi. Sau đó Home bắt lỗi, giữ UI signed-in, hiện thông báo chung và nút retry; test chứng minh gọi lại logout, xóa thông báo khi thành công.
+
+Kiểm tra cuối cho quyết định này: api-client 24/24, mobile 5/5 (2 suites), mobile lint/typecheck và Prettier các file thay đổi pass. Có test logout network/timeout/429/500 giữ refresh/callback không invalidation; logout thành công clear; refresh401 không retry/clear lặp; refresh thành công dùng credentials đã rotation. Hành vi logout failure mới có unit/component evidence, chưa chạy lại riêng failure journey trên emulator sau commit này; bảng device phía trên là lần chạy trước đó.
 
 ## Điểm lệch phát hiện
 
