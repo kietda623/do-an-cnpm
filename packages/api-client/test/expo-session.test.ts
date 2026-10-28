@@ -128,6 +128,14 @@ describe("native session", () => {
       assert.equal(test.getCleared(), 0);
       assert.equal(test.getNotices(), 0);
     });
+  for (const status of [429, 500, "network", "timeout"] as const)
+    it(`preserves credentials and session when logout fails with ${status}`, async () => {
+      const test = setup(status);
+      await assert.rejects(test.session.logout());
+      assert.equal(test.getRefresh(), "refresh-secret");
+      assert.equal(test.getCleared(), 0);
+      assert.equal(test.getNotices(), 0);
+    });
   it("rotates in secure storage and logout clears credentials", async () => {
     let stored: string | null = null;
     const requests: Array<{

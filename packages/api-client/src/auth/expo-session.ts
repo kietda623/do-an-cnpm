@@ -187,20 +187,17 @@ export class ExpoSession {
       });
     };
     try {
-      try {
-        await send();
-      } catch (error) {
-        if (
-          this.invalidated ||
-          !(error instanceof ApiClientError) ||
-          error.status !== 401
-        )
-          throw error;
-        await send();
-      }
-    } finally {
-      if (!this.invalidated) await this.tokens.clear();
+      await send();
+    } catch (error) {
+      if (
+        this.invalidated ||
+        !(error instanceof ApiClientError) ||
+        error.status !== 401
+      )
+        throw error;
+      await send();
     }
+    if (!this.invalidated) await this.tokens.clear();
   }
 
   private enqueueStorage(operation: () => Promise<void>): Promise<void> {
