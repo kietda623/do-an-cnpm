@@ -75,7 +75,7 @@ export interface paths {
     put?: never;
     /**
      * POST /auth/refresh
-     * @description Auth scope: refresh credential. Source constraint: rotation/reuse/expiry; never log credential Web uses the HttpOnly refresh cookie; native clients provide Refresh in the request body.
+     * @description Auth scope: refresh credential. Rotation/reuse/expiry: reused or revoked refresh returns 401 SESSION_REVOKED; invalid or expired refresh returns 401 INVALID_REFRESH; never log credential. Web uses the HttpOnly refresh cookie; native clients provide Refresh in the request body.
      */
     post: operations["post_auth_refresh"];
     delete?: never;

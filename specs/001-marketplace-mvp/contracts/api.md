@@ -61,7 +61,7 @@ hoặc Tauri Stronghold mã hóa, mở khóa bằng mật khẩu riêng do ngư�
 Không hardcode khóa Stronghold, không localStorage, không log token. Quên mật khẩu vault
 thì xóa vault cục bộ và đăng nhập lại, không ảnh hưởng giao dịch phía server.
 Native token response là ngoại lệ có chủ đích của quy tắc không lộ dữ liệu nhạy cảm.
-Refresh cũ tái sử dụng thu hồi family, 401 `SESSION_REVOKED`; logout lặp 204.
+Refresh cũ tái sử dụng thu hồi family, 401 `SESSION_REVOKED`; refresh không hợp lệ hoặc hết hạn trả 401 `INVALID_REFRESH`; logout lặp 204.
 
 ## DTO dictionary
 
