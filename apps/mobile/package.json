@@ -2,19 +2,35 @@
   "name": "@marketplace/mobile",
   "version": "0.1.0",
   "private": true,
-  "main": "expo/AppEntry",
+  "main": "expo-router/entry",
   "dependencies": {
+    "@marketplace/api-client": "workspace:*",
     "expo": "57.0.30",
+    "expo-build-properties": "57.0.22",
+    "expo-constants": "57.0.22",
+    "expo-linking": "57.0.13",
+    "expo-router": "57.0.29",
+    "expo-secure-store": "57.0.4",
     "react": "catalog:",
-    "react-native": "0.86.3"
+    "react-native": "0.86.3",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "5.7.0",
+    "react-native-screens": "4.26.2",
+    "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
+    "@react-native/metro-config": "0.86.3",
+    "@testing-library/react-native": "13.3.3",
     "@types/react": "catalog:",
-    "typescript": "catalog:",
-    "eslint": "catalog:"
+    "eslint": "catalog:",
+    "jest": "29.7.0",
+    "jest-expo": "57.0.6",
+    "react-test-renderer": "19.2.3",
+    "typescript": "catalog:"
   },
   "scripts": {
     "lint": "node ../../packages/config/lint.mjs",
-    "typecheck": "node ../../packages/config/typecheck.mjs"
+    "typecheck": "node ../../packages/config/typecheck.mjs",
+    "test": "jest --runInBand"
   }
 }
