@@ -15,6 +15,7 @@ import {
   resetAndDeployMigrations,
 } from "../helpers/database.js";
 import { Barrier } from "../helpers/concurrency.js";
+import { buildTargetSellerOrdersSnapshot } from "../../src/modules/payment/services/target-snapshot.js";
 
 type Actor = { id: string; token: string };
 const reportRange = "from=2026-10-01T00%3A00%3A00Z&to=2026-12-01T00%3A00%3A00Z";
@@ -236,7 +237,7 @@ describe("US8 reviews and revenue on PostgreSQL", () => {
       "DELIVERED",
     ] as const)
       await createItem(first, status, "701");
-    const cancelledItem = await createItem(first, "CANCELLED", "999");
+    const cancelledItem = await createItem(first, "PENDING", "999");
     const cancelled = await db.prisma.orderItem.findUniqueOrThrow({
       where: { id: cancelledItem },
       include: { sellerOrder: true },
@@ -252,11 +253,23 @@ describe("US8 reviews and revenue on PostgreSQL", () => {
         attemptNumber: 1,
         provider: "MOCK",
         status: "SUCCEEDED",
-        targetSellerOrdersSnapshot: [
-          { sellerOrderId: cancelled.sellerOrderId, amount: "999" },
-        ],
+        targetSellerOrdersSnapshot: buildTargetSellerOrdersSnapshot({
+          mode: "NEW",
+          orderId: payment.orderId,
+          amount: "999",
+          sellerOrders: [cancelled.sellerOrder],
+          snapshot: [{ sellerOrderId: cancelled.sellerOrderId, amount: "999" }],
+        }),
         amount: "999",
         operationKey: `us8-attempt-${randomUUID()}`,
+      },
+    });
+    await db.prisma.sellerOrder.update({
+      where: { id: cancelled.sellerOrderId },
+      data: {
+        status: "CANCELLED",
+        cancelledAt: new Date(),
+        cancellationReason: "fixture cancellation",
       },
     });
     const allocation = await db.prisma.paymentAllocation.create({

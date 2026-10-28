@@ -4,6 +4,7 @@ import argon2 from "argon2";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { PrismaClient } from "../../src/generated/prisma/client.ts";
+import { buildTargetSellerOrdersSnapshot } from "../../src/modules/payment/services/target-snapshot.ts";
 
 dotenv.config({ path: resolve(process.cwd(), "../../.env.test"), quiet: true });
 const rawUrl = process.env.TEST_DATABASE_URL?.trim();
@@ -193,15 +194,9 @@ try {
             orderId: ids.orders[index]!,
             shopId: shop.id,
             shopNameSnapshot: shop.name,
-            status: fixture.status,
+            status: fixture.status === "CANCELLED" ? "PENDING" : fixture.status,
             originalTotal: fixture.amount,
             completedAt: fixture.completedAt,
-            ...(fixture.status === "CANCELLED"
-              ? {
-                  cancelledAt: new Date("2026-10-26T17:00:00Z"),
-                  cancellationReason: "Cancelled fixture",
-                }
-              : {}),
           },
         });
         await tx.orderItem.upsert({
@@ -238,22 +233,40 @@ try {
         update: {},
         create: { id: ids.payment, orderId: ids.orders[2]!, method: "MOCK" },
       });
-      await tx.paymentAttempt.upsert({
+      const existingAttempt = await tx.paymentAttempt.findUnique({
         where: { id: ids.attempt },
-        update: {},
-        create: {
-          id: ids.attempt,
-          paymentId: ids.payment,
-          attemptNumber: 1,
-          provider: "MOCK",
-          status: "SUCCEEDED",
-          targetSellerOrdersSnapshot: [
-            { sellerOrderId: ids.parts[2]!, amount: "999" },
-          ],
-          amount: "999",
-          operationKey: "seed-us8-attempt",
-        },
       });
+      if (!existingAttempt) {
+        const sellerOrder = await tx.sellerOrder.findUniqueOrThrow({
+          where: { id: ids.parts[2]! },
+        });
+        await tx.paymentAttempt.create({
+          data: {
+            id: ids.attempt,
+            paymentId: ids.payment,
+            attemptNumber: 1,
+            provider: "MOCK",
+            status: "SUCCEEDED",
+            targetSellerOrdersSnapshot: buildTargetSellerOrdersSnapshot({
+              mode: "NEW",
+              orderId: ids.orders[2]!,
+              amount: "999",
+              sellerOrders: [sellerOrder],
+              snapshot: [{ sellerOrderId: ids.parts[2]!, amount: "999" }],
+            }),
+            amount: "999",
+            operationKey: "seed-us8-attempt",
+          },
+        });
+        await tx.sellerOrder.update({
+          where: { id: ids.parts[2]! },
+          data: {
+            status: "CANCELLED",
+            cancelledAt: new Date("2026-10-26T17:00:00Z"),
+            cancellationReason: "Cancelled fixture",
+          },
+        });
+      }
       await tx.paymentAllocation.upsert({
         where: { id: ids.allocation },
         update: {},

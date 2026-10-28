@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "../../../generated/prisma/client.js";
+import { buildTargetSellerOrdersSnapshot } from "./target-snapshot.js";
 
-type SnapshotPart = { sellerOrderId: string; amount: string };
 type OrderItem = {
   id: string;
   variantId: string;
@@ -121,7 +121,26 @@ export class SettlementService {
         lateReceivedTransactionId: `MOCK-LATE-${eventId}`,
       },
     });
-    const snapshot = attempt.targetSellerOrdersSnapshot as SnapshotPart[];
+    const payment = await tx.payment.findUniqueOrThrow({
+      where: { id: paymentId },
+      include: { order: { include: { sellerOrders: true } } },
+    });
+    const original = await tx.paymentAttempt.findFirstOrThrow({
+      where: { id: attempt.id, paymentId },
+    });
+    const snapshotInput = {
+      mode: "LATE_COMPENSATION" as const,
+      orderId: payment.orderId,
+      amount: attempt.amount.toString(),
+      sellerOrders: payment.order.sellerOrders,
+      snapshot: attempt.targetSellerOrdersSnapshot,
+      originalAttempt: {
+        paymentOrderId: payment.orderId,
+        amount: original.amount.toString(),
+        snapshot: original.targetSellerOrdersSnapshot,
+      },
+    };
+    const snapshot = buildTargetSellerOrdersSnapshot(snapshotInput);
     const latest = await tx.paymentAttempt.aggregate({
       where: { paymentId },
       _max: { attemptNumber: true },
@@ -136,7 +155,7 @@ export class SettlementService {
         compensatesEventId: source.id,
         status: "SUCCEEDED",
         targetSellerOrdersSnapshot:
-          snapshot as unknown as Prisma.InputJsonValue,
+          buildTargetSellerOrdersSnapshot(snapshotInput),
         amount: attempt.amount.toString(),
         externalTransactionId: `MOCK-LATE-${eventId}`,
         settledAt: now,
@@ -162,5 +181,6 @@ export class SettlementService {
         },
       });
     }
+    return compensation;
   }
 }

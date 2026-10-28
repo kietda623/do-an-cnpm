@@ -3,20 +3,27 @@ import dotenv from "dotenv";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../src/generated/prisma/client.ts";
 import { Pool } from "pg";
+import { buildTargetSellerOrdersSnapshot } from "../../src/modules/payment/services/target-snapshot.ts";
 
 dotenv.config({ path: resolve(process.cwd(), "../../.env.test"), quiet: true });
 const url = process.env.TEST_DATABASE_URL?.trim();
 const orderId = process.env.PAYMENT_FIXTURE_ORDER_ID?.trim();
 if (!url || !orderId)
-  throw new Error("Set TEST_DATABASE_URL and PAYMENT_FIXTURE_ORDER_ID for payment fixtures.");
+  throw new Error(
+    "Set TEST_DATABASE_URL and PAYMENT_FIXTURE_ORDER_ID for payment fixtures.",
+  );
 const databaseName = decodeURIComponent(new URL(url).pathname.slice(1));
 if (
   !/(?:_test|_disposable)$/i.test(databaseName) ||
   process.env.TEST_DATABASE_NAME_CONFIRMATION !== databaseName
 )
-  throw new Error("Payment fixtures are restricted to the confirmed disposable test database.");
+  throw new Error(
+    "Payment fixtures are restricted to the confirmed disposable test database.",
+  );
 const pool = new Pool({ connectionString: url, max: 2 });
-const db = new PrismaClient({ adapter: new PrismaPg(pool, { disposeExternalPool: true }) });
+const db = new PrismaClient({
+  adapter: new PrismaPg(pool, { disposeExternalPool: true }),
+});
 try {
   const order = await db.marketplaceOrder.findUnique({
     where: { id: orderId },
@@ -36,15 +43,25 @@ try {
     throw new Error(
       "The selected fixture already has payment attempts; use a fresh checkout order.",
     );
-  const snapshot = order.sellerOrders.map((part) => ({
+  const rawSnapshot = order.sellerOrders.map((part) => ({
     sellerOrderId: part.id,
     amount: part.originalTotal.toString(),
   }));
-  const amount = snapshot.reduce((total, part) => total + BigInt(part.amount), 0n).toString();
+  const amount = rawSnapshot
+    .reduce((total, part) => total + BigInt(part.amount), 0n)
+    .toString();
   await db.$transaction(async (tx) => {
-    const now = (await tx.$queryRaw<Array<{ now: Date }>>`SELECT clock_timestamp() AS now`)[0]!.now;
+    await tx.$queryRaw`SELECT id FROM marketplace_orders WHERE id = ${order.id}::uuid FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM payments WHERE order_id = ${order.id}::uuid FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM seller_orders WHERE order_id = ${order.id}::uuid ORDER BY id FOR UPDATE`;
+    const now = (
+      await tx.$queryRaw<Array<{ now: Date }>>`SELECT clock_timestamp() AS now`
+    )[0]!.now;
     if (order.paymentDeadline! <= now)
       throw new Error("Fixture order payment deadline has elapsed.");
+    const sellerOrders = await tx.sellerOrder.findMany({
+      where: { orderId: order.id },
+    });
     await tx.paymentAttempt.create({
       data: {
         paymentId: order.payment!.id,
@@ -52,7 +69,13 @@ try {
         provider: "MOCK",
         settlementKind: "NORMAL",
         status: "PENDING",
-        targetSellerOrdersSnapshot: snapshot,
+        targetSellerOrdersSnapshot: buildTargetSellerOrdersSnapshot({
+          mode: "NEW",
+          orderId: order.id,
+          amount,
+          sellerOrders,
+          snapshot: rawSnapshot,
+        }),
         amount,
         expiresAt: order.paymentDeadline,
         operationKey: `seed-payment:${order.id}`,
@@ -68,7 +91,7 @@ try {
     });
   });
   console.info(
-    `Created a pending mock-payment fixture for order ${order.id} (${amount} VND, ${snapshot.length} seller order(s)).`,
+    `Created a pending mock-payment fixture for order ${order.id} (${amount} VND, ${rawSnapshot.length} seller order(s)).`,
   );
 } finally {
   await db.$disconnect();

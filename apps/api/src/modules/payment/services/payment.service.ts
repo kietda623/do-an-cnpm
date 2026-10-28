@@ -11,6 +11,7 @@ import { canCollectCod } from "../../../common/auth/permissions.js";
 import { OrderTransaction } from "../../order/services/order-transaction.js";
 import { SettlementService } from "./settlement.service.js";
 import { sumVnd } from "./payment-policy.js";
+import { buildTargetSellerOrdersSnapshot } from "./target-snapshot.js";
 
 type TargetPart = { sellerOrderId: string; amount: string };
 type PaymentResult = {
@@ -22,6 +23,10 @@ const conflict = (code: string, message: string, details?: unknown) =>
   new ConflictException({ code, message, ...(details ? { details } : {}) });
 const digest = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
+const terminalError = {
+  code: "RESULT_ALREADY_TERMINAL",
+  message: "The attempt already has a different terminal result.",
+};
 
 const attemptInclude = {
   allocations: { include: { refund: true } },
@@ -121,11 +126,11 @@ export class PaymentService {
           where: { id: pending.id },
           data: { status: "CANCELLED", settledAt: now },
         });
-      const snapshot: TargetPart[] = liveParts.map((part) => ({
+      const rawSnapshot: TargetPart[] = liveParts.map((part) => ({
         sellerOrderId: part.id,
         amount: part.originalTotal.toString(),
       }));
-      const amount = sumVnd(snapshot.map((part) => part.amount));
+      const amount = sumVnd(rawSnapshot.map((part) => part.amount));
       const lastAttemptNumber = Math.max(
         0,
         ...payment.attempts.map((attempt) => attempt.attemptNumber),
@@ -139,8 +144,13 @@ export class PaymentService {
           settlementKind: "NORMAL",
           originalAttemptId: previous?.id ?? null,
           status: "PENDING",
-          targetSellerOrdersSnapshot:
-            snapshot as unknown as Prisma.InputJsonValue,
+          targetSellerOrdersSnapshot: buildTargetSellerOrdersSnapshot({
+            mode: "NEW",
+            orderId,
+            amount,
+            sellerOrders: order.sellerOrders,
+            snapshot: rawSnapshot,
+          }),
           amount,
           expiresAt: order.paymentDeadline,
           operationKey: `mock-attempt:${key}`,
@@ -182,8 +192,16 @@ export class PaymentService {
         key,
         requestHash,
       );
-      if (idem.replay)
+      if (idem.replay) {
+        if (idem.responseStatus === 409) {
+          const summary = idem.responseSummary as {
+            error?: { code: string; message: string };
+          } | null;
+          const error = summary?.error ?? terminalError;
+          throw conflict(error.code, error.message);
+        }
         return { attemptId: idem.resourceId!, terminalConflict: false };
+      }
       const orderPreview = await tx.marketplaceOrder.findFirst({
         where: { id: orderId, buyerUserId: userId },
         select: { id: true },
@@ -221,8 +239,21 @@ export class PaymentService {
             "EVENT_ID_REUSED",
             "This event ID was already used for different data.",
           );
-        await this.complete(tx, idem.id, "PaymentAttempt", attempt.id, 200);
-        return { attemptId: attempt.id, terminalConflict: false };
+        const compensation = await tx.paymentAttempt.findUnique({
+          where: { compensatesEventId: seen.id },
+          select: { id: true },
+        });
+        const responseAttemptId = compensation?.id ?? attempt.id;
+        const terminalConflict = seen.processingResult === "IGNORED";
+        await this.complete(
+          tx,
+          idem.id,
+          "PaymentAttempt",
+          responseAttemptId,
+          terminalConflict ? 409 : 200,
+          terminalConflict ? { error: terminalError } : undefined,
+        );
+        return { attemptId: responseAttemptId, terminalConflict };
       }
       if (payment.order.version !== input.expectedVersion)
         throw conflict(
@@ -242,6 +273,7 @@ export class PaymentService {
           !deadline ||
           deadline <= now ||
           Boolean(attempt.expiresAt && attempt.expiresAt <= now));
+      let responseAttemptId = attempt.id;
       if (attempt.status === "PENDING" && !late) {
         if (input.outcome === "SUCCEEDED") {
           const alreadySucceeded = await tx.paymentAttempt.findFirst({
@@ -304,7 +336,7 @@ export class PaymentService {
             where: { id: attempt.id },
             data: { status: "CANCELLED", settledAt: now },
           });
-        await this.settlement.compensateLate(
+        const compensation = await this.settlement.compensateLate(
           tx,
           payment.id,
           attempt,
@@ -312,6 +344,7 @@ export class PaymentService {
           payloadDigest,
           now,
         );
+        responseAttemptId = compensation.id;
       } else {
         const processingResult =
           attempt.status === input.outcome ? "DUPLICATE" : "IGNORED";
@@ -335,7 +368,9 @@ export class PaymentService {
             where: { id: orderId },
             data: { version: { increment: 1 } },
           });
-          await this.complete(tx, idem.id, "PaymentAttempt", attempt.id, 409);
+          await this.complete(tx, idem.id, "PaymentAttempt", attempt.id, 409, {
+            error: terminalError,
+          });
           return { attemptId: attempt.id, terminalConflict: true };
         }
       }
@@ -347,14 +382,17 @@ export class PaymentService {
         where: { id: orderId },
         data: { version: { increment: 1 } },
       });
-      await this.complete(tx, idem.id, "PaymentAttempt", attempt.id, 200);
-      return { attemptId: attempt.id, terminalConflict: false };
+      await this.complete(
+        tx,
+        idem.id,
+        "PaymentAttempt",
+        responseAttemptId,
+        200,
+      );
+      return { attemptId: responseAttemptId, terminalConflict: false };
     });
     if (result.terminalConflict)
-      throw conflict(
-        "RESULT_ALREADY_TERMINAL",
-        "The attempt already has a different terminal result.",
-      );
+      throw conflict(terminalError.code, terminalError.message);
     return this.readAttempt(userId, result.attemptId);
   }
 
@@ -472,9 +510,15 @@ export class PaymentService {
           provider: "COD_SIMULATION",
           settlementKind: "NORMAL",
           status: "SUCCEEDED",
-          targetSellerOrdersSnapshot: [
-            { sellerOrderId, amount: part.originalTotal.toString() },
-          ],
+          targetSellerOrdersSnapshot: buildTargetSellerOrdersSnapshot({
+            mode: "NEW",
+            orderId,
+            amount: part.originalTotal.toString(),
+            sellerOrders: [part],
+            snapshot: [
+              { sellerOrderId, amount: part.originalTotal.toString() },
+            ],
+          }),
           amount: part.originalTotal,
           externalTransactionId: `COD-${eventId}`,
           settledAt: now,
@@ -747,8 +791,20 @@ export class PaymentService {
         "This key was used for a different payment request.",
       );
     if (locked.state === "COMPLETED" && locked.resourceId)
-      return { id: locked.id, replay: true, resourceId: locked.resourceId };
-    return { id: locked.id, replay: false, resourceId: null };
+      return {
+        id: locked.id,
+        replay: true,
+        resourceId: locked.resourceId,
+        responseStatus: locked.responseStatus,
+        responseSummary: locked.responseSummary,
+      };
+    return {
+      id: locked.id,
+      replay: false,
+      resourceId: null,
+      responseStatus: null,
+      responseSummary: null,
+    };
   }
 
   private complete(
@@ -757,6 +813,7 @@ export class PaymentService {
     resourceType: string,
     resourceId: string,
     responseStatus: number,
+    responseSummary?: Prisma.InputJsonObject,
   ) {
     return tx.idempotencyRecord.update({
       where: { id },
@@ -765,7 +822,7 @@ export class PaymentService {
         responseStatus,
         resourceType,
         resourceId,
-        responseSummary: { id: resourceId },
+        responseSummary: responseSummary ?? { id: resourceId },
       },
     });
   }

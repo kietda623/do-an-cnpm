@@ -10,6 +10,7 @@ import { AppModule } from "../../apps/api/src/app.module.js";
 import { DatabaseService } from "../../apps/api/src/database/prisma.service.js";
 
 type Schema = {
+  required?: string[];
   properties?: Record<string, Schema>;
   items?: Schema;
   $ref?: string;
@@ -21,7 +22,12 @@ type Schema = {
 type Operation = {
   operationId?: string;
   security?: Array<Record<string, string[]>>;
-  parameters?: Array<{ name: string; in: string; required?: boolean; schema?: Schema }>;
+  parameters?: Array<{
+    name: string;
+    in: string;
+    required?: boolean;
+    schema?: Schema;
+  }>;
   responses?: Record<string, unknown>;
 };
 type Contract = {
@@ -29,7 +35,10 @@ type Contract = {
   components: { schemas: Record<string, Schema> };
 };
 const contract = parse(
-  readFileSync(resolve(process.cwd(), "../../packages/contracts/openapi.yaml"), "utf8"),
+  readFileSync(
+    resolve(process.cwd(), "../../packages/contracts/openapi.yaml"),
+    "utf8",
+  ),
 ) as Contract;
 const operations = [
   ["get", "/payments"],
@@ -60,18 +69,24 @@ describe("payment and cancellation OpenAPI/runtime contract", () => {
     await app.init();
     runtime = SwaggerModule.createDocument(
       app,
-      new DocumentBuilder().setTitle("Marketplace API").setVersion("1.0.0").build(),
+      new DocumentBuilder()
+        .setTitle("Marketplace API")
+        .setVersion("1.0.0")
+        .build(),
       { ignoreGlobalPrefix: true },
     );
   });
   afterAll(async () => app?.close());
 
-  it.each(operations)("documents %s %s in the runtime and contract", (method, path) => {
-    const operation = contract.paths[path]?.[method];
-    expect(operation?.operationId).toBeTruthy();
-    expect(operation?.security).toEqual([{ BearerAuth: [] }]);
-    expect(runtime.paths[path]?.[method]).toBeDefined();
-  });
+  it.each(operations)(
+    "documents %s %s in the runtime and contract",
+    (method, path) => {
+      const operation = contract.paths[path]?.[method];
+      expect(operation?.operationId).toBeTruthy();
+      expect(operation?.security).toEqual([{ BearerAuth: [] }]);
+      expect(runtime.paths[path]?.[method]).toBeDefined();
+    },
+  );
 
   it.each(operations.filter(([method]) => method === "post"))(
     "requires a UUID Idempotency-Key for %s %s",
@@ -89,13 +104,29 @@ describe("payment and cancellation OpenAPI/runtime contract", () => {
 
   it("keeps every payment amount an integer VND string and limits settlement outcomes", () => {
     const payment = contract.components.schemas.Payment.properties ?? {};
-    expect(payment.amount).toMatchObject({ type: "string", pattern: "^[0-9]+$" });
-    for (const field of ["amount"]) expect(payment[field]?.pattern).toBe("^[0-9]+$");
-    expect(contract.components.schemas.MockResult.properties?.outcome?.enum).toEqual([
-      "SUCCEEDED",
-      "FAILED",
-      "CANCELLED",
+    expect(payment.amount).toMatchObject({
+      type: "string",
+      pattern: "^[0-9]+$",
+    });
+    expect(payment.settlementKind?.enum).toEqual([
+      "NORMAL",
+      "LATE_COMPENSATION",
     ]);
+    expect(payment.originalAttemptId).toMatchObject({
+      type: "string",
+      format: "uuid",
+    });
+    expect(contract.components.schemas.Payment.required).toContain(
+      "settlementKind",
+    );
+    expect(contract.components.schemas.Payment.required).not.toContain(
+      "originalAttemptId",
+    );
+    for (const field of ["amount"])
+      expect(payment[field]?.pattern).toBe("^[0-9]+$");
+    expect(
+      contract.components.schemas.MockResult.properties?.outcome?.enum,
+    ).toEqual(["SUCCEEDED", "FAILED", "CANCELLED"]);
     expect(contract.components.schemas.ReasonVersion.properties).toEqual(
       expect.objectContaining({
         reason: expect.objectContaining({ type: "string" }),
