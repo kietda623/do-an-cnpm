@@ -22,6 +22,10 @@ const conflict = (code: string, message: string, details?: unknown) =>
   new ConflictException({ code, message, ...(details ? { details } : {}) });
 const digest = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
+const terminalError = {
+  code: "RESULT_ALREADY_TERMINAL",
+  message: "The attempt already has a different terminal result.",
+};
 
 const attemptInclude = {
   allocations: { include: { refund: true } },
@@ -182,8 +186,16 @@ export class PaymentService {
         key,
         requestHash,
       );
-      if (idem.replay)
+      if (idem.replay) {
+        if (idem.responseStatus === 409) {
+          const summary = idem.responseSummary as {
+            error?: { code: string; message: string };
+          } | null;
+          const error = summary?.error ?? terminalError;
+          throw conflict(error.code, error.message);
+        }
         return { attemptId: idem.resourceId!, terminalConflict: false };
+      }
       const orderPreview = await tx.marketplaceOrder.findFirst({
         where: { id: orderId, buyerUserId: userId },
         select: { id: true },
@@ -226,8 +238,16 @@ export class PaymentService {
           select: { id: true },
         });
         const responseAttemptId = compensation?.id ?? attempt.id;
-        await this.complete(tx, idem.id, "PaymentAttempt", responseAttemptId, 200);
-        return { attemptId: responseAttemptId, terminalConflict: false };
+        const terminalConflict = seen.processingResult === "IGNORED";
+        await this.complete(
+          tx,
+          idem.id,
+          "PaymentAttempt",
+          responseAttemptId,
+          terminalConflict ? 409 : 200,
+          terminalConflict ? { error: terminalError } : undefined,
+        );
+        return { attemptId: responseAttemptId, terminalConflict };
       }
       if (payment.order.version !== input.expectedVersion)
         throw conflict(
@@ -342,7 +362,9 @@ export class PaymentService {
             where: { id: orderId },
             data: { version: { increment: 1 } },
           });
-          await this.complete(tx, idem.id, "PaymentAttempt", attempt.id, 409);
+          await this.complete(tx, idem.id, "PaymentAttempt", attempt.id, 409, {
+            error: terminalError,
+          });
           return { attemptId: attempt.id, terminalConflict: true };
         }
       }
@@ -354,14 +376,17 @@ export class PaymentService {
         where: { id: orderId },
         data: { version: { increment: 1 } },
       });
-      await this.complete(tx, idem.id, "PaymentAttempt", responseAttemptId, 200);
+      await this.complete(
+        tx,
+        idem.id,
+        "PaymentAttempt",
+        responseAttemptId,
+        200,
+      );
       return { attemptId: responseAttemptId, terminalConflict: false };
     });
     if (result.terminalConflict)
-      throw conflict(
-        "RESULT_ALREADY_TERMINAL",
-        "The attempt already has a different terminal result.",
-      );
+      throw conflict(terminalError.code, terminalError.message);
     return this.readAttempt(userId, result.attemptId);
   }
 
@@ -754,8 +779,20 @@ export class PaymentService {
         "This key was used for a different payment request.",
       );
     if (locked.state === "COMPLETED" && locked.resourceId)
-      return { id: locked.id, replay: true, resourceId: locked.resourceId };
-    return { id: locked.id, replay: false, resourceId: null };
+      return {
+        id: locked.id,
+        replay: true,
+        resourceId: locked.resourceId,
+        responseStatus: locked.responseStatus,
+        responseSummary: locked.responseSummary,
+      };
+    return {
+      id: locked.id,
+      replay: false,
+      resourceId: null,
+      responseStatus: null,
+      responseSummary: null,
+    };
   }
 
   private complete(
@@ -764,6 +801,7 @@ export class PaymentService {
     resourceType: string,
     resourceId: string,
     responseStatus: number,
+    responseSummary?: Prisma.InputJsonObject,
   ) {
     return tx.idempotencyRecord.update({
       where: { id },
@@ -772,7 +810,7 @@ export class PaymentService {
         responseStatus,
         resourceType,
         resourceId,
-        responseSummary: { id: resourceId },
+        responseSummary: responseSummary ?? { id: resourceId },
       },
     });
   }

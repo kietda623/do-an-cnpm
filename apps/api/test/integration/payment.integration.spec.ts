@@ -21,7 +21,9 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
   let db: DatabaseService;
   beforeAll(async () => {
     await resetAndDeployMigrations();
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     app = moduleRef.createNestApplication({ logger: false });
     app.setGlobalPrefix("api/v1", {
       exclude: [
@@ -41,7 +43,12 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
   async function register(name: string): Promise<Auth> {
     const response = await request(app.getHttpServer())
       .post("/api/v1/auth/register")
-      .send({ email: email(), password, fullName: name, clientPlatform: "ANDROID" });
+      .send({
+        email: email(),
+        password,
+        fullName: name,
+        clientPlatform: "ANDROID",
+      });
     expect(response.status).toBe(201);
     return response as Auth;
   }
@@ -88,7 +95,11 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
     const category = await request(app.getHttpServer())
       .post("/api/v1/admin/categories")
       .set("Authorization", `Bearer ${admin.body.data.accessToken}`)
-      .send({ name: `Payments ${randomUUID().slice(0, 6)}`, parentId: null, visible: true });
+      .send({
+        name: `Payments ${randomUUID().slice(0, 6)}`,
+        parentId: null,
+        visible: true,
+      });
     expect(category.status).toBe(201);
     const image = await db.prisma.asset.create({
       data: {
@@ -146,7 +157,11 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
     const quote = await request(app.getHttpServer())
       .post("/api/v1/checkout/quotes")
       .set("Authorization", `Bearer ${buyer.body.data.accessToken}`)
-      .send({ cartItemIds: [itemId], addressId: address.body.data.id, paymentMethod: "MOCK" });
+      .send({
+        cartItemIds: [itemId],
+        addressId: address.body.data.id,
+        paymentMethod: "MOCK",
+      });
     expect(quote.status).toBe(201);
     const checkout = await request(app.getHttpServer())
       .post("/api/v1/checkout")
@@ -186,7 +201,11 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
       .post(`/api/v1/payments/${started.body.data.id}/mock-result`)
       .set("Authorization", buyer)
       .set("Idempotency-Key", randomUUID())
-      .send({ eventId: randomUUID(), outcome: "FAILED", expectedVersion: order.version });
+      .send({
+        eventId: randomUUID(),
+        outcome: "FAILED",
+        expectedVersion: order.version,
+      });
     expect(failed.status).toBe(200);
     const retryKey = randomUUID();
     const retry = await request(app.getHttpServer())
@@ -231,10 +250,80 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
     ).body.data;
     expect(order.capturedAmount).toBe("2500");
     expect(
-      order.payments.filter((attempt: { status: string }) => attempt.status === "SUCCEEDED"),
+      order.payments.filter(
+        (attempt: { status: string }) => attempt.status === "SUCCEEDED",
+      ),
     ).toHaveLength(1);
+    const duplicate = await request(app.getHttpServer())
+      .post(`/api/v1/payments/${retry.body.data.id}/mock-result`)
+      .set("Authorization", buyer)
+      .set("Idempotency-Key", randomUUID())
+      .send({
+        eventId: randomUUID(),
+        outcome: "SUCCEEDED",
+        expectedVersion: order.version,
+      });
+    expect(duplicate.status).toBe(200);
+    expect(duplicate.body.data.id).toBe(retry.body.data.id);
+    order = (
+      await request(app.getHttpServer())
+        .get(`/api/v1/orders/${test.orderId}`)
+        .set("Authorization", buyer)
+    ).body.data;
+    const conflictKey = randomUUID();
+    const conflictBody = {
+      eventId: randomUUID(),
+      outcome: "FAILED",
+      expectedVersion: order.version,
+    };
+    const sendConflict = (key: string) =>
+      request(app.getHttpServer())
+        .post(`/api/v1/payments/${retry.body.data.id}/mock-result`)
+        .set("Authorization", buyer)
+        .set("Idempotency-Key", key)
+        .send(conflictBody);
+    const firstConflict = await sendConflict(conflictKey);
+    expect(firstConflict.status).toBe(409);
+    const afterConflict = await db.prisma.marketplaceOrder.findUniqueOrThrow({
+      where: { id: test.orderId },
+      include: { payment: true },
+    });
+    for (const key of [conflictKey, randomUUID()]) {
+      const response = await sendConflict(key);
+      expect(response.status).toBe(409);
+      expect(response.body.error.code).toBe(firstConflict.body.error.code);
+      expect(response.body.error.message).toBe(
+        firstConflict.body.error.message,
+      );
+    }
+    const afterReplays = await db.prisma.marketplaceOrder.findUniqueOrThrow({
+      where: { id: test.orderId },
+      include: { payment: true },
+    });
+    expect(afterReplays.version).toBe(afterConflict.version);
+    expect(afterReplays.payment?.version).toBe(afterConflict.payment?.version);
+    expect(
+      await db.prisma.paymentEvent.count({
+        where: { externalEventId: conflictBody.eventId },
+      }),
+    ).toBe(1);
+    const persistedAttempt = await db.prisma.paymentAttempt.findUniqueOrThrow({
+      where: { id: retry.body.data.id },
+      include: { allocations: { include: { refund: true } } },
+    });
+    expect(persistedAttempt.status).toBe("SUCCEEDED");
+    expect(persistedAttempt.allocations).toHaveLength(1);
+    expect(persistedAttempt.allocations[0]?.refund).toBeNull();
+    order = (
+      await request(app.getHttpServer())
+        .get(`/api/v1/orders/${test.orderId}`)
+        .set("Authorization", buyer)
+    ).body.data;
     const cancelKey = randomUUID();
-    const cancelBody = { reason: "Buyer changed their mind", expectedVersion: order.version };
+    const cancelBody = {
+      reason: "Buyer changed their mind",
+      expectedVersion: order.version,
+    };
     const cancelled = await request(app.getHttpServer())
       .post(`/api/v1/orders/${test.orderId}/cancel`)
       .set("Authorization", buyer)
@@ -292,7 +381,11 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
         .then((row) => row.availableQuantity),
     ).toBe(6);
     const lateKey = randomUUID();
-    const lateBody = { eventId: randomUUID(), outcome: "SUCCEEDED", expectedVersion: order.version };
+    const lateBody = {
+      eventId: randomUUID(),
+      outcome: "SUCCEEDED",
+      expectedVersion: order.version,
+    };
     const late = await request(app.getHttpServer())
       .post(`/api/v1/payments/${started.body.data.id}/mock-result`)
       .set("Authorization", buyer)
@@ -300,27 +393,35 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
       .send(lateBody);
     expect(late.status).toBe(200);
     expect(late.body.data).toMatchObject({
-      settlementKind: "LATE_COMPENSATION", status: "SUCCEEDED",
-      originalAttemptId: started.body.data.id, amount: "2500",
+      settlementKind: "LATE_COMPENSATION",
+      status: "SUCCEEDED",
+      originalAttemptId: started.body.data.id,
+      amount: "2500",
     });
     expect(late.body.data.id).not.toBe(started.body.data.id);
     for (const key of [lateKey, randomUUID()]) {
       const replay = await request(app.getHttpServer())
         .post(`/api/v1/payments/${started.body.data.id}/mock-result`)
-        .set("Authorization", buyer).set("Idempotency-Key", key).send(lateBody);
+        .set("Authorization", buyer)
+        .set("Idempotency-Key", key)
+        .send(lateBody);
       expect(replay.status).toBe(200);
       expect(replay.body.data).toEqual(late.body.data);
     }
     const history = await request(app.getHttpServer())
-      .get(`/api/v1/payments?orderId=${test.orderId}`).set("Authorization", buyer);
+      .get(`/api/v1/payments?orderId=${test.orderId}`)
+      .set("Authorization", buyer);
     expect(history.status).toBe(200);
     expect(history.body.data.map((item: { id: string }) => item.id)).toEqual(
       expect.arrayContaining([started.body.data.id, late.body.data.id]),
     );
-    const source = await db.prisma.paymentEvent.findFirstOrThrow({ where: { externalEventId: lateBody.eventId } });
+    const source = await db.prisma.paymentEvent.findFirstOrThrow({
+      where: { externalEventId: lateBody.eventId },
+    });
     expect(source.attemptId).toBe(started.body.data.id);
     const compensation = await db.prisma.paymentAttempt.findUniqueOrThrow({
-      where: { compensatesEventId: source.id }, include: { allocations: { include: { refund: true } } },
+      where: { compensatesEventId: source.id },
+      include: { allocations: { include: { refund: true } } },
     });
     expect(compensation.id).toBe(late.body.data.id);
     expect(compensation.allocations).toHaveLength(1);
@@ -335,7 +436,10 @@ describe("mock payments and cancellation PostgreSQL integration", () => {
     expect(order.refundedAmount).toBe("2500");
     expect(order.payments).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ settlementKind: "LATE_COMPENSATION", status: "SUCCEEDED" }),
+        expect.objectContaining({
+          settlementKind: "LATE_COMPENSATION",
+          status: "SUCCEEDED",
+        }),
       ]),
     );
   }, 60_000);
