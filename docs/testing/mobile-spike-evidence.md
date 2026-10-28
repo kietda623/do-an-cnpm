@@ -6,7 +6,16 @@ Nhánh từ `origin/main` d741f4b. Chỉ login, session native và danh sách s�
 
 - Windows 11 (NT 10.0.26200.0), Node 24.21.0, pnpm 12.14.0 qua Corepack, Java 17.0.8.
 - Expo 57.0.30, React Native 0.86.3, React 19.2.3.
-- ANDROID_HOME/ANDROID_SDK_ROOT trỏ tới `C:/Users/letro/AppData/Local/Android/Sdk` nhưng thư mục không tồn tại; không có adb/emulator. Model/API level: chưa có. iOS simulator không khả dụng trên Windows.
+- Lần chạy ban đầu chưa có SDK. Sau khi cài theo yêu cầu: SDK tại `C:/Users/letro/AppData/Local/Android/Sdk`, platform/build-tools 36/36.0.0, adb 37.0.1, emulator 37.2.12, system image google_apis x86_64 revision 7. AVD Marketplace_API_36 (profile Pixel 6, ro.product.model sdk_gphone64_x86_64), Android 16/API 36; sys.boot_completed=1. WHPX khả dụng, chạy headless với SwiftShader, 2 CPU/1536 MB RAM. iOS simulator không khả dụng trên Windows.
+
+## Lần chuẩn bị kiểm chứng Android sau khi cài SDK
+
+- Expo Go 57.0.9 (versionCode 444) tải bằng URL chính thức do `npx expo-go url android 57 --json` trả về, `adb install` thành công.
+- PostgreSQL 18 tại loopback:55439, database mới `mobile_spike_disposable`; migrate deploy 8 migrations pass; seed identity/shops/catalog pass. Chỉ sửa fixture trong DB disposable để có sản phẩm ACTIVE tên `T130 Android discovery product`, không sửa backend/seed repo.
+- API nguyên trạng nhánh T130 chạy cổng 4000; GET /products trả một sản phẩm thật từ DB. API-only native login → refresh rotation → logout 204 pass. Kiểm tra log API không chứa các token thực tế vừa nhận pass (lần đầu lỗi đọc file đang mở, đã chạy lại bằng Get-Content với ErrorActionPreference=Stop).
+- Emulator truy cập `http://10.0.2.2:4000/health/live` qua toybox nc: HTTP 200, status ok. Đây là kiểm tra kết nối, không phải UI flow.
+- Khởi động Expo runtime bị bộ kiểm duyệt công cụ từ chối hai lần với thông báo `blocked by policy` (không nêu lý do cụ thể). Đã yêu cầu người dùng chạy lệnh Expo localhost cổng 8081 thủ công để tiếp tục. Chưa có listener 8081 tại thời điểm ghi nhận.
+- Vì chưa chạy app, chưa chứng minh SecureStore thực, login/products UI, logout và force-stop/reopen. **T130 vẫn mở**; các kết quả API/emulator nêu trên không được thay cho journey pass.
 
 ## Red / green thực tế
 
@@ -53,7 +62,7 @@ Main trả REFRESH_REUSE khi dùng lại refresh trong khi contract yêu cầu S
 - Login và GET /products với API thật; trạng thái loading/empty/error/retry mới có component evidence.
 - Quan sát log runtime không có token; kiểm tra SecureStore thực chứa refresh và không chứa access.
 - Logout thực xóa SecureStore, bộ nhớ và state; tắt/mở app thực khôi phục qua refresh rotation.
-- Android model/API level, iOS, native APK/dev build và hành vi mạng LAN/HTTPS.
+- iOS, native APK/dev build và hành vi HTTPS/LAN trên thiết bị thật. Android API level/profile và kết nối emulator đã có bằng chứng ở lần chuẩn bị nêu trên.
 
 Không đánh dấu các mục này pass bằng unit test hoặc Metro export. Reviewer đề xuất: M3 theo T130.
 
