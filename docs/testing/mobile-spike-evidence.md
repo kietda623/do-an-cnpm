@@ -1,12 +1,12 @@
 # T130 — bằng chứng Expo spike
 
-## Phạm vi và môi trường (2026-10-28)
+## Phạm vi và môi trường (2026-10-28–29)
 
-Nhánh từ `origin/main` d741f4b. Chỉ login, session native và danh sách sản phẩm; không sửa backend. T130 **giữ mở**, W032 vẫn 2 PD: chưa chạy hành trình với API thật trên emulator/thiết bị.
+Nhánh từ `origin/main` d741f4b. Chỉ login, session native và danh sách sản phẩm; không sửa backend. Hành trình Android emulator với API thật đã pass ngày 2026-10-29. T130 **giữ mở**, W032 vẫn 2 PD: chưa chạy iOS và chưa kiểm chứng HTTPS/native release; không suy rộng kết quả Expo Go sang hai mục này.
 
 - Windows 11 (NT 10.0.26200.0), Node 24.21.0, pnpm 12.14.0 qua Corepack, Java 17.0.8.
 - Expo 57.0.30, React Native 0.86.3, React 19.2.3.
-- Lần chạy ban đầu chưa có SDK. Sau khi cài theo yêu cầu: SDK tại `C:/Users/letro/AppData/Local/Android/Sdk`, platform/build-tools 36/36.0.0, adb 37.0.1, emulator 37.2.12, system image google_apis x86_64 revision 7. AVD Marketplace_API_36 (profile Pixel 6, ro.product.model sdk_gphone64_x86_64), Android 16/API 36; sys.boot_completed=1. WHPX khả dụng, chạy headless với SwiftShader, 2 CPU/1536 MB RAM. iOS simulator không khả dụng trên Windows.
+- SDK tại `C:/Users/letro/AppData/Local/Android/Sdk`, platform/build-tools 36/36.0.0, adb 37.0.1, emulator 37.2.12, system image google_apis x86_64 revision 7. AVD Marketplace_API_36 (profile Pixel 6, ro.product.model sdk_gphone64_x86_64), Android 16/API 36; sys.boot_completed=1. WHPX khả dụng, SwiftShader, 2 CPU/1536 MB RAM, màn hình giảm còn 480×800/density 160 do thiếu RAM. iOS simulator không khả dụng trên Windows.
 
 ## Lần chuẩn bị kiểm chứng Android sau khi cài SDK
 
@@ -14,8 +14,28 @@ Nhánh từ `origin/main` d741f4b. Chỉ login, session native và danh sách s�
 - PostgreSQL 18 tại loopback:55439, database mới `mobile_spike_disposable`; migrate deploy 8 migrations pass; seed identity/shops/catalog pass. Chỉ sửa fixture trong DB disposable để có sản phẩm ACTIVE tên `T130 Android discovery product`, không sửa backend/seed repo.
 - API nguyên trạng nhánh T130 chạy cổng 4000; GET /products trả một sản phẩm thật từ DB. API-only native login → refresh rotation → logout 204 pass. Kiểm tra log API không chứa các token thực tế vừa nhận pass (lần đầu lỗi đọc file đang mở, đã chạy lại bằng Get-Content với ErrorActionPreference=Stop).
 - Emulator truy cập `http://10.0.2.2:4000/health/live` qua toybox nc: HTTP 200, status ok. Đây là kiểm tra kết nối, không phải UI flow.
-- Khởi động Expo runtime bị bộ kiểm duyệt công cụ từ chối hai lần với thông báo `blocked by policy` (không nêu lý do cụ thể). Đã yêu cầu người dùng chạy lệnh Expo localhost cổng 8081 thủ công để tiếp tục. Chưa có listener 8081 tại thời điểm ghi nhận.
-- Vì chưa chạy app, chưa chứng minh SecureStore thực, login/products UI, logout và force-stop/reopen. **T130 vẫn mở**; các kết quả API/emulator nêu trên không được thay cho journey pass.
+- Công cụ ban đầu chặn lệnh Expo (`blocked by policy`); người dùng đã khởi động/restart server thủ công. Manifest lần đầu có apiBaseUrl rỗng; đã tạo `apps/mobile/.env.local` bị Git bỏ qua và xác nhận manifest sau restart có URL đúng. Không commit file local này.
+- Expo localhost chỉ bind `::1:8081`, IPv4 localhost từ chối; gây Expo Go `Failed to download remote update`. Cầu TCP ngoài repo chỉ bind `127.0.0.1:8082` → `::1:8081`, kết hợp `adb reverse tcp:8081 tcp:8082`, đã giải quyết kết nối. API app vẫn dùng `10.0.2.2:4000`. Không đổi firewall hoặc publish port ra Internet.
+- Emulator ban đầu có System UI ANR; giảm độ phân giải và đóng ứng dụng theo thao tác người dùng. Sau khi công cụ cửa sổ bấm lệch, người dùng chọn rõ ADB/UIAutomator cho hành trình sau đây.
+
+## Hành trình Android thật — 2026-10-29
+
+Các thao tác dưới đây chạy trên Expo Go 57.0.9 và API thật/DB disposable nêu trên, không mock HTTP. `uiautomator dump` xác nhận text/bounds; `screencap` lưu ảnh trong `assets/t130/`. Account thử nghiệm `t130-buyer@example.test`, password sinh ngẫu nhiên giữ ngoài repo, không ghi vào bằng chứng.
+
+| Bước                | Thao tác / kết quả thật                                                                                                                                                                                                                                                                                                          | Ảnh                                                           |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Discovery           | `adb shell am start -W -a android.intent.action.VIEW -d exp://127.0.0.1:8081 -p host.exp.exponent`; UI hiển thị `T130 Android discovery product`; API GET /products 200, các lần sau 304 qua cache HTTP.                                                                                                                         | [Danh sách](assets/t130/android-products.png)                 |
+| Login               | Nhập tài khoản bằng ADB từ biến local, không in password. POST /auth/login 200; UI đổi thành ĐĂNG XUẤT, có sản phẩm.                                                                                                                                                                                                             | [Đăng nhập thành công](assets/t130/android-login-success.png) |
+| SecureStore         | Expo Go không debuggable nên run-as bị từ chối; chỉ trên emulator disposable, `adb root` cho phép đọc preferences scoped của project. Có đúng một entry `key_v1-marketplace.refresh.v1`, payload mã hóa gồm ct/iv/tlen/scheme/keystoreAlias; không có entry access token. Không ghi ciphertext/token vào repo/log.               | Kiểm tra cấu trúc và số lượng, không chụp giá trị             |
+| Force-stop / reopen | `am force-stop host.exp.exponent` xác nhận tiến trình dừng; mở project lại. Trong Expo Go cần gửi deep link lần thứ hai sau cold LauncherActivity để tới ExperienceActivity. POST /auth/refresh 200; không nhập lại password; UI ĐĂNG XUẤT và sản phẩm. Fingerprint ciphertext refresh thay đổi, chứng minh ghi rotation.        | [Khôi phục phiên](assets/t130/android-restored-session.png)   |
+| Logout              | Bấm ĐĂNG XUẤT: API 204, về form login trống, refresh entry=0, active test sessions=0. Force-stop/reopen tiếp theo chỉ có ĐĂNG NHẬP, không phát sinh refresh request. Không có cache persistent của spike; danh sách cũ unmount khi chuyển login.                                                                                 | [Logout](assets/t130/android-logout.png)                      |
+| Refresh 401         | Login mới; thu hồi session của đúng account trong DB disposable; force-stop/reopen. API refresh 401 với mã REFRESH_REUSE của backend gốc; UI về login, refresh entry=0. Logger chỉ hiện mã lỗi đã làm sạch.                                                                                                                      | [401](assets/t130/android-refresh-401.png)                    |
+| Lỗi mạng + retry    | Login mới; dừng đúng API process disposable; force-stop/reopen. UI báo không khôi phục được; ciphertext refresh giữ nguyên. Sau sửa safe area bên dưới, chạy lại: khởi động API, bấm THỬ LẠI tại bounds [28,175][452,194] → refresh 200, UI đăng nhập + sản phẩm. Kết thúc bằng logout; refresh entry=0, active test sessions=0. | [Retry đã sửa](assets/t130/android-network-retry-fixed.png)   |
+| Log                 | Quét ReactNativeJS và cả ba log API của lần chạy: 0 JWT-pattern, 0 trường accessToken/refreshToken có giá trị, không có password thử nghiệm. Trước đó API-only test cũng so sánh trực tiếp các token nhận được với log và không thấy. Đây không phải chứng minh bao quát mọi log của mọi hệ thống.                               | Không lưu log thô hoặc token vào Git                          |
+
+## Lỗi UI tìm thấy trên emulator và red/green
+
+Màn loading/retry nằm ngoài Stack và chưa áp dụng safe area. Lúc API đã chạy lại, nút retry vẫn ở [8,27][472,46] trong vùng system bar; bấm không tạo request. [Ảnh trước sửa](assets/t130/android-network-retry.png). Test mới `test/session-provider.smoke.spec.tsx` chạy đỏ: Expected top padding >=96, received 0. Sau đó thêm SafeAreaProvider tại root và insets +20 cho loading/retry; 4/4 smoke pass. Chạy lại lỗi mạng thật sau sửa: nút ở y175–194, bấm tạo refresh 200 và về màn authenticated. Rà soát độc lập không có finding quan trọng còn lại. Không sửa backend.
 
 ## Red / green thực tế
 
@@ -27,10 +47,10 @@ Test được viết trước implementation. Native session ban đầu đỏ v�
 | `corepack pnpm lint:workspaces`                                                        | Pass, 11 workspace tasks.                                                                                             |
 | `corepack pnpm typecheck`                                                              | Pass, 11 workspace tasks.                                                                                             |
 | `corepack pnpm format:check`                                                           | Fail: 93 file có sẵn ngoài phần mobile/session mới; không format hàng loạt.                                           |
-| `corepack pnpm test`                                                                   | Pass: API 59 test; api-client 14 test ở lần chạy toàn bộ; mobile 3 test.                                              |
+| `corepack pnpm test`                                                                   | Lần cuối 2026-10-29 pass: API 59 test (Turbo cache), api-client 17 và mobile 4 chạy mới; 3 tasks thành công.          |
 | `corepack pnpm build`                                                                  | Pass cả 4 target API/Web; đây không phải Android native build.                                                        |
 | `corepack pnpm --filter @marketplace/api-client test`                                  | Rerun cuối: 17/17 pass (thêm test logger, logout đua refresh và lỗi xóa SecureStore).                                 |
-| `corepack pnpm --filter @marketplace/mobile test`                                      | Rerun cuối: 3/3 pass; component smoke mock transport/provider, không phải device E2E.                                 |
+| `corepack pnpm --filter @marketplace/mobile test`                                      | Rerun cuối sau sửa safe area: 4/4 pass, 2 suites. Đây là component test; device journey là bảng riêng phía trên.      |
 | `corepack pnpm --filter @marketplace/mobile typecheck` và `lint`                       | Rerun cuối pass.                                                                                                      |
 | `expo export --platform android` qua `corepack pnpm --filter @marketplace/mobile exec` | Metro/Hermes Android export pass. Không phải APK hoặc hành trình native. Output ngoài repo.                           |
 | `expo config --type public`                                                            | Dev HTTP được cấu hình và origin được chuẩn hóa thêm `/api/v1`; HTTP khi không bật dev bị từ chối.                    |
@@ -57,12 +77,13 @@ Mọi refresh 401 xóa token local và báo provider xóa user, điều hướng
 
 Main trả REFRESH_REUSE khi dùng lại refresh trong khi contract yêu cầu SESSION_REVOKED; INVALID_REFRESH cần được mô tả rõ cho token sai/hết hạn. Sửa riêng ở [PR #23](https://github.com/kietda623/do-an-cnpm/pull/23), không thay backend/contract trong PR T130. Native xử lý theo status 401 nên độc lập việc merge PR đó.
 
-## Chưa kiểm chứng trên thiết bị
+## Giới hạn và việc chưa kiểm chứng
 
-- Login và GET /products với API thật; trạng thái loading/empty/error/retry mới có component evidence.
-- Quan sát log runtime không có token; kiểm tra SecureStore thực chứa refresh và không chứa access.
-- Logout thực xóa SecureStore, bộ nhớ và state; tắt/mở app thực khôi phục qua refresh rotation.
-- iOS, native APK/dev build và hành vi HTTPS/LAN trên thiết bị thật. Android API level/profile và kết nối emulator đã có bằng chứng ở lần chuẩn bị nêu trên.
+- iOS chưa chạy do không có macOS/Xcode/device; không ghi iOS pass.
+- Chưa build/chạy APK dev/release riêng. Expo Go không chứng minh manifest release thực chặn HTTP hoặc cấu hình backup của app riêng; mới kiểm tra config và hành trình HTTP dev trên emulator.
+- HTTPS và IP LAN trên thiết bị thật chưa chạy. Không suy rộng `10.0.2.2` emulator thành LAN pass.
+- Discovery empty/error/retry có component test; chưa thao tác riêng mọi trạng thái discovery trên emulator. Refresh timeout/429/5xx có unit test, lỗi mạng và 401 có thêm device evidence.
+- Access chỉ memory được đối chiếu mã, cấu trúc SecureStore và việc force-stop phải refresh; không có heap dump để chứng minh tuyệt đối toàn bộ bộ nhớ/storage. Không yêu cầu hoặc ghi token vào heap/log phục vụ bằng chứng.
 
 Không đánh dấu các mục này pass bằng unit test hoặc Metro export. Reviewer đề xuất: M3 theo T130.
 
