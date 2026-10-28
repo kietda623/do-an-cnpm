@@ -141,4 +141,9 @@ test("seller sees simulated statistics and filters reviews (mock API)", async ({
   await expect(page.getByText("Rất tốt")).toBeVisible();
   expect(filter).toContain(`productId=${productId}`);
   expect(filter).toContain("rating=5");
+  await page.getByLabel("Đến trước (giờ Việt Nam)").fill("9999-12-31T23:59");
+  await page.getByRole("button", { name: "Áp dụng khoảng thời gian" }).click();
+  await expect(
+    page.getByText("Vui lòng nhập thời gian hợp lệ", { exact: false }),
+  ).toBeVisible();
 });

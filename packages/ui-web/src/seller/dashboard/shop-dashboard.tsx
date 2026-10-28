@@ -43,6 +43,7 @@ function vietnamInputToUtc(value: string): string | null {
   let instant = target;
   for (let attempt = 0; attempt < 4; attempt++) {
     const observed = Date.parse(`${localTimestamp(new Date(instant))}Z`);
+    if (!Number.isFinite(observed)) return null;
     const correction = target - observed;
     if (correction === 0) return new Date(instant).toISOString();
     instant += correction;
