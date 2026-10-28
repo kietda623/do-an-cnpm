@@ -81,14 +81,15 @@ sequenceDiagram
     ID-->>C: 200 access mới + cookie refresh mới
   else Refresh cũ bị dùng lại
     ID->>DB: Thu hồi toàn bộ family_id
-    ID-->>C: 401 SESSION_REVOKED
+    ID-->>C: 401 REFRESH_REUSE
   end
 
   U->>C: Chọn đăng xuất
   C->>API: POST /auth/logout
   API->>ID: logout(session)
   ID->>DB: UPDATE sessions SET revoked_at
-  API-->>C: 204 (lặp lại vẫn 204)
+  API-->>C: 204
+  Note over C,API: Gửi lại bằng access token của phiên đã thu hồi bị từ chối 401 INVALID_ACCESS_TOKEN
   C->>C: Xóa token và cache query của user
 ```
 
@@ -156,7 +157,7 @@ sequenceDiagram
 
 ## S03. Upload ảnh và tạo sản phẩm kèm biến thể
 
-Việc gọi Object Storage nằm **ngoài** transaction DB (Asset đi từ PENDING sang VERIFIED).
+Việc gọi Object Storage nằm **ngoài** transaction DB; sau khi lưu object thành công, Asset được tạo trực tiếp với trạng thái VERIFIED.
 
 ```mermaid
 sequenceDiagram
@@ -177,10 +178,9 @@ sequenceDiagram
     alt Sai định dạng hoặc quá lớn
       CAT-->>C: 415 hoặc 413, không công khai file
     else Hợp lệ
-      CAT->>DB: INSERT assets (PENDING)
       CAT->>ST: PUT object
       ST-->>CAT: OK
-      CAT->>DB: UPDATE assets SET status VERIFIED
+      CAT->>DB: INSERT assets (VERIFIED)
       CAT-->>C: 201 Asset
     end
   end
@@ -270,8 +270,12 @@ sequenceDiagram
   API->>ORD: createQuote(userId, dto)
   ORD->>DB: Đọc dòng giỏ, địa chỉ, giá và tồn hiện tại
   ORD->>ORD: Tính thành tiền, tổng theo shop, phí giao 0
-  ORD->>DB: INSERT checkout_quotes (hash, snapshot, hết hạn sau 5 phút)
-  ORD-->>C: 201 Quote (valid, issues theo dòng, tổng do server tính)
+  alt Mọi dòng hợp lệ và tổng lớn hơn 0
+    ORD->>DB: INSERT checkout_quotes (hash, snapshot, hết hạn sau 5 phút)
+  else Có lỗi hoặc tổng không lớn hơn 0
+    Note over ORD,DB: Không lưu CheckoutQuote
+  end
+  ORD-->>C: 201 kết quả quote (valid, issues theo dòng, tổng do server tính)
 
   B->>C: Xác nhận đặt hàng
   C->>API: POST /checkout (quoteId, Idempotency-Key)
@@ -279,37 +283,40 @@ sequenceDiagram
   ORD->>DB: BEGIN
   ORD->>DB: Claim idempotency_records (IN_PROGRESS)
   alt Key đã COMPLETED với cùng nội dung
-    ORD->>DB: ROLLBACK
+    ORD->>DB: Kết thúc transaction không tạo đơn mới
     ORD-->>C: 201 Order cũ (replay)
   else Cùng key khác nội dung
-    ORD-->>C: 409 IDEMPOTENCY_CONFLICT
+    ORD-->>C: 409 IDEMPOTENCY_KEY_REUSED
   else Key mới
-    ORD->>DB: Khóa Cart, Quote, rồi Product, Variant, Inventory theo thứ tự ID
+    ORD->>DB: Khóa User, Cart, Quote, Shop, Category, Product, Variant, Inventory theo thứ tự ID
     ORD->>ORD: Kiểm tra lại quote, shop ACTIVE, giá, biến thể
     alt Quote hết hạn
       ORD->>DB: ROLLBACK
       ORD-->>C: 409 QUOTE_EXPIRED
     else Giá đã đổi
       ORD->>DB: ROLLBACK
-      ORD-->>C: 409 PRICE_CHANGED + quote mới
+      ORD-->>C: 409 PRICE_CHANGED
+      Note over C,ORD: Client gọi POST /checkout/quotes để tạo quote mới trước khi xác nhận lại
     else Dòng không hợp lệ
       ORD->>DB: ROLLBACK
-      ORD-->>C: 422 lỗi từng dòng, không tạo đơn một phần
+      ORD-->>C: 409 CART_CHANGED, PRODUCT_UNAVAILABLE hoặc INSUFFICIENT_STOCK
     else Mọi dòng hợp lệ
-      loop Mỗi dòng đã chọn
-        ORD->>INV: reserve(variantId, qty, txContext)
-        INV->>DB: UPDATE inventory SET available = available - qty WHERE available ≥ qty
-        DB-->>INV: affected rows
-        INV->>DB: INSERT inventory_movements (SALE, operation_key)
+      ORD->>DB: INSERT marketplace_orders (snapshot người nhận, tổng gốc, deadline nếu MOCK)
+      loop Mỗi shop
+        ORD->>DB: INSERT seller_orders
+        loop Mỗi dòng đã chọn của shop
+          ORD->>INV: reserve(variantId, qty, txContext)
+          INV->>DB: UPDATE inventory SET available = available - qty WHERE available ≥ qty
+          DB-->>INV: affected rows
+          ORD->>DB: INSERT order_items (snapshot tên, SKU, thuộc tính, giá, số lượng)
+          INV->>DB: INSERT inventory_movements (SALE, operation_key)
+        end
       end
       alt Có dòng không đủ tồn
         ORD->>DB: ROLLBACK
-        ORD-->>C: 422 OUT_OF_STOCK
+        ORD-->>C: 409 INSUFFICIENT_STOCK
       else Đủ tồn
-        ORD->>DB: INSERT marketplace_orders (snapshot người nhận, tổng gốc, deadline nếu MOCK)
-        ORD->>DB: INSERT seller_orders (mỗi shop một phần)
-        ORD->>DB: INSERT order_items (snapshot tên, SKU, thuộc tính, giá, số lượng)
-        ORD->>DB: INSERT payments (và attempt COD nếu cần)
+        ORD->>DB: INSERT payments (chưa tạo attempt COD)
         ORD->>DB: INSERT order_events
         ORD->>DB: DELETE các cart_items đã mua, đánh dấu quote đã dùng
         ORD->>DB: UPDATE idempotency_records COMPLETED + resourceId
@@ -462,10 +469,11 @@ sequenceDiagram
     loop Mỗi Order quá hạn
       PAY->>DB: BEGIN
       PAY->>DB: Khóa Order, Payment, SellerOrders theo ID
-      PAY->>DB: Kiểm tra lại: vẫn chưa trả, vẫn có phần PENDING
-      alt Đã có thanh toán thành công trong lúc chờ
-        PAY->>DB: ROLLBACK
-      else Vẫn quá hạn
+      PAY->>DB: Đọc lại deadline, phương thức, attempts và SellerOrders
+      alt Deadline không còn hiệu lực, không phải MOCK hoặc đã có NORMAL success
+        PAY->>DB: Kết thúc transaction không xử lý
+      else Vẫn quá hạn và chưa có NORMAL success
+        PAY->>DB: Đóng attempt PENDING thành CANCELLED
         PAY->>ORD: cancelParts(PENDING, reason EXPIRED, txContext)
         ORD->>DB: UPDATE seller_orders SET status CANCELLED, cancelled_at, stock_returned_at
         loop Mỗi OrderItem của phần bị hủy
@@ -474,13 +482,13 @@ sequenceDiagram
           Note over INV,DB: Unique order_item_id + effect_type chặn hoàn tồn lần hai
           INV->>DB: UPDATE inventory SET available = available + qty
         end
-        PAY->>DB: Đóng attempt PENDING thành CANCELLED
-        PAY->>DB: INSERT order_events, audit_events
+        PAY->>DB: INSERT order_events cho phần đã hủy, audit_events với restoredSellerOrderCount
         PAY->>DB: COMMIT
       end
     end
   end
   Note over PAY,DB: Chạy lại hoặc chạy song song không hoàn tồn hai lần. COD không áp dụng thời hạn này.
+  Note over PAY,DB: Truy vấn ban đầu yêu cầu có phần PENDING; sau khóa code hiện tại chưa dừng riêng nếu không còn phần PENDING, vẫn có thể đóng attempt và ghi audit với restoredSellerOrderCount = 0.
 ```
 
 ---

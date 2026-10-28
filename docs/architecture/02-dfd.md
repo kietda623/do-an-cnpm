@@ -281,8 +281,8 @@ flowchart TD
   P64 -- "đủ tồn" --> P65
   P64 -- "hết hàng thì rollback toàn bộ" --> Buyer
 
-  P65 -- "marketplace_orders, seller_orders, order_items" --> D6
-  P65 -- "payments, attempt COD hoặc deadline MOCK" --> D7
+  P65 -- "marketplace_orders, seller_orders, order_items, deadline MOCK" --> D6
+  P65 -- "payments (chưa tạo attempt COD)" --> D7
   P65 -- "order_events" --> D6
   P65 --> P66
   P66 -- "xóa đúng dòng đã mua" --> D5
@@ -302,6 +302,8 @@ flowchart TD
   P68 -- "trạng thái mới, order_event" --> D6
   P68 -- "derive status Order theo BR-08" --> D6
 ```
+
+Thứ tự P64–P65 thể hiện luồng logic, không áp đặt thứ tự ghi. Trong `CheckoutService.create`, `MarketplaceOrder` và `SellerOrder` được tạo trước khi P64 gọi `tx.inventory.updateMany`; nếu cập nhật tồn thất bại, transaction rollback cả các dòng đã tạo trước đó.
 
 ### 3.2. P7 — Thanh toán và hoàn tiền mô phỏng
 
@@ -328,14 +330,14 @@ flowchart TD
   P71 -- "attempt PENDING, snapshot phần đơn" --> D7
   P71 -- "Payment" --> Buyer
 
-  Buyer -- "eventId, outcome" --> P72
+  Buyer -- "eventId, outcome, expectedVersion" --> P72
   P72 <-- "payment_events unique provider+eventId" --> D7
   P72 -- "FAILED hoặc CANCELLED, đơn vẫn PENDING" --> D7
   P72 -- "SUCCEEDED trong hạn" --> P73
   P72 -- "SUCCEEDED sau hạn hoặc sau hủy" --> P74
 
   P73 -- "allocation MOCK_PREPAYMENT theo SellerOrder" --> D7
-  P73 -- "đọc phần còn hiệu lực" --> D6
+  D7 -- "PaymentAttempt.targetSellerOrdersSnapshot" --> P73
 
   P74 -- "attempt LATE_COMPENSATION, allocation" --> D7
   P74 --> P77
@@ -344,11 +346,10 @@ flowchart TD
   D6 -- "Order MOCK chưa trả" --> P75
   P75 -- "SellerOrder CANCELLED" --> D6
   P75 -- "hoàn tồn đúng một lần" --> D4
-  P75 -- "nếu đã trả một phần" --> P77
 
   Seller -- "eventId, expectedVersion" --> P76
   D6 -- "SellerOrder DELIVERED, số tiền" --> P76
-  P76 -- "allocation COD_COLLECTION, số tiền do server tính" --> D7
+  P76 -- "attempt COD_SIMULATION SUCCEEDED, allocation COD_COLLECTION, số tiền do server tính" --> D7
 
   P77 -- "simulated_refunds, unique theo allocation" --> D7
   P77 -- "Payment, refunds" --> Buyer
@@ -361,5 +362,5 @@ flowchart TD
 1. **Tiền luôn do server tính.** Mọi luồng tiền tệ ra khỏi P6/P7 là chuỗi VND nguyên (`"150000"`), không nhận số tiền từ client (FR-24, contract).
 2. **Dữ liệu lịch sử không bị ghi đè.** OrderItem/Shipment/Payment event chỉ thêm, snapshot không đổi theo catalog hoặc hồ sơ.
 3. **Thứ tự khóa:** Idempotency → User/Cart → Quote → Order → Payment → SellerOrders → Shop → Category → Product → Variant → Inventory → Shipment (xem `docs/database/data-design.md`). DFD mức 2 tuân theo thứ tự này.
-4. **Không gọi mạng/S3 trong transaction DB.** Luồng "ảnh → Object Storage" của P3 chạy ngoài transaction (trạng thái asset PENDING → VERIFIED).
+4. **Không gọi mạng/S3 trong transaction DB.** Luồng "ảnh → Object Storage" của P3 chạy ngoài transaction; sau khi lưu object thành công, service tạo asset trực tiếp ở trạng thái VERIFIED.
 5. **D9 (đánh giá) chưa có trong schema thực tế**; P9 vì vậy vẫn là thiết kế. Các luồng đến D9 sẽ bắt đầu hoạt động từ Sprint 6.

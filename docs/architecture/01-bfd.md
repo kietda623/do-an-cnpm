@@ -2,7 +2,7 @@
 
 **Dự án:** Multi-vendor Marketplace MVP
 **Nguồn:** `specs/001-marketplace-mvp/spec.md` (FR-01–FR-50, BR-01–BR-10), `docs/requirements/srs.md`
-**Phạm vi:** Phân rã hệ thống từ mức gốc xuống các chức năng lá. Mỗi chức năng lá gắn mã FR để truy vết.
+**Phạm vi:** Phân rã hệ thống từ mức gốc xuống các chức năng lá. Các lá có FR được gắn mã FR để truy vết; các lá hỗ trợ khác được liên kết với BR hoặc Edge Case tương ứng.
 
 > Quy ước mã: **F0** = hệ thống, **F1…F10** = nhóm chức năng cấp 1, **F1.1…** = chức năng cấp 2.
 > Nhóm chức năng cấp 1 ánh xạ logic với module backend trong `apps/api/src/modules/*`: một nhóm có thể dùng nhiều module, và một module có thể phục vụ nhiều nhóm (xem bảng cuối tài liệu).
@@ -154,4 +154,4 @@ flowchart LR
 
 ## 4. Độ phủ FR
 
-Các nhóm F1–F10 phủ đủ FR-01–FR-50 của spec. Ngoài FR, BFD ghi thêm ba chức năng hỗ trợ từ BR/Edge Case để không bị bỏ sót khi thiết kế: **F2.5** (gửi lại shop bị từ chối), **F7.6** (kết quả thanh toán đến muộn), **F10.6** (Admin xử lý đơn khi tài khoản Seller bị khóa).
+Các nhóm F1–F10 phủ đủ FR-01–FR-50 của spec; bảng ánh xạ FR theo nhóm không hàm ý mọi lá đều có mã FR riêng. Bảy lá không gắn mã FR trực tiếp là **F2.5** (gửi lại shop bị từ chối), **F3.6** (tải và xác thực ảnh), **F7.6** (kết quả thanh toán đến muộn), **F8.4** (giao lại khi thất bại), **F8.5** (xác nhận hàng hoàn về), **F10.5** (nhật ký audit) và **F10.6** (Admin xử lý đơn khi tài khoản Seller bị khóa); các lá này truy vết tới BR hoặc Edge Case như trong sơ đồ.

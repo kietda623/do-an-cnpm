@@ -276,7 +276,7 @@ flowchart LR
 | API | `POST /auth/login`, `POST /auth/refresh` |
 | Tiền điều kiện | Tài khoản tồn tại; Web có CSRF token. |
 | Luồng chính | 1. Guest gửi email, mật khẩu, `clientPlatform`.<br>2. Hệ thống tìm user theo email chuẩn hóa, so khớp hash.<br>3. Tạo Session mới, cấp access token (10 phút) và refresh token (7 ngày).<br>4. Khi access token hết hạn, client gọi `/auth/refresh`; hệ thống **rotate** refresh token (token cũ gắn `replaced_by_session_id`). |
-| Luồng thay thế | 2a. Sai email hoặc mật khẩu → 401 `INVALID_CREDENTIALS` (thông báo chung, không lộ email có tồn tại).<br>2b. Tài khoản LOCKED → 403.<br>2c. Vượt giới hạn tần suất → 429.<br>4a. Refresh token cũ bị dùng lại → thu hồi cả `family_id`, trả 401 `SESSION_REVOKED`. |
+| Luồng thay thế | 2a. Sai email hoặc mật khẩu → 401 `INVALID_CREDENTIALS` (thông báo chung, không lộ email có tồn tại).<br>2b. Tài khoản LOCKED → 403.<br>2c. Vượt giới hạn tần suất → 429.<br>4a. Refresh token cũ bị dùng lại → thu hồi cả `family_id`, trả 401 `REFRESH_REUSE`. |
 | Hậu điều kiện | Có Session hợp lệ; refresh cũ không dùng lại được. |
 | Ghi chú | Native lưu refresh token trong SecureStore (Mobile) hoặc Stronghold (Desktop); Web giữ access token trong bộ nhớ, không dùng localStorage. |
 
@@ -288,7 +288,7 @@ flowchart LR
 | Yêu cầu | FR-03 · BR-01 |
 | API | `POST /auth/logout` |
 | Luồng chính | 1. Người dùng chọn đăng xuất.<br>2. Hệ thống thu hồi (`revoked_at`) Session tương ứng.<br>3. Trả 204; client xóa cache query của user/shop. |
-| Luồng thay thế | Đăng xuất lặp lại → vẫn 204. Access token cũ bị từ chối ở request kế tiếp. |
+| Luồng thay thế | Gửi lại yêu cầu với access token của phiên đã thu hồi → `AccessGuard` từ chối với 401 `INVALID_ACCESS_TOKEN`. |
 | Hậu điều kiện | Session không thể refresh. |
 
 #### UC-01.4 Quản lý hồ sơ và đổi mật khẩu
@@ -348,7 +348,7 @@ flowchart LR
 | --- | --- |
 | Actor | Seller (thành viên shop) |
 | Yêu cầu | FR-09 · BR-02 |
-| API | `GET/PATCH /shops/{id}` (management), `POST /shops/{id}/resubmit` |
+| API | `GET /shops/{id}/management`, `PATCH /shops/{id}` (management), `POST /shops/{id}/resubmit` |
 | Luồng chính | 1. Seller sửa tên, mô tả, logo, banner, liên hệ (kèm `expectedVersion`).<br>2. Nếu shop bị REJECTED, Seller sửa rồi gửi lại → trạng thái về PENDING. |
 | Luồng thay thế | Seller của shop A truy cập shop B → 404. Đổi slug sau lần duyệt đầu → từ chối. Xung đột `version` → 409. |
 | Hậu điều kiện | Hồ sơ cập nhật; Guest chỉ thấy hồ sơ công khai (không lộ địa chỉ liên hệ, SĐT riêng, lý do từ chối, version). |
@@ -409,8 +409,8 @@ flowchart LR
 | Actor | Seller |
 | Yêu cầu | FR-28 · BR-03, BR-04 |
 | API | `GET /shops/{shopId}/variants/{id}/inventory`, `POST .../inventory-adjustments` |
-| Luồng chính | 1. Seller gửi `delta` khác 0, lý do (1–500), `expectedVersion`, `Idempotency-Key`.<br>2. Hệ thống áp dụng delta, tạo movement `ADJUST`, tăng `version`. |
-| Luồng thay thế | Version cũ → 409. Kết quả sẽ âm → từ chối. Gửi lại cùng key → trả kết quả cũ, delta chỉ áp dụng một lần. |
+| Luồng chính | 1. Seller gửi `delta` khác 0, lý do (1–500), `expectedVersion`.<br>2. Hệ thống áp dụng delta, tạo movement `ADJUST`, tăng `version`. |
+| Luồng thay thế | Version cũ → 409. Kết quả sẽ âm → từ chối. |
 | Hậu điều kiện | Tồn ≥ 0 và truy vết được qua movement. Không có thao tác "ghi đè tuyệt đối" làm mất lượng đã bán. |
 
 #### UC-03.5 Ẩn sản phẩm vi phạm
@@ -430,7 +430,7 @@ flowchart LR
 | Actor | Buyer / Seller |
 | Yêu cầu | BR-03 |
 | API | `POST /users/me/assets` (multipart, đúng một file) |
-| Luồng chính | 1. Client gửi file kèm `purpose` (`AVATAR`, `SHOP_LOGO`, `SHOP_BANNER`, `PRODUCT_IMAGE`) và `shopId` nếu có.<br>2. Hệ thống kiểm tra magic-byte, MIME (JPEG/PNG/WebP), dung lượng ≤ 5 MB, kích thước ảnh, quyền sở hữu.<br>3. Lưu object ra storage **ngoài transaction DB**; tạo `Asset` PENDING → VERIFIED. |
+| Luồng chính | 1. Client gửi file kèm `purpose` (`AVATAR`, `SHOP_LOGO`, `SHOP_BANNER`, `PRODUCT_IMAGE`) và `shopId` nếu có.<br>2. Hệ thống kiểm tra magic-byte, MIME (JPEG/PNG/WebP), dung lượng ≤ 5 MB, kích thước ảnh, quyền sở hữu.<br>3. Lưu object ra storage **ngoài transaction DB**; tạo trực tiếp `Asset` với trạng thái VERIFIED. |
 | Luồng thay thế | Sai định dạng → 415; quá lớn → 413; file giả mạo đuôi → từ chối, không công khai. |
 | Hậu điều kiện | Chỉ asset VERIFIED mới được gắn vào shop/sản phẩm/hồ sơ. |
 
@@ -493,8 +493,8 @@ flowchart LR
 | Yêu cầu | FR-24 · BR-04, BR-05 |
 | API | `POST /checkout/quotes` |
 | Tiền điều kiện | Có ít nhất một dòng đã chọn; có địa chỉ giao hàng; chọn `COD` hoặc `MOCK`. |
-| Luồng chính | 1. Buyer gửi `cartItemIds`, `addressId`, `paymentMethod`.<br>2. Hệ thống kiểm tra các dòng và địa chỉ thuộc Buyer.<br>3. Đọc **giá và tồn hiện tại** từ catalog; tính thành tiền từng dòng, tổng theo shop, phí giao = 0.<br>4. Lưu `CheckoutQuote` (cart version, snapshot người nhận, `canonical_hash`), hết hạn sau 5 phút.<br>5. Trả quote kèm danh sách `issues` theo từng dòng. |
-| Luồng thay thế | Dòng không hợp lệ → quote `valid = false` và liệt kê đầy đủ lỗi từng dòng, không dừng ở lỗi đầu tiên. |
+| Luồng chính | 1. Buyer gửi `cartItemIds`, `addressId`, `paymentMethod`.<br>2. Hệ thống kiểm tra các dòng và địa chỉ thuộc Buyer.<br>3. Đọc **giá và tồn hiện tại** từ catalog; tính thành tiền từng dòng, tổng theo shop, phí giao = 0.<br>4. Chỉ lưu `CheckoutQuote` (cart version, snapshot người nhận, `canonical_hash`, hết hạn sau 5 phút) khi mọi dòng hợp lệ và tổng > 0.<br>5. Trả kết quả kèm danh sách `issues` theo từng dòng. |
+| Luồng thay thế | Dòng không hợp lệ → kết quả `valid = false` và liệt kê đầy đủ lỗi từng dòng, không dừng ở lỗi đầu tiên; không lưu quote. Tổng không lớn hơn 0 cũng không lưu quote. |
 | Hậu điều kiện | Chưa tạo đơn, chưa trừ tồn. Giá client gửi lên (nếu có) không được dùng. |
 
 #### UC-05.3 Đặt hàng (Checkout)
@@ -505,8 +505,8 @@ flowchart LR
 | Yêu cầu | FR-25, 26, 27, 28 · BR-04, BR-05 · SC-003, SC-004 |
 | API | `POST /checkout` (`quoteId` + `Idempotency-Key`) |
 | Tiền điều kiện | Quote còn hạn, thuộc Buyer. Include UC-05.2. |
-| Luồng chính | 1. Buyer xác nhận quote.<br>2. Hệ thống **claim Idempotency-Key** (nếu key đã COMPLETED thì trả lại đơn cũ).<br>3. Mở transaction; khóa Cart, Quote và các dòng catalog/tồn theo thứ tự cố định.<br>4. Kiểm tra lại shop ACTIVE, sản phẩm đang bán, biến thể hợp lệ, giá, tồn so với quote.<br>5. **Trừ tồn có điều kiện** (`available_quantity >= qty`); ghi movement `SALE`.<br>6. Tạo `MarketplaceOrder` + một `SellerOrder` cho mỗi shop + các `OrderItem` snapshot (tên, SKU, thuộc tính, ảnh, đơn giá, số lượng, thành tiền) + `Payment`; nếu MOCK, đặt `payment_deadline` = +15 phút.<br>7. Xóa đúng các dòng đã mua khỏi giỏ; lưu kết quả idempotency; commit.<br>8. Trả 201 `Order`. |
-| Luồng thay thế | 4a. Giá đổi → 409 `PRICE_CHANGED` + quote mới, Buyer phải xác nhận lại.<br>4b. Quote hết hạn → 409 `QUOTE_EXPIRED`.<br>4c. Thiếu hàng, shop bị khóa, biến thể ngừng bán → báo lỗi theo dòng, **rollback toàn bộ**, không tạo đơn một phần.<br>2a. Cùng key + cùng nội dung → trả đúng đơn cũ. Cùng key khác nội dung → 409 `IDEMPOTENCY_CONFLICT`.<br>7a. Mất kết nối sau khi xác nhận → UI tra cứu đơn rồi gửi lại cùng key, không tạo đơn thứ hai. |
+| Luồng chính | 1. Buyer xác nhận quote.<br>2. Trong transaction, hệ thống **claim Idempotency-Key** (nếu key đã COMPLETED thì trả lại đơn cũ).<br>3. Khóa User, Cart, Quote, Shop, Category, Product, Variant và Inventory theo thứ tự cố định.<br>4. Kiểm tra lại shop ACTIVE, sản phẩm đang bán, biến thể hợp lệ, giá, tồn so với quote.<br>5. Tạo `MarketplaceOrder` (deadline +15 phút nếu MOCK), rồi tạo từng `SellerOrder`; với mỗi dòng, **trừ tồn có điều kiện** (`available_quantity >= qty`), tạo `OrderItem` snapshot và movement `SALE`.<br>6. Tạo `Payment`; checkout chưa tạo attempt COD.<br>7. Xóa đúng các dòng đã mua khỏi giỏ; lưu kết quả idempotency; commit.<br>8. Trả 201 `Order`; nếu trừ tồn thất bại, rollback cả đơn và các phần đã tạo. |
+| Luồng thay thế | 4a. Giá đổi → 409 `PRICE_CHANGED`; client tạo quote mới qua `POST /checkout/quotes` và Buyer xác nhận lại.<br>4b. Quote hết hạn → 409 `QUOTE_EXPIRED`.<br>4c. Thiếu hàng, shop bị khóa, biến thể ngừng bán → báo lỗi theo dòng, **rollback toàn bộ**, không tạo đơn một phần.<br>2a. Cùng key + cùng nội dung → trả đúng đơn cũ. Cùng key khác nội dung → 409 `IDEMPOTENCY_KEY_REUSED`.<br>7a. Mất kết nối sau khi xác nhận → UI tra cứu đơn rồi gửi lại cùng key, không tạo đơn thứ hai. |
 | Hậu điều kiện | Một Order + N SellerOrder (PENDING); tồn đã trừ; tổng Order = tổng các SellerOrder. Snapshot không đổi khi Seller sửa hàng hoặc Buyer đổi địa chỉ. |
 | Ghi chú | 20 yêu cầu đồng thời cho 5 đơn vị tồn → đúng 5 thành công, 15 báo hết hàng, tồn cuối bằng 0. |
 
