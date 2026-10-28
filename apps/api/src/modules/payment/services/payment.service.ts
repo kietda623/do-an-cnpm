@@ -11,6 +11,7 @@ import { canCollectCod } from "../../../common/auth/permissions.js";
 import { OrderTransaction } from "../../order/services/order-transaction.js";
 import { SettlementService } from "./settlement.service.js";
 import { sumVnd } from "./payment-policy.js";
+import { buildTargetSellerOrdersSnapshot } from "./target-snapshot.js";
 
 type TargetPart = { sellerOrderId: string; amount: string };
 type PaymentResult = {
@@ -125,11 +126,11 @@ export class PaymentService {
           where: { id: pending.id },
           data: { status: "CANCELLED", settledAt: now },
         });
-      const snapshot: TargetPart[] = liveParts.map((part) => ({
+      const rawSnapshot: TargetPart[] = liveParts.map((part) => ({
         sellerOrderId: part.id,
         amount: part.originalTotal.toString(),
       }));
-      const amount = sumVnd(snapshot.map((part) => part.amount));
+      const amount = sumVnd(rawSnapshot.map((part) => part.amount));
       const lastAttemptNumber = Math.max(
         0,
         ...payment.attempts.map((attempt) => attempt.attemptNumber),
@@ -143,8 +144,13 @@ export class PaymentService {
           settlementKind: "NORMAL",
           originalAttemptId: previous?.id ?? null,
           status: "PENDING",
-          targetSellerOrdersSnapshot:
-            snapshot as unknown as Prisma.InputJsonValue,
+          targetSellerOrdersSnapshot: buildTargetSellerOrdersSnapshot({
+            mode: "NEW",
+            orderId,
+            amount,
+            sellerOrders: order.sellerOrders,
+            snapshot: rawSnapshot,
+          }),
           amount,
           expiresAt: order.paymentDeadline,
           operationKey: `mock-attempt:${key}`,
@@ -504,9 +510,15 @@ export class PaymentService {
           provider: "COD_SIMULATION",
           settlementKind: "NORMAL",
           status: "SUCCEEDED",
-          targetSellerOrdersSnapshot: [
-            { sellerOrderId, amount: part.originalTotal.toString() },
-          ],
+          targetSellerOrdersSnapshot: buildTargetSellerOrdersSnapshot({
+            mode: "NEW",
+            orderId,
+            amount: part.originalTotal.toString(),
+            sellerOrders: [part],
+            snapshot: [
+              { sellerOrderId, amount: part.originalTotal.toString() },
+            ],
+          }),
           amount: part.originalTotal,
           externalTransactionId: `COD-${eventId}`,
           settledAt: now,

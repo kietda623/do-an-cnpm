@@ -44,8 +44,16 @@ module.exports = {
     {
       displayName: "integration",
       rootDir: ".",
+      roots: [
+        "<rootDir>/test/integration",
+        "<rootDir>/../../tests/concurrency",
+      ],
+      modulePaths: [apiNodeModules],
       testEnvironment: "node",
-      testMatch: ["<rootDir>/test/integration/**/*.spec.ts"],
+      testMatch: [
+        "<rootDir>/test/integration/**/*.spec.ts",
+        "<rootDir>/../../tests/concurrency/**/*.spec.ts",
+      ],
       setupFiles,
       setupFilesAfterEnv,
       transform,
