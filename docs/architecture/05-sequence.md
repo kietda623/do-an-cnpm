@@ -17,7 +17,7 @@
 
 **Metadata request dùng chung:** Các POST thuộc nhóm lệnh chống lặp sau trong các sơ đồ đều gửi HTTP header `Idempotency-Key: <UUID>`: checkout (S05–S06), payment attempt/result (S07–S08, gồm `POST /payments/:id/mock-result`), điều chỉnh tồn, hủy/xác nhận/đóng gói/từ chối/nhận hàng, shipment events/retry/return, thu COD (S10–S13), khóa tài khoản và Admin recovery (S15). Quy ước này áp dụng cả khi nhãn lời gọi chỉ ghi body; `Idempotency-Key` là header. Mỗi lệnh mới dùng key mới; gửi lại cùng lệnh giữ nguyên key và body.
 
-**Trạng thái code** (đối chiếu 77 route thực tế tại `main`, commit `8ee488a`; không phải kết quả test): S01–S13 và S15 có route tương ứng. S14 (đánh giá) và S16 (dashboard, doanh thu Seller) thuộc US8, **chưa có mã** và là thiết kế theo contract.
+**Trạng thái code** (đối chiếu 78 route thực tế tại `main`, commit `8ee488a`; không phải kết quả test): S01–S13 và S15 có route tương ứng. S14 (đánh giá) và S16 (dashboard, doanh thu Seller) thuộc US8, **chưa có mã** và là thiết kế theo contract.
 
 | # | Luồng | UC | Trạng thái |
 | --- | --- | --- | --- |

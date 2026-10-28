@@ -243,7 +243,7 @@ flowchart LR
 | UC-10.4 | Xử lý đơn thay Seller bị khóa | Admin | Edge Case | admin, order | Có route (`admin/seller-orders/:id/confirm`, `pack`, `reject`) |
 | UC-10.5 | Ghi audit | System | BR-10 | common | Có model |
 
-\* Đối chiếu với **77 route thực tế** trong các `*.controller.ts` tại `main` (commit `8ee488a`). Contract còn thiếu 5/80 route, đều thuộc US8 (reviews, thống kê và doanh thu Seller). "Có route" nghĩa là endpoint tồn tại trong mã; **không** phải kết quả chạy test hay xác nhận nghiệm thu (xem `docs/testing/us*-evidence.md`).
+\* Đối chiếu với **78 route thực tế** trong các `*.controller.ts` tại `main` (commit `8ee488a`). Contract còn thiếu 5/80 route, đều thuộc US8 (reviews, thống kê và doanh thu Seller). "Có route" nghĩa là endpoint tồn tại trong mã; **không** phải kết quả chạy test hay xác nhận nghiệm thu (xem `docs/testing/us*-evidence.md`).
 
 ---
 

@@ -14,7 +14,7 @@ Bộ tài liệu này hoàn thành phần tài liệu phân tích/thiết kế c
 
 - **Nghiệp vụ:** `specs/001-marketplace-mvp/spec.md` (FR-01–50, BR-01–10), `docs/requirements/srs.md`. Mã UC-01…UC-11 giữ nguyên theo SRS; tài liệu use case phân rã thêm thành UC-xx.y.
 - **Dữ liệu:** ERD lấy từ `apps/api/prisma/schema.prisma` (28 model thực tế; `Review` còn thiết kế) cộng `Review` từ `data-model.md`.
-- **Luồng API:** lấy từ `contracts/api.md`; trạng thái "có/chưa có code" đối chiếu với 77 route thực tế trong `*.controller.ts`.
+- **Luồng API:** lấy từ `contracts/api.md`; trạng thái "có/chưa có code" đối chiếu với 78 route thực tế trong `*.controller.ts`.
 - Các tài liệu truy vết hành vi trong spec/contract; không thêm nghiệp vụ mới. `spec.md` hiện có trạng thái **Draft**: các quyết định từ nguồn Draft là đề xuất, cần rà soát và xác nhận trạng thái nguồn trước khi dùng làm cơ sở triển khai.
 
 ## Đối chiếu và điểm lệch phát hiện khi viết tài liệu

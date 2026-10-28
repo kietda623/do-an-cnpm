@@ -150,7 +150,7 @@ flowchart LR
 | F9 | Đánh giá và thống kê | Buyer, Seller | FR-40–45 | `review` | Chưa có (US8): reviews, thống kê, doanh thu |
 | F10 | Quản trị sàn và nhật ký | Admin | FR-46–50 | `admin` (+ `shop`/`catalog`/`order` admin routes) | Có route (users, products, orders, stats, audit, recovery) |
 
-\* Đối chiếu với **77 route thực tế** trong các `*.controller.ts` tại `main` (commit `8ee488a`). Module `review` còn trống (US8). Đây là đối chiếu mã nguồn, **không** phải kết quả chạy test hay nghiệm thu.
+\* Đối chiếu với **78 route thực tế** trong các `*.controller.ts` tại `main` (commit `8ee488a`). Module `review` còn trống (US8). Đây là đối chiếu mã nguồn, **không** phải kết quả chạy test hay nghiệm thu.
 
 ## 4. Độ phủ FR
 
