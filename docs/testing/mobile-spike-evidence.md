@@ -2,7 +2,7 @@
 
 ## Phạm vi và môi trường (2026-10-28–29)
 
-Nhánh từ `origin/main` d741f4b. Chỉ login, session native và danh sách sản phẩm; không sửa backend. Hành trình Android emulator với API thật đã pass ngày 2026-10-29. T130 **giữ mở**, W032 vẫn 2 PD: chưa chạy iOS và chưa kiểm chứng HTTPS/native release; không suy rộng kết quả Expo Go sang hai mục này.
+Nhánh từ `origin/main` d741f4b. Chỉ login, session native và danh sách sản phẩm; không sửa backend. Hành trình Android emulator với API thật đã pass ngày 2026-10-29. Theo quyết định của người dùng ngày 2026-10-29, tạm hoãn nghiệm thu iOS và ưu tiên Android trong T130; không ghi iOS pass. T130 **giữ mở**, W032 vẫn 2 PD: Android chưa được kiểm chứng HTTPS/native release, không suy rộng kết quả Expo Go sang các mục này.
 
 - Windows 11 (NT 10.0.26200.0), Node 24.21.0, pnpm 12.14.0 qua Corepack, Java 17.0.8.
 - Expo 57.0.30, React Native 0.86.3, React 19.2.3.
@@ -101,7 +101,7 @@ Main tại thời điểm tạo nhánh trả REFRESH_REUSE khi dùng lại refre
 
 ## Giới hạn và việc chưa kiểm chứng
 
-- iOS chưa chạy do không có macOS/Xcode/device; không ghi iOS pass.
+- iOS tạm hoãn theo quyết định người dùng ngày 2026-10-29; chưa chạy và không ghi pass. Phần này không chặn nghiệm thu Android của T130, sẽ được xem xét khi tiếp tục phạm vi iOS.
 - Chưa build/chạy APK dev/release riêng. Expo Go không chứng minh manifest release thực chặn HTTP hoặc cấu hình backup của app riêng; mới kiểm tra config và hành trình HTTP dev trên emulator.
 - HTTPS và IP LAN trên thiết bị thật chưa chạy. Không suy rộng `10.0.2.2` emulator thành LAN pass.
 - Discovery empty/error/retry có component test; chưa thao tác riêng mọi trạng thái discovery trên emulator. Refresh timeout/429/5xx có unit test, lỗi mạng và 401 có thêm device evidence.
