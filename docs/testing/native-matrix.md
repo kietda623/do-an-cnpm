@@ -2,7 +2,7 @@
 
 ## Phạm vi và cách đọc
 
-Nhánh `codex/mobile-t131-t132` từ main `b0a45fe`. Chỉ T131 và phần mobile T132. iOS tạm hoãn theo quyết định 2026-10-29, không coi là pass. **Desktop: chờ phần Desktop**; không tạo seller-journeys.spec.tsx và không tick T132. T130 vẫn mở, phụ thuộc của T131 đang chờ quyết định chủ dự án; không tick T130/T133, không đổi PD/phụ thuộc.
+Ma trận này được cập nhật sau khi #26 được merge vào `main` (`5f5d1b8`). T130 đóng theo quyết định chủ dự án ngày 2026-10-29 trong phạm vi Android Expo Go trên emulator API 36; hành trình thật được ghi ở [mobile spike evidence](mobile-spike-evidence.md#hành-trình-android-thật--2026-10-29). iOS hoãn, không coi là pass. API HTTPS, kết nối LAN trên thiết bị thật, Android native development/release build, xác minh manifest release chặn HTTP và cấu hình backup, cùng nghiệm thu iOS khi có thiết bị/Mac, được chuyển sang T139. Component test chạy trên Windows/Node/Jest với `Platform.OS=ANDROID`; đây không phải native OS execution. `todo` là case chưa triển khai, không phải test pass.
 
 Component chạy trên Windows/Node/Jest với Platform.OS=ANDROID, mock router, fetch và SecureStore; dùng provider/ExpoSession/ApiTransport thật. Đây không phải native OS execution. Unit conformance có cả nhãn IOS nhưng không chứng minh iOS UI/device. `todo` là case chưa triển khai, không phải test pass.
 

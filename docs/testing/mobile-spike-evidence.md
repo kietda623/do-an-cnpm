@@ -2,7 +2,7 @@
 
 ## Phạm vi và môi trường (2026-10-28–29)
 
-Nhánh từ `origin/main` d741f4b. Chỉ login, session native và danh sách sản phẩm; không sửa backend. Hành trình Android emulator với API thật đã pass ngày 2026-10-29. Theo quyết định của người dùng ngày 2026-10-29, tạm hoãn nghiệm thu iOS và ưu tiên Android trong T130; không ghi iOS pass. T130 **giữ mở**, W032 vẫn 2 PD: Android chưa được kiểm chứng HTTPS/native release, không suy rộng kết quả Expo Go sang các mục này.
+Nhánh từ `origin/main` d741f4b. Chỉ login, session native và danh sách sản phẩm; không sửa backend. Theo quyết định chủ dự án ngày 2026-10-29, T130 được nghiệm thu trong phạm vi Android Expo Go trên emulator API 36; hành trình Android với API thật đã pass ngày 2026-10-29. iOS hoãn và không ghi pass. W032 vẫn 2 PD. API qua HTTPS, kết nối LAN trên thiết bị thật và Android native development/release build được chuyển sang T139; kết quả Expo Go không được tính cho các hạng mục đó.
 
 - Windows 11 (NT 10.0.26200.0), Node 24.21.0, pnpm 12.14.0 qua Corepack, Java 17.0.8.
 - Expo 57.0.30, React Native 0.86.3, React 19.2.3.
@@ -101,9 +101,9 @@ Main tại thời điểm tạo nhánh trả REFRESH_REUSE khi dùng lại refre
 
 ## Giới hạn và việc chưa kiểm chứng
 
-- iOS tạm hoãn theo quyết định người dùng ngày 2026-10-29; chưa chạy và không ghi pass. Phần này không chặn nghiệm thu Android của T130, sẽ được xem xét khi tiếp tục phạm vi iOS.
-- Chưa build/chạy APK dev/release riêng. Expo Go không chứng minh manifest release thực chặn HTTP hoặc cấu hình backup của app riêng; mới kiểm tra config và hành trình HTTP dev trên emulator.
-- HTTPS và IP LAN trên thiết bị thật chưa chạy. Không suy rộng `10.0.2.2` emulator thành LAN pass.
+- iOS tạm hoãn theo quyết định chủ dự án ngày 2026-10-29; chưa chạy và không ghi pass. Nghiệm thu iOS được chuyển sang T139, khi có thiết bị iOS và Mac.
+- Chưa build/chạy APK dev/release riêng. Expo Go không chứng minh manifest release chặn HTTP hoặc cấu hình backup của app riêng; xác nhận Android native development/release build, chặn HTTP trong manifest release và cấu hình backup thuộc T139.
+- HTTPS và IP LAN trên thiết bị thật chưa chạy. Không suy rộng `10.0.2.2` emulator thành LAN pass. API qua HTTPS và kết nối LAN trên thiết bị thật được chuyển sang T139.
 - Discovery empty/error/retry có component test; chưa thao tác riêng mọi trạng thái discovery trên emulator. Refresh timeout/429/5xx có unit test, lỗi mạng và 401 có thêm device evidence.
 - Access chỉ memory được đối chiếu mã, cấu trúc SecureStore và việc force-stop phải refresh; không có heap dump để chứng minh tuyệt đối toàn bộ bộ nhớ/storage. Không yêu cầu hoặc ghi token vào heap/log phục vụ bằng chứng.
 
