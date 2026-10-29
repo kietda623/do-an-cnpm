@@ -6,8 +6,8 @@ import {
   fireEvent,
   waitFor,
 } from "@testing-library/react-native";
-import Login from "../src/app/login";
-import Home from "../src/app/index";
+import Login from "../src/app/(auth)/login";
+import Home from "../src/app/(public)/index";
 
 const mockLogin = jest.fn();
 const mockLogout = jest.fn();
@@ -16,6 +16,7 @@ const mockRequest = jest.fn();
 const mockApi = { request: mockRequest };
 jest.mock("expo-router", () => ({
   useRouter: () => ({ replace: jest.fn(), push: jest.fn() }),
+  useLocalSearchParams: () => ({}),
 }));
 jest.mock("../src/features/auth/session-provider", () => ({
   useSession: () => ({
@@ -78,7 +79,7 @@ test("reports an error and retries to an empty list", async () => {
     .mockRejectedValueOnce(new Error("network"))
     .mockResolvedValueOnce([]);
   render(<Home />);
-  await screen.findByText("Không thể tải sản phẩm.");
+  await screen.findByText("Không thể tải dữ liệu.");
   await act(async () => {
     fireEvent.press(screen.getByRole("button", { name: "Thử lại" }));
   });

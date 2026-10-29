@@ -2,10 +2,12 @@ import type { ExpoConfig } from "expo/config";
 
 const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim() ?? "";
 if (!rawApiUrl) throw new Error("EXPO_PUBLIC_API_URL is required");
+const appVariant = process.env.APP_VARIANT?.trim() ?? "development";
+if (appVariant !== "development" && appVariant !== "production")
+  throw new Error("APP_VARIANT must be development or production");
 const apiBaseUrl = new URL(rawApiUrl);
 const allowDevHttp =
-  process.env.APP_VARIANT === "development" &&
-  process.env.EXPO_ALLOW_HTTP === "1";
+  appVariant === "development" && process.env.EXPO_ALLOW_HTTP === "1";
 if (
   apiBaseUrl.username ||
   apiBaseUrl.password ||
@@ -40,6 +42,6 @@ const config: ExpoConfig = {
   ],
   android: { package: "com.marketplace.buyer" },
   ios: { bundleIdentifier: "com.marketplace.buyer" },
-  extra: { apiBaseUrl: apiBaseUrl.toString() },
+  extra: { apiBaseUrl: apiBaseUrl.toString(), appVariant },
 };
 export default config;

@@ -1,16 +1,16 @@
 import React from "react";
-import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Button, FlatList, Text, View } from "react-native";
+import { useCallback, useState } from "react";
+import { Button, FlatList, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { components } from "@marketplace/api-client";
-import { useSession } from "../features/auth/session-provider";
+import { useSession } from "../../features/auth/session-provider";
+import { ApiResourceFeedback } from "../../features/api/api-resource-feedback";
+import { useApiResource } from "../../features/api/use-api-resource";
 
 type Product = components["schemas"]["ProductSummary"];
 export default function Home() {
   const { api, user, logout } = useSession();
   const router = useRouter();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [state, setState] = useState<"loading" | "error" | "ready">("loading");
   const [logoutError, setLogoutError] = useState(false);
   const handleLogout = useCallback(async () => {
     setLogoutError(false);
@@ -20,21 +20,16 @@ export default function Home() {
       setLogoutError(true);
     }
   }, [logout]);
-  const load = useCallback(async () => {
-    setState("loading");
-    try {
-      setProducts(await api.request<Product[]>("/products"));
-      setState("ready");
-    } catch {
-      setState("error");
-    }
-  }, [api]);
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const load = useCallback(() => api.request<Product[]>("/products"), [api]);
+  const isEmpty = useCallback((items: Product[]) => items.length === 0, []);
+  const { state, retry } = useApiResource(load, isEmpty);
   return (
     <View style={{ flex: 1, padding: 20, gap: 12 }}>
       <Text accessibilityRole="header">Sản phẩm</Text>
+      <Button
+        title="Danh sách sản phẩm"
+        onPress={() => router.push("/products")}
+      />
       {user ? (
         <View>
           <Button title="Đăng xuất" onPress={() => void handleLogout()} />
@@ -50,21 +45,16 @@ export default function Home() {
       ) : (
         <Button title="Đăng nhập" onPress={() => router.push("/login")} />
       )}
-      {state === "loading" ? (
-        <ActivityIndicator accessibilityLabel="Đang tải sản phẩm" />
-      ) : null}
-      {state === "error" ? (
-        <View>
-          <Text accessibilityRole="alert">Không thể tải sản phẩm.</Text>
-          <Button title="Thử lại" onPress={() => void load()} />
-        </View>
-      ) : null}
-      {state === "ready" ? (
+      <ApiResourceFeedback
+        state={state}
+        emptyMessage="Chưa có sản phẩm."
+        onRetry={retry}
+      />
+      {state.status === "success" ? (
         <FlatList
-          data={products}
+          data={state.data}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <Text>{item.name}</Text>}
-          ListEmptyComponent={<Text>Chưa có sản phẩm.</Text>}
         />
       ) : null}
     </View>
