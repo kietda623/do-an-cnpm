@@ -228,3 +228,62 @@ test("unauthorized profile access redirects to login without showing private dat
   await expect(page).toHaveURL(/login/);
   await expect(page.getByText(buyer.email)).toHaveCount(0);
 });
+
+test("failed logout keeps the account visible and allows retry", async ({
+  page,
+}) => {
+  let attempts = 0;
+  await mockAccountApi(page, {
+    "/users/me": route => route.fulfill(route.request().method() === "PATCH"
+      ? { status: 500, json: { error: { code: "PROFILE_UNAVAILABLE", message: "Profile unavailable" } } }
+      : { json: { data: buyer } }),
+    "/auth/logout": async (route) => {
+      attempts++;
+      await route.fulfill(
+        attempts === 1
+          ? {
+              status: 503,
+              json: {
+                error: { code: "UNAVAILABLE", message: "Temporary failure" },
+              },
+            }
+          : { status: 204 },
+      );
+    },
+  });
+  await page.goto("/account");
+  await expect(page.getByText(buyer.email)).toBeVisible();
+  await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(page.getByText(buyer.email)).toBeVisible();
+  await expect(page.locator("p[role=alert]")).toContainText(
+    "Không thể đăng xuất",
+  );
+  await page.getByRole("button", { name: "Lưu", exact: true }).click();
+  await expect(page.locator("p[role=alert]").filter({ hasText: "Không thể đăng xuất" })).toBeVisible();
+  await expect(page.locator("p[role=alert]").filter({ hasText: "Profile unavailable" })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Thử lại đăng xuất", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByText(buyer.email)).toHaveCount(0);
+  expect(attempts).toBe(2);
+});
+
+test("logout401 clears local account state and redirects to login", async ({ page }) => {
+  let invalid = false;
+  await mockAccountApi(page, {
+    "/auth/refresh": route => route.fulfill(invalid
+      ? { status: 401, json: { error: { code: "SESSION_REVOKED" } } }
+      : { json: { data: tokens } }),
+    "/auth/logout": async route => {
+      invalid = true;
+      await route.fulfill({ status: 401, json: { error: { code: "INVALID_ACCESS_TOKEN" } } });
+    },
+  });
+  await page.goto("/account");
+  await expect(page.getByText(buyer.email)).toBeVisible();
+  await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByText(buyer.email)).toHaveCount(0);
+});

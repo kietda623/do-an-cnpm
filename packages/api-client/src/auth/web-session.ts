@@ -1,4 +1,8 @@
-import { ApiTransport, type ApiTransportOptions } from "../transport";
+import {
+  ApiClientError,
+  ApiTransport,
+  type ApiTransportOptions,
+} from "../transport";
 import { MemoryTokenStore } from "./types";
 import { SessionRestore } from "./session-restore";
 
@@ -22,15 +26,21 @@ export class WebSession {
   }
   restore<T>(): Promise<T> {
     return this.restoration.run(async () => {
-      const result = await this.api.request<{ accessToken: string }>(
-        "/auth/refresh",
-        {
-          method: "POST",
-          body: JSON.stringify({ clientPlatform: "WEB" }),
-        },
-      );
-      await this.api.setTokens({ accessToken: result.accessToken });
-      return this.currentUser<T>();
+      try {
+        const result = await this.api.request<{ accessToken: string }>(
+          "/auth/refresh",
+          {
+            method: "POST",
+            body: JSON.stringify({ clientPlatform: "WEB" }),
+          },
+        );
+        await this.api.setTokens({ accessToken: result.accessToken });
+        return this.currentUser<T>();
+      } catch (error) {
+        if (error instanceof ApiClientError && error.status === 401)
+          await tokenStore.clear();
+        throw error;
+      }
     });
   }
   async login<T>(email: string, password: string): Promise<T> {
@@ -72,9 +82,12 @@ export class WebSession {
         method: "POST",
         body: JSON.stringify({ clientPlatform: "WEB" }),
       });
-    } finally {
-      await tokenStore.clear();
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 401)
+        await tokenStore.clear();
+      throw error;
     }
+    await tokenStore.clear();
   }
   clear(): Promise<void> {
     return tokenStore.clear();

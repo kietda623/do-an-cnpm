@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, TextField, useSession, type SessionUser } from "@marketplace/ui-web";
-import { normalizeFormError } from "@marketplace/api-client";
+import { ApiClientError, normalizeFormError } from "@marketplace/api-client";
 import { webSession } from "./auth-form";
 
 type Address = {
@@ -29,6 +29,7 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const [logoutError, setLogoutError] = useState("");
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [showAddress, setShowAddress] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -162,10 +163,17 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
 
   async function logout() {
     setPending(true);
+    setError("");
+    setLogoutError("");
     try {
       await webSession.logout();
-    } catch {
-      await webSession.clear();
+    } catch (cause) {
+      if (!(cause instanceof ApiClientError) || cause.status !== 401) {
+        setLogoutError("Không thể đăng xuất. Kiểm tra kết nối rồi thử lại.");
+        return;
+      }
+    } finally {
+      setPending(false);
     }
     setUser(null);
     queryClient.clear();
@@ -203,6 +211,16 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
         <p role="alert" className="text-marketplace-danger">
           {error}
         </p>
+      )}
+      {logoutError && (
+        <div>
+          <p role="alert" className="text-marketplace-danger">
+            {logoutError}
+          </p>
+          <Button disabled={pending} onClick={logout}>
+            Thử lại đăng xuất
+          </Button>
+        </div>
       )}
       {status && <p role="status">{status}</p>}
       {view === "profile" ? (
