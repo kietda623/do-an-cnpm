@@ -129,6 +129,9 @@ async function submitLogin(email = "first@example.test") {
 
 test("B01/B02: login, real client product request, logout removes session and old screen state", async () => {
   render(<Journey />);
+  await act(async () => {
+    // Flush initial SecureStore restoration and the resulting Home effect before queries.
+  });
   await screen.findByText("Public product buyer-a");
   fireEvent.press(screen.getByRole("button", { name: /Đăng nhập/i }));
   await submitLogin();
