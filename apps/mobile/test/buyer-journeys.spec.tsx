@@ -30,7 +30,9 @@ jest.mock("react-native-safe-area-context", () => ({
 }));
 jest.mock("expo-secure-store", () => ({
   getItemAsync: jest.fn(async () => mockStored),
-  setItemAsync: jest.fn(async (_key: string, value: string) => {
+  setItemAsync: jest.fn(async (key: string, value: string) => {
+    expect(key).toBe("marketplace.refresh.v1");
+    expect(value).toMatch(/^fixture-refresh-\d+$/);
     mockStored = value;
     mockWrites.push(value);
   }),
