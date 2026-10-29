@@ -234,6 +234,9 @@ test("failed logout keeps the account visible and allows retry", async ({
 }) => {
   let attempts = 0;
   await mockAccountApi(page, {
+    "/users/me": route => route.fulfill(route.request().method() === "PATCH"
+      ? { status: 500, json: { error: { code: "PROFILE_UNAVAILABLE", message: "Profile unavailable" } } }
+      : { json: { data: buyer } }),
     "/auth/logout": async (route) => {
       attempts++;
       await route.fulfill(
@@ -256,6 +259,9 @@ test("failed logout keeps the account visible and allows retry", async ({
   await expect(page.locator("p[role=alert]")).toContainText(
     "Không thể đăng xuất",
   );
+  await page.getByRole("button", { name: "Lưu", exact: true }).click();
+  await expect(page.locator("p[role=alert]").filter({ hasText: "Không thể đăng xuất" })).toBeVisible();
+  await expect(page.locator("p[role=alert]").filter({ hasText: "Profile unavailable" })).toBeVisible();
   await page
     .getByRole("button", { name: "Thử lại đăng xuất", exact: true })
     .click();

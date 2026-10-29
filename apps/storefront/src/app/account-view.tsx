@@ -29,7 +29,7 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
-  const [logoutFailed, setLogoutFailed] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [showAddress, setShowAddress] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -164,13 +164,12 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
   async function logout() {
     setPending(true);
     setError("");
-    setLogoutFailed(false);
+    setLogoutError("");
     try {
       await webSession.logout();
     } catch (cause) {
       if (!(cause instanceof ApiClientError) || cause.status !== 401) {
-        setError("Không thể đăng xuất. Kiểm tra kết nối rồi thử lại.");
-        setLogoutFailed(true);
+        setLogoutError("Không thể đăng xuất. Kiểm tra kết nối rồi thử lại.");
         return;
       }
     } finally {
@@ -209,15 +208,18 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
         </Link>
       </nav>
       {error && (
+        <p role="alert" className="text-marketplace-danger">
+          {error}
+        </p>
+      )}
+      {logoutError && (
         <div>
           <p role="alert" className="text-marketplace-danger">
-            {error}
+            {logoutError}
           </p>
-          {logoutFailed && (
-            <Button disabled={pending} onClick={logout}>
-              Thử lại đăng xuất
-            </Button>
-          )}
+          <Button disabled={pending} onClick={logout}>
+            Thử lại đăng xuất
+          </Button>
         </div>
       )}
       {status && <p role="status">{status}</p>}
