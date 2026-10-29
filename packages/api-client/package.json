@@ -12,7 +12,7 @@
   "scripts": {
     "generate:types": "openapi-typescript ../contracts/openapi.yaml -o src/generated/index.ts && prettier --write src/generated/index.ts",
     "lint": "node ../../packages/config/lint.mjs",
-    "test": "node --experimental-strip-types --test test/transport.test.ts test/expo-session.test.ts",
+    "test": "node --experimental-strip-types --import ./test/register-typescript.mjs --test test/transport.test.ts test/expo-session.test.ts test/native-session.test.ts",
     "typecheck": "node ../../packages/config/typecheck.mjs"
   },
   "devDependencies": {
