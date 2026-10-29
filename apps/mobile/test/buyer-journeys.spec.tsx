@@ -144,7 +144,8 @@ test("B01/B02: login, real client product request, logout removes session and ol
   expect(mockStored).toBeNull();
   expect(screen.getByText("Session: anonymous")).toBeTruthy();
   expect(screen.queryByText("Public product buyer-a")).toBeNull();
-});
+  // Cold Jest transforms and first native component initialization share this journey's budget.
+}, 15_000);
 test("B02: process-like provider remount restores with refresh and persists each rotation", async () => {
   mockStored = "fixture-refresh-seeded";
   const first = render(<Journey />);
