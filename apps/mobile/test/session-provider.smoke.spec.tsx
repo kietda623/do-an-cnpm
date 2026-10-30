@@ -10,6 +10,7 @@ import { SessionProvider } from "../src/features/auth/session-provider";
 
 const mockRestore = jest.fn();
 const mockReplace = jest.fn();
+let mockPathname = "/cart";
 let mockInvalidate: () => void;
 jest.mock("@marketplace/api-client/auth/expo-session", () => ({
   SessionStorageError: class SessionStorageError extends Error {},
@@ -20,6 +21,7 @@ jest.mock("@marketplace/api-client/auth/expo-session", () => ({
 }));
 jest.mock("expo-router", () => ({
   useRouter: () => ({ replace: mockReplace }),
+  usePathname: () => mockPathname,
 }));
 jest.mock("expo-constants", () => ({
   expoConfig: { extra: { apiBaseUrl: "https://example.test/api/v1" } },
@@ -32,6 +34,7 @@ jest.mock("react-native-safe-area-context", () => ({
 beforeEach(() => {
   mockRestore.mockReset();
   mockReplace.mockReset();
+  mockPathname = "/cart";
 });
 
 it("returns to login instead of network retry after storage invalidation", async () => {
@@ -47,7 +50,12 @@ it("returns to login instead of network retry after storage invalidation", async
       <Text>Navigator mounted</Text>
     </SessionProvider>,
   );
-  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/login"));
+  await waitFor(() =>
+    expect(mockReplace).toHaveBeenCalledWith({
+      pathname: "/login",
+      params: { returnTo: "/cart" },
+    }),
+  );
   expect(screen.getByText("Navigator mounted")).toBeTruthy();
   expect(
     screen.queryByText(

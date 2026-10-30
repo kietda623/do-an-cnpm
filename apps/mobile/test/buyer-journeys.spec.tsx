@@ -19,10 +19,12 @@ const mockWrites: string[] = [];
 const mockCalls: string[] = [];
 const mockRouter = {
   push: (path: string) => mockNavigate(path),
-  replace: (path: string) => mockNavigate(path),
+  replace: (target: string | { pathname: string }) =>
+    mockNavigate(typeof target === "string" ? target : target.pathname),
 };
 jest.mock("expo-router", () => ({
   useRouter: () => mockRouter,
+  usePathname: () => "/",
   useLocalSearchParams: () => ({}),
 }));
 jest.mock("expo-constants", () => ({

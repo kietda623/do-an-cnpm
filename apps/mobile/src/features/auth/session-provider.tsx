@@ -9,7 +9,7 @@ import React, {
 import { Button, Platform, Text, View } from "react-native";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ExpoSession,
@@ -17,6 +17,7 @@ import {
 } from "@marketplace/api-client/auth/expo-session";
 import { ApiClientError } from "@marketplace/api-client";
 import type { components } from "@marketplace/api-client";
+import { safeBuyerReturnTo } from "../../navigation/return-to";
 
 type User = components["schemas"]["User"];
 type ContextValue = {
@@ -44,6 +45,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "retry">("loading");
   const [needsLogin, setNeedsLogin] = useState(false);
+  const pathname = usePathname();
   const router = useRouter();
   const session = useMemo(
     () =>
@@ -81,9 +83,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (state === "ready" && needsLogin) {
       setNeedsLogin(false);
-      router.replace("/login");
+      router.replace({
+        pathname: "/login",
+        params: { returnTo: safeBuyerReturnTo(pathname) },
+      });
     }
-  }, [state, needsLogin, router]);
+  }, [state, needsLogin, pathname, router]);
   const value = useMemo<ContextValue>(
     () => ({
       api: session.api,

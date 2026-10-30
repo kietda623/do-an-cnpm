@@ -4,6 +4,7 @@ import {
   fireEvent,
   renderRouter,
   screen,
+  waitFor,
 } from "expo-router/testing-library";
 
 let mockStored: string | null = null;
@@ -210,6 +211,17 @@ test("a refresh 401 clears session and protected screen state", async () => {
   expect(screen.queryByText(/Giỏ hàng.*đang phát triển/i)).toBeNull();
 });
 
+test("a refresh 401 preserves the protected route through reauthentication", async () => {
+  mockStored = "t133-refresh-seed";
+  mockRefreshUnauthorized = true;
+  const navigation = await openRoute("/cart");
+  expect(await screen.findByPlaceholderText("Email")).toBeTruthy();
+  expect(navigation.getSearchParams().returnTo).toBe("/cart");
+  await signIn();
+  await waitFor(() => expect(navigation.getPathname()).toBe("/cart"));
+  expect(screen.getByText(/Giỏ hàng.*đang phát triển/i)).toBeTruthy();
+});
+
 function loadAppConfig(environment: Record<string, string>) {
   const names = [
     "EXPO_PUBLIC_API_URL",
@@ -272,4 +284,13 @@ test("app links use marketplace-buyer scheme and explicit build variants preserv
       EXPO_ALLOW_HTTP: "1",
     }),
   ).toThrow(/requires HTTPS/);
+});
+
+test("an omitted app variant cannot implicitly enable development cleartext", () => {
+  expect(() =>
+    loadAppConfig({
+      EXPO_PUBLIC_API_URL: "http://api.example.test/api/v1",
+      EXPO_ALLOW_HTTP: "1",
+    }),
+  ).toThrow(/APP_VARIANT/);
 });

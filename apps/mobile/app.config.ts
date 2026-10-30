@@ -2,9 +2,11 @@ import type { ExpoConfig } from "expo/config";
 
 const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim() ?? "";
 if (!rawApiUrl) throw new Error("EXPO_PUBLIC_API_URL is required");
-const appVariant = process.env.APP_VARIANT?.trim() ?? "development";
+const appVariant = process.env.APP_VARIANT?.trim();
 if (appVariant !== "development" && appVariant !== "production")
-  throw new Error("APP_VARIANT must be development or production");
+  throw new Error(
+    "APP_VARIANT must be explicitly set to development or production",
+  );
 const apiBaseUrl = new URL(rawApiUrl);
 const allowDevHttp =
   appVariant === "development" && process.env.EXPO_ALLOW_HTTP === "1";

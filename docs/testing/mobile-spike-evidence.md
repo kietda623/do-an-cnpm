@@ -119,16 +119,16 @@ T133 mở rộng navigation trên Expo app hiện có, giữ nguyên ExpoSession
 
 - Red trước implementation: `apps/mobile/test/navigation.spec.tsx` có 14/15 ca fail; Expo Router trả `Unmatched Route` cho các đường dẫn chưa đăng ký và config chưa có `extra.appVariant`. Home harness ban đầu cũng cần flush initial restore; đã sửa harness test trước khi dùng kết quả green. Đây là bằng chứng route/config còn thiếu, không phải test mock cho màn hình chưa làm.
 - Cold run tìm thêm assertion smoke cũ còn trông đợi chuỗi `Không thể tải sản phẩm.` sau khi đã dùng feedback chung. Đã cập nhật assertion sang chuỗi UI chung `Không thể tải dữ liệu.`; full mobile suite xanh sau đó.
-- Cold Jest cuối: 4 suites pass, 29 tests pass, 13 `todo`, 0 fail. Full workspace `test` sau lần lint cleanup cũng chạy lại mobile và giữ cùng kết quả.
+- Cold Jest sau khi xử lý review: 4 suites pass, 31 tests pass, 13 `todo`, 0 fail. Full workspace `test` cũng chạy lại mobile và giữ cùng kết quả.
 
 ### Lệnh và kết quả
 
 | Lệnh | Kết quả thực tế |
 | --- | --- |
-| `corepack pnpm --filter @marketplace/mobile exec jest --runInBand --no-cache` | Pass cold: 4 suites, 29 pass, 13 todo. Lần chạy đầu trước khi sửa assertion error copy thất bại; lần chạy hoàn tất sau sửa pass. |
+| `corepack pnpm --filter @marketplace/mobile exec jest --runInBand --no-cache` | Pass cold: 4 suites, 31 pass, 13 todo. Lần chạy đầu trước khi sửa assertion error copy thất bại; lần chạy hoàn tất sau sửa pass. |
 | `corepack pnpm lint:workspaces` | Pass 11/11 workspace tasks sau khi bỏ React import thừa và giới hạn eslint exception cho import app config động. Lần lint đầu chỉ báo hai lỗi này. |
 | `corepack pnpm typecheck` | Pass 11/11 workspace tasks; mobile typecheck chạy mới, các task khác có cache. |
-| `corepack pnpm test` | Pass 3/3 task có test; mobile chạy mới: 4 suites, 29 pass, 13 todo. API 59 và api-client 98 được Turbo lấy cache trong lần này. |
+| `corepack pnpm test` | Pass 3/3 task có test; mobile chạy mới: 4 suites, 31 pass, 13 todo. API 59 và api-client 98 được Turbo lấy cache trong lần này. |
 | `corepack pnpm build` | Pass 4/4 build targets hiện có (API/Web, cache). Workspace không có native mobile build target; không coi đây là APK evidence. |
 | `$env:EXPO_PUBLIC_API_URL='http://10.0.2.2:4000/api/v1'; $env:APP_VARIANT='development'; $env:EXPO_ALLOW_HTTP='1'; corepack pnpm --filter @marketplace/mobile exec expo export --platform android --output-dir D:/do-an-cnpm-2/t133-expo-export` | Pass: Metro bundle Android tạo được, 1 Hermes bundle 2.7 MB. Lần thử trước không truyền API URL bị config từ chối; lần sau truyền biến môi trường tạm cho process và export thành công. Không gọi API, không phải device journey. |
 
@@ -137,3 +137,10 @@ T133 mở rộng navigation trên Expo app hiện có, giữ nguyên ExpoSession
 Windows 11 Home Single Language build 26200; Node `v24.21.0`; pnpm `12.14.0`; Expo CLI `57.0.31`, project Expo SDK `57.0.30`. AVD `Marketplace_API_36` có cấu hình, nhưng lúc kiểm tra `adb devices` không có thiết bị đang chạy; còn 2.30 GiB RAM trống, các cổng API 4000 và PostgreSQL 55439 không lắng nghe. Vì vậy **chưa chạy thiết bị** cho T133. Không ghi pass cho Expo Go/device trong PR này; Android component tests chỉ chạy trong Jest với `Platform.OS=ANDROID`. iOS không nằm trong phạm vi chạy.
 
 `corepack pnpm format:check` không chạy trong T133 vì baseline đã có lỗi Prettier rộng ngoài các file này; không format hàng loạt. Không có dependency/pin, backend, ExpoSession hoặc migration thay đổi. Reviewer đề xuất: M3.
+
+### Đối chiếu CodeRabbit — 2026-10-30
+
+- Refresh 401 khi đang ở buyer route đã chuyển đến `/login` không có `returnTo`; red test nhận `undefined` thay vì `/cart`, và kiểm tra `SessionProvider` cho thấy redirect trực tiếp bằng chuỗi `/login` có thể ghi đè redirect của BuyerLayout. Sửa provider để gắn `safeBuyerReturnTo(usePathname())`. Sau sửa, test khôi phục phiên sau 401 xác nhận query `returnTo=/cart` và đăng nhập trở lại `/cart`.
+- Khi `APP_VARIANT` bị bỏ trống, giá trị mặc định `development` cùng `EXPO_ALLOW_HTTP=1` đã khiến config chấp nhận API HTTP và bật cleartext Android. Red test xác nhận config không ném lỗi. Sửa để bắt buộc variant tường minh là `development` hoặc `production`; dev HTTP vẫn cần cờ allow hiện có, production vẫn yêu cầu HTTPS.
+- Red trước sửa: hai regression test mới fail đúng như trên và smoke test provider nhận `replace("/login")` thay vì object có safe return path. Green sau sửa: lệnh `corepack pnpm --filter @marketplace/mobile exec jest --runInBand test/navigation.spec.tsx test/session-provider.smoke.spec.tsx --testNamePattern 'refresh 401 preserves|omitted app variant|returns to login instead'` pass 3 test / 2 suites.
+- Docstring Coverage của CodeRabbit phát cảnh báo chung (0% trên các hàm thay đổi). Không có cấu hình CodeRabbit trong repo hoặc quy ước docstring cho các helper UI đơn giản; cảnh báo không chỉ ra lỗi chức năng cụ thể nên không thêm docstring hình thức. Native release/HTTPS còn chưa xác minh như đã ghi ở phần giới hạn và T139.
