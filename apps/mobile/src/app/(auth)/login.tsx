@@ -1,12 +1,14 @@
 import React from "react";
 import { useState } from "react";
 import { Button, Text, TextInput, View } from "react-native";
-import { useRouter } from "expo-router";
-import { useSession } from "../features/auth/session-provider";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSession } from "../../features/auth/session-provider";
+import { safeBuyerReturnTo } from "../../navigation/return-to";
 
 export default function Login() {
   const { login } = useSession();
   const router = useRouter();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string | string[] }>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,7 +18,7 @@ export default function Login() {
     setError("");
     try {
       await login(email.trim(), password);
-      router.replace("/");
+      router.replace(safeBuyerReturnTo(returnTo));
     } catch {
       setError("Đăng nhập không thành công. Vui lòng thử lại.");
     } finally {
@@ -44,6 +46,10 @@ export default function Login() {
         title={busy ? "Đang đăng nhập…" : "Đăng nhập"}
         disabled={busy}
         onPress={() => void submit()}
+      />
+      <Button
+        title="Đăng ký (đang phát triển — T135)"
+        onPress={() => router.push("/register")}
       />
     </View>
   );

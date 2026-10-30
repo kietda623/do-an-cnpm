@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Text, Platform } from "react-native";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
-import Home from "../src/app/index";
-import Login from "../src/app/login";
+import Home from "../src/app/(public)/index";
+import Login from "../src/app/(auth)/login";
 import {
   SessionProvider,
   useSession,
@@ -19,9 +19,14 @@ const mockWrites: string[] = [];
 const mockCalls: string[] = [];
 const mockRouter = {
   push: (path: string) => mockNavigate(path),
-  replace: (path: string) => mockNavigate(path),
+  replace: (target: string | { pathname: string }) =>
+    mockNavigate(typeof target === "string" ? target : target.pathname),
 };
-jest.mock("expo-router", () => ({ useRouter: () => mockRouter }));
+jest.mock("expo-router", () => ({
+  useRouter: () => mockRouter,
+  usePathname: () => "/",
+  useLocalSearchParams: () => ({}),
+}));
 jest.mock("expo-constants", () => ({
   expoConfig: { extra: { apiBaseUrl: "https://example.test/api/v1" } },
 }));
