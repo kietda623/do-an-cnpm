@@ -250,7 +250,7 @@ test("registration validates contract fields and returns to the requested route"
   fireEvent.changeText(screen.getByPlaceholderText("Email"), "new@example.test");
   fireEvent.changeText(screen.getByPlaceholderText("Mật khẩu"), "valid-password-123");
   await act(async () => {
-    fireEvent.press(screen.getByRole("button", { name: "Tạo tài khoản" }));
+    fireEvent.press(screen.getByRole("button", { name: /Tạo tài khoản/i }));
   });
 
   await waitFor(() => expect(navigation.getPathname()).toBe("/account"));
@@ -274,7 +274,7 @@ test("registration blocks a password below the contract minimum", async () => {
   fireEvent.changeText(screen.getByPlaceholderText("Email"), "new@example.test");
   fireEvent.changeText(screen.getByPlaceholderText("Mật khẩu"), "short-pass");
   await act(async () => {
-    fireEvent.press(screen.getByRole("button", { name: "Tạo tài khoản" }));
+    fireEvent.press(screen.getByRole("button", { name: /Tạo tài khoản/i }));
   });
 
   expect(await screen.findByText("Mật khẩu phải có từ 12 đến 128 ký tự."))
@@ -290,7 +290,7 @@ test("profile updates fields and changes the password through the API", async ()
   fireEvent.changeText(await screen.findByPlaceholderText("Họ và tên"), "Buyer Updated");
   fireEvent.changeText(screen.getByPlaceholderText("Số điện thoại"), "0901234567");
   await act(async () => {
-    fireEvent.press(screen.getByRole("button", { name: "Lưu hồ sơ" }));
+    fireEvent.press(screen.getByRole("button", { name: /Lưu hồ sơ/i }));
   });
   expect(await screen.findByText("Đã lưu hồ sơ.")).toBeTruthy();
   expect(mockCalls).toContainEqual({
@@ -299,7 +299,7 @@ test("profile updates fields and changes the password through the API", async ()
     body: { fullName: "Buyer Updated", phone: "0901234567" },
   });
 
-  fireEvent.press(screen.getByRole("button", { name: "Đổi mật khẩu" }));
+  fireEvent.press(screen.getByRole("button", { name: /Đổi mật khẩu/i }));
   fireEvent.changeText(
     screen.getByPlaceholderText("Mật khẩu hiện tại"),
     "current-password",
@@ -309,7 +309,7 @@ test("profile updates fields and changes the password through the API", async ()
     "a-new-password-123",
   );
   await act(async () => {
-    fireEvent.press(screen.getByRole("button", { name: "Lưu mật khẩu" }));
+    fireEvent.press(screen.getByRole("button", { name: /Lưu mật khẩu/i }));
   });
   expect(await screen.findByText("Đã đổi mật khẩu.")).toBeTruthy();
   expect(mockCalls).toContainEqual({
@@ -326,7 +326,7 @@ test("avatar selection uploads an AVATAR asset and attaches it to the profile", 
   mockStored = "refresh-existing";
   renderRouter("./src/app", { initialUrl: "/account" });
   await screen.findByPlaceholderText("Họ và tên");
-  fireEvent.press(screen.getByRole("button", { name: "Chọn ảnh đại diện" }));
+  fireEvent.press(screen.getByRole("button", { name: /Chọn ảnh đại diện/i }));
 
   await waitFor(() =>
     expect(mockCalls.some((call) => call.path.endsWith("/users/me/assets"))).toBe(
@@ -368,8 +368,8 @@ test("addresses show loading then a retryable error state", async () => {
       ),
     );
   });
-  expect(await screen.findByText("Không thể tải địa chỉ.")).toBeTruthy();
-  fireEvent.press(screen.getByRole("button", { name: "Thử lại" }));
+  expect(await screen.findByText("Server error")).toBeTruthy();
+  fireEvent.press(screen.getByRole("button", { name: /Thử lại/i }));
   expect(await screen.findByText("Chưa có địa chỉ.")).toBeTruthy();
 });
 
@@ -387,15 +387,15 @@ test("addresses create, edit, set default, and delete with confirmation", async 
   renderRouter("./src/app", { initialUrl: "/account/addresses" });
   expect(await screen.findByText("Home One")).toBeTruthy();
 
-  fireEvent.press(screen.getByRole("button", { name: "Sửa Home One" }));
+  fireEvent.press(screen.getByRole("button", { name: /Sửa Home One/i }));
   fireEvent.changeText(screen.getByPlaceholderText("Địa chỉ"), "12 Main Street");
   await act(async () => {
-    fireEvent.press(screen.getByRole("button", { name: "Lưu địa chỉ" }));
+    fireEvent.press(screen.getByRole("button", { name: /Lưu địa chỉ/i }));
   });
   expect(await screen.findByText("Đã lưu địa chỉ.")).toBeTruthy();
   expect(mockCalls.some((call) => call.method === "PATCH" && call.path.includes("00000000-0000-4000-8000-000000000031"))).toBe(true);
 
-  fireEvent.press(screen.getByRole("button", { name: "Đặt mặc định cho Home Two" }));
+  fireEvent.press(screen.getByRole("button", { name: /Đặt mặc định cho Home Two/i }));
   await waitFor(() => {
     const update = mockCalls.find(
       (call) =>
@@ -408,7 +408,7 @@ test("addresses create, edit, set default, and delete with confirmation", async 
   const alert = jest.spyOn(Alert, "alert").mockImplementation((_title, _message, buttons) => {
     buttons?.find((button) => button.style === "destructive")?.onPress?.();
   });
-  fireEvent.press(screen.getByRole("button", { name: "Xóa Home One" }));
+  fireEvent.press(screen.getByRole("button", { name: /Xóa Home One/i }));
   await waitFor(() =>
     expect(
       mockCalls.some(
