@@ -203,10 +203,35 @@ export class ExpoSession {
         clientPlatform: this.options.clientPlatform,
       }),
     });
+    return this.establishSession(result, generation);
+  }
+
+  async register(
+    fullName: string,
+    email: string,
+    password: string,
+  ): Promise<Tokens["user"]> {
+    const generation = this.generation;
+    const result = await this.transport.request<Tokens>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({
+        fullName,
+        email,
+        password,
+        clientPlatform: this.options.clientPlatform,
+      }),
+    });
+    return this.establishSession(result, generation);
+  }
+
+  private async establishSession(
+    result: Tokens,
+    generation: number,
+  ): Promise<Tokens["user"]> {
     if (!result.refreshToken)
-      throw new Error("Native login did not return a refresh token");
+      throw new Error("Native authentication did not return a refresh token");
     if (generation !== this.generation)
-      throw new Error("Session changed during login");
+      throw new Error("Session changed during authentication");
     this.generation++;
     const writeGeneration = this.generation;
     this.invalidated = false;
@@ -219,7 +244,7 @@ export class ExpoSession {
       writeGeneration,
     );
     if (writeGeneration !== this.generation)
-      throw new Error("Session changed during login");
+      throw new Error("Session changed during authentication");
     return result.user;
   }
 
