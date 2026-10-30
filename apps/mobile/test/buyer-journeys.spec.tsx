@@ -1,5 +1,9 @@
 import React, { useState } from "react";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Text, Platform } from "react-native";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import Home from "../src/app/(public)/index";
@@ -308,11 +312,11 @@ test("logout cancels and clears cache; an old query cannot populate it after ano
     const result = await outcome;
 
     expect(result.succeeded).toBe(false);
-    expect(
-      mockQueryClient.getQueryData([...key, "in-flight"]),
-    ).toBeUndefined();
+    expect(mockQueryClient.getQueryData([...key, "in-flight"])).toBeUndefined();
     expect(mockQueryClient.getQueryCache().getAll()).toHaveLength(0);
-    expect(mockCalls.filter((path) => path.endsWith("/orders"))).toHaveLength(1);
+    expect(mockCalls.filter((path) => path.endsWith("/orders"))).toHaveLength(
+      1,
+    );
     expect(screen.getByText("Session: buyer-b")).toBeTruthy();
   } finally {
     finishRequest(Response.json({ data: [{ owner: "buyer-a" }] }));

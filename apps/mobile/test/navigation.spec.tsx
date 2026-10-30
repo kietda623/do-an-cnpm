@@ -49,10 +49,12 @@ const buyer = {
 beforeEach(() => {
   jest.replaceProperty(Platform, "OS", "android");
   mockAppStateListener = null;
-  jest.spyOn(AppState, "addEventListener").mockImplementation((_type, listener) => {
-    mockAppStateListener = listener;
-    return { remove: jest.fn() };
-  });
+  jest
+    .spyOn(AppState, "addEventListener")
+    .mockImplementation((_type, listener) => {
+      mockAppStateListener = listener;
+      return { remove: jest.fn() };
+    });
   focusManager.setFocused(true);
   mockStored = null;
   mockRefreshUnauthorized = false;
@@ -104,7 +106,10 @@ beforeEach(() => {
         return Response.json(
           {
             error: {
-              code: mockMeStatus === "account_locked" ? "ACCOUNT_LOCKED" : "FORBIDDEN",
+              code:
+                mockMeStatus === "account_locked"
+                  ? "ACCOUNT_LOCKED"
+                  : "FORBIDDEN",
               message: "Not allowed",
             },
           },
@@ -149,7 +154,8 @@ afterAll(() => {
 });
 
 function emitAppState(state: AppStateStatus) {
-  if (!mockAppStateListener) throw new Error("AppState listener was not registered");
+  if (!mockAppStateListener)
+    throw new Error("AppState listener was not registered");
   mockAppStateListener(state);
 }
 
@@ -279,7 +285,9 @@ test("resume does not request /users/me before the exported background threshold
       await Promise.resolve();
     });
     expect(navigation.getPathname()).toBe("/cart");
-    expect(mockCalls.filter((path) => path.endsWith("/users/me"))).toHaveLength(0);
+    expect(mockCalls.filter((path) => path.endsWith("/users/me"))).toHaveLength(
+      0,
+    );
   } finally {
     nowSpy.mockRestore();
   }

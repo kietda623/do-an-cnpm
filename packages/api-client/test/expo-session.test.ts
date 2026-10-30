@@ -306,8 +306,14 @@ describe("native session", () => {
             },
           });
         }
-        if ((path.endsWith("/users/me") || path.endsWith("/products")) && expired)
-          return Response.json({ error: { code: "INVALID_ACCESS_TOKEN" } }, { status: 401 });
+        if (
+          (path.endsWith("/users/me") || path.endsWith("/products")) &&
+          expired
+        )
+          return Response.json(
+            { error: { code: "INVALID_ACCESS_TOKEN" } },
+            { status: 401 },
+          );
         return Response.json({ data: path.endsWith("/users/me") ? user : [] });
       },
     });
@@ -361,8 +367,9 @@ describe("native session", () => {
       });
       await session.login("buyer@example.test", "fixture-password");
 
-      await assert.rejects(session.resume(), (error) =>
-        error instanceof ApiClientError && error.status === 403,
+      await assert.rejects(
+        session.resume(),
+        (error) => error instanceof ApiClientError && error.status === 403,
       );
 
       assert.equal(stored, shouldClear ? null : "refresh-1");
@@ -402,7 +409,8 @@ describe("native session", () => {
             },
           });
         }
-        if (path.endsWith("/auth/logout")) return new Response(null, { status: 204 });
+        if (path.endsWith("/auth/logout"))
+          return new Response(null, { status: 204 });
         if (path.endsWith("/products"))
           return new Response(
             new ReadableStream<Uint8Array>({
@@ -425,7 +433,9 @@ describe("native session", () => {
 
     await session.logout();
     await session.login("b@example.test", "fixture-password");
-    controller.enqueue(new TextEncoder().encode('{"data":["buyer-a private result"]}'));
+    controller.enqueue(
+      new TextEncoder().encode('{"data":["buyer-a private result"]}'),
+    );
     controller.close();
 
     await assert.rejects(oldRequest, /session changed/i);

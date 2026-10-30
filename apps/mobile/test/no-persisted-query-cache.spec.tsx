@@ -22,7 +22,10 @@ test("mobile query cache has no persistent package, adapter, or SecureStore back
   const appRoot = join(__dirname, "..");
   const manifest = JSON.parse(
     await readFile(join(appRoot, "package.json"), "utf8"),
-  ) as { dependencies: Record<string, string>; devDependencies: Record<string, string> };
+  ) as {
+    dependencies: Record<string, string>;
+    devDependencies: Record<string, string>;
+  };
   const dependencies = Object.keys({
     ...manifest.dependencies,
     ...manifest.devDependencies,
@@ -37,7 +40,13 @@ test("mobile query cache has no persistent package, adapter, or SecureStore back
   expect(source).not.toMatch(
     /persistQueryClient|createAsyncStoragePersister|createSyncStoragePersister|AsyncStorage|\bMMKV\b/,
   );
-  const queryClientPath = join(appRoot, "src", "features", "api", "query-client.ts");
+  const queryClientPath = join(
+    appRoot,
+    "src",
+    "features",
+    "api",
+    "query-client.ts",
+  );
   if (existsSync(queryClientPath)) {
     const queryClientSource = await readFile(queryClientPath, "utf8");
     expect(queryClientSource).not.toMatch(/SecureStore|expo-secure-store/);
