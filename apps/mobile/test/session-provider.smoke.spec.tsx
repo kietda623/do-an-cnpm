@@ -6,6 +6,7 @@ import {
   fireEvent,
   waitFor,
 } from "@testing-library/react-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "../src/features/auth/session-provider";
 
 const mockRestore = jest.fn();
@@ -37,6 +38,17 @@ beforeEach(() => {
   mockPathname = "/cart";
 });
 
+function renderSession(children: React.ReactNode) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <SessionProvider>{children}</SessionProvider>
+    </QueryClientProvider>,
+  );
+}
+
 it("returns to login instead of network retry after storage invalidation", async () => {
   const { SessionStorageError } = jest.requireMock(
     "@marketplace/api-client/auth/expo-session",
@@ -45,11 +57,7 @@ it("returns to login instead of network retry after storage invalidation", async
     mockInvalidate();
     throw new SessionStorageError();
   });
-  render(
-    <SessionProvider>
-      <Text>Navigator mounted</Text>
-    </SessionProvider>,
-  );
+  renderSession(<Text>Navigator mounted</Text>);
   await waitFor(() =>
     expect(mockReplace).toHaveBeenCalledWith({
       pathname: "/login",
@@ -68,11 +76,7 @@ it("keeps session recovery below system bars and allows retry", async () => {
   mockRestore
     .mockRejectedValueOnce(new TypeError("network unavailable"))
     .mockResolvedValueOnce(null);
-  render(
-    <SessionProvider>
-      <Text>Application ready</Text>
-    </SessionProvider>,
-  );
+  renderSession(<Text>Application ready</Text>);
   const message = await screen.findByText(
     "Không thể khôi phục phiên. Kiểm tra kết nối rồi thử lại.",
   );

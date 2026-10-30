@@ -376,7 +376,7 @@ test("a non-locking 403 on resume reports an error without ending the session", 
     ).toBeTruthy();
     expect(navigation.getPathname()).toBe("/cart");
     expect(screen.getByText(/Giỏ hàng.*đang phát triển/i)).toBeTruthy();
-    expect(mockStored).toBe("t133-refresh-seed");
+    expect(mockStored).toBe("t133-refresh-rotated");
   } finally {
     nowSpy.mockRestore();
   }
