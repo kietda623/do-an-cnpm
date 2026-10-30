@@ -48,6 +48,7 @@ export class ExpoSession {
   constructor(options: Options) {
     this.options = options;
     this.tokens = {
+      getGeneration: () => this.generation,
       read: async () => {
         if (this.invalidated) return null;
         const refreshToken = await options.secureStore.getItemAsync(key);
@@ -59,17 +60,33 @@ export class ExpoSession {
             }
           : null;
       },
-      write: async (tokens: TokenSet) => {
-        const generation = this.generation;
+      write: async (tokens: TokenSet, expectedGeneration?: number) => {
+        const generation = expectedGeneration ?? this.generation;
+        if (expectedGeneration !== undefined && generation !== this.generation)
+          throw new SessionChangedError();
         try {
           await this.enqueueStorage(async () => {
-            if (this.invalidated || generation !== this.generation) return;
+            if (this.invalidated || generation !== this.generation) {
+              if (expectedGeneration !== undefined)
+                throw new SessionChangedError();
+              return;
+            }
             if (tokens.refreshToken)
               await options.secureStore.setItemAsync(key, tokens.refreshToken);
+            if (this.invalidated || generation !== this.generation) {
+              if (expectedGeneration !== undefined)
+                throw new SessionChangedError();
+              return;
+            }
             if (!this.invalidated && generation === this.generation)
               this.accessToken = tokens.accessToken;
           });
         } catch {
+          if (
+            expectedGeneration !== undefined &&
+            generation !== this.generation
+          )
+            throw new SessionChangedError();
           // Run cleanup outside the storage queue to avoid waiting on itself.
           if (!this.invalidated && generation === this.generation) {
             try {
@@ -194,10 +211,13 @@ export class ExpoSession {
     const writeGeneration = this.generation;
     this.invalidated = false;
     this.invalidation = undefined;
-    await this.tokens.write({
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-    });
+    await this.tokens.write(
+      {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      },
+      writeGeneration,
+    );
     if (writeGeneration !== this.generation)
       throw new Error("Session changed during login");
     return result.user;
@@ -218,10 +238,13 @@ export class ExpoSession {
         });
         if (!result.refreshToken)
           throw new Error("Native refresh did not rotate its token");
-        await this.tokens.write({
-          accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
-        });
+        await this.tokens.write(
+          {
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
+          },
+          generation,
+        );
         if (generation !== this.generation)
           throw new Error("Session changed during restoration");
         return result.user;

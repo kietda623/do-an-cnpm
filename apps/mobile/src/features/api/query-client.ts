@@ -16,8 +16,7 @@ export function shouldRetryQuery(
     return false;
   if (error instanceof ApiClientError)
     return error.status >= 500 && failureCount < 2;
-  if (error instanceof DOMException && error.name === "AbortError")
-    return false;
+  if (error instanceof Error && error.name === "AbortError") return false;
   return error instanceof TypeError && failureCount < 2;
 }
 

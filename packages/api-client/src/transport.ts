@@ -43,10 +43,11 @@ export class ApiTransport {
 
   async request<T>(path: ApiPath, init: RequestInit = {}): Promise<T> {
     const method = (init.method ?? "GET").toUpperCase();
+    const generation = this.options.tokens.getGeneration?.();
     const first = await this.send(path, init);
     if (first.status !== 401 || path === "/auth/refresh") return this.readResponse<T>(first);
 
-    await this.refreshAccessToken();
+    await this.refreshAccessToken(generation);
     if (!new Set(["GET", "HEAD", "OPTIONS"]).has(method)) {
       return this.readResponse<T>(first);
     }
@@ -81,17 +82,27 @@ export class ApiTransport {
     });
   }
 
-  private refreshAccessToken(): Promise<void> {
+  private refreshAccessToken(expectedGeneration?: number): Promise<void> {
     if (!this.refreshInFlight) {
-      this.refreshInFlight = this.performRefresh().finally(() => {
+      this.refreshInFlight = this.performRefresh(expectedGeneration).finally(() => {
         this.refreshInFlight = undefined;
       });
     }
     return this.refreshInFlight;
   }
 
-  private async performRefresh(): Promise<void> {
+  private async performRefresh(expectedGeneration?: number): Promise<void> {
+    if (
+      expectedGeneration !== undefined &&
+      this.options.tokens.getGeneration?.() !== expectedGeneration
+    )
+      throw new Error("Session changed before token refresh");
     const current = await this.options.tokens.read();
+    if (
+      expectedGeneration !== undefined &&
+      this.options.tokens.getGeneration?.() !== expectedGeneration
+    )
+      throw new Error("Session changed before token refresh");
     const body: components["schemas"]["Refresh"] = {
       clientPlatform: this.options.clientPlatform,
       ...(this.options.refreshMode === "body" && current?.refreshToken
@@ -119,7 +130,7 @@ export class ApiTransport {
     const envelope = (await response.json()) as ApiEnvelope<RefreshResponse>;
     const result: TokenSet = { accessToken: envelope.data.accessToken };
     if (envelope.data.refreshToken) result.refreshToken = envelope.data.refreshToken;
-    await this.options.tokens.write(result);
+    await this.options.tokens.write(result, expectedGeneration);
   }
 
   private async getCsrfToken(): Promise<string> {

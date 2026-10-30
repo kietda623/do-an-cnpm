@@ -122,7 +122,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       }
 
       foreground = true;
-      if (resumeInFlight) return;
+      if (resumeInFlight) {
+        backgroundedAt = null;
+        return;
+      }
       const backgroundDuration =
         backgroundedAt === null ? 0 : Date.now() - backgroundedAt;
       backgroundedAt = null;

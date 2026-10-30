@@ -6,7 +6,8 @@ export interface TokenSet {
 /** Platform implementations can keep refresh credentials in memory or native secure storage. */
 export interface TokenStore {
   read(): Promise<TokenSet | null>;
-  write(tokens: TokenSet): Promise<void>;
+  getGeneration?(): number;
+  write(tokens: TokenSet, expectedGeneration?: number): Promise<void>;
   clear(): Promise<void>;
 }
 
