@@ -1,5 +1,8 @@
 import { ApiClientError } from "@marketplace/api-client";
-import { SessionChangedError } from "@marketplace/api-client/auth/expo-session";
+import {
+  SessionChangedError,
+  SessionStorageError,
+} from "@marketplace/api-client/auth/expo-session";
 import { createMobileQueryClient } from "../src/features/api/query-client";
 
 test("queries do not retry client errors or stale session results", () => {
@@ -13,6 +16,7 @@ test("queries do not retry client errors or stale session results", () => {
     expect(retry(0, new ApiClientError("request failed", status))).toBe(false);
   }
   expect(retry(0, new SessionChangedError())).toBe(false);
+  expect(retry(0, new SessionStorageError())).toBe(false);
   client.clear();
 });
 
