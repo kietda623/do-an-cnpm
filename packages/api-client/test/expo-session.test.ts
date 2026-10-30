@@ -371,7 +371,6 @@ describe("native session", () => {
   it("does not return an old generation response after logout and another login", async () => {
     let stored: string | null = null;
     let owner = "buyer-a";
-    let releaseBody!: () => void;
     let bodyStarted!: () => void;
     let controller!: ReadableStreamDefaultController<Uint8Array>;
     const parsed = new Promise<void>((resolve) => {
@@ -426,11 +425,8 @@ describe("native session", () => {
 
     await session.logout();
     await session.login("b@example.test", "fixture-password");
-    releaseBody = () => {
-      controller.enqueue(new TextEncoder().encode('{"data":["buyer-a private result"]}'));
-      controller.close();
-    };
-    releaseBody();
+    controller.enqueue(new TextEncoder().encode('{"data":["buyer-a private result"]}'));
+    controller.close();
 
     await assert.rejects(oldRequest, /session changed/i);
     assert.equal(stored, "refresh-buyer-b");
