@@ -183,3 +183,28 @@ Phạm vi Android: quản lý resume và cache phiên hiện có. Thêm `@tansta
 - Dựng PostgreSQL 18 riêng trên loopback port 55439, tạo database `mobile_t134_disposable`, áp dụng đủ 8 migration và seed user thử nghiệm; API local port 4000 trả health 200. Không thay backend. API và PostgreSQL đã được dừng sau lần thử.
 - Đã thử khởi động AVD bằng `emulator -avd Marketplace_API_36 -no-snapshot-load -no-boot-anim` và chờ qua `adb wait-for-device`. Lần đầu ADB báo boot complete nhưng tiến trình emulator không giữ được sau lệnh; lần tiếp theo ADB chuyển `offline`/`device offline` và shell đóng kết nối. Đã dừng AVD bằng `adb emu kill`.
 - Chưa mở Expo Go, chưa đăng nhập trên thiết bị, chưa thực hiện HOME → chờ quá ngưỡng → mở lại. Vì vậy **chưa chạy thiết bị** cho resume T134; không ghi pass cho hành trình này. T134 vẫn mở trong `tasks.md` cho tới khi có Android device evidence.
+
+## T135 evidence — 2026-10-30
+
+Phạm vi lần này là Android component/API journeys cho B02/B11/B12. Màn đăng ký dùng `ExpoSession.register()` và giữ `returnTo`; hồ sơ gọi API profile/password, avatar upload `AVATAR` rồi gắn asset; sổ địa chỉ gọi API list/create/edit/default/delete. Request và response dùng types sinh từ OpenAPI. Image Picker được Expo installer chọn ở `expo-image-picker@~57.0.20` cho SDK 57. `buyer-journeys.spec.tsx` bỏ ba `todo` đã được thay bằng kiểm thử trong `identity-journeys.spec.tsx`; còn 10 todo cho B01 đầy đủ/B03–B10/B13.
+
+### Red / green
+
+- Red trước UI: 6/6 journey fail vì register/profile/addresses còn là placeholder T135.
+- Red riêng cho login validation: email sai gửi request login và mock đăng nhập thành công; sau sửa form chặn email không hợp lệ và mật khẩu ngoài 1–128 ký tự trước khi gọi API.
+- Cold run ban đầu phơi bày mock Image Picker `virtual` không ổn định khi package đã cài và chạy chung với navigation; bỏ cờ `virtual` để test dùng package mock bình thường. Đây là lỗi test harness.
+- Green: `identity-journeys.spec.tsx` có 9 ca pass; toàn bộ Mobile pass 57 ca, còn 10 `todo` chưa triển khai. Các API trong journey dùng mock, không gọi backend/DB.
+
+### Lệnh và kết quả
+
+| Lệnh | Kết quả thực tế |
+| --- | --- |
+| `corepack pnpm --filter @marketplace/api-client test` | Pass 105/105. |
+| `corepack pnpm --filter @marketplace/mobile exec jest --runInBand --no-cache` | Pass cold: 7 suites, 57 pass, 10 todo, 0 fail. |
+| `corepack pnpm lint:workspaces` | Pass 11/11 workspace tasks (5 cached). |
+| `corepack pnpm typecheck` | Pass 11/11 workspace tasks (5 cached). |
+| `corepack pnpm test` | Pass 3/3 test tasks: API 59 pass (cached), api-client 105 pass, Mobile 57 pass + 10 todo. |
+| `corepack pnpm build` | Pass 4/4 build targets (1 cached). Workspace không có native Mobile APK target; đây không phải device/build evidence. |
+| Prettier `--check` trên file TS/TSX đổi và `git diff --check` | Pass; không format hàng loạt. |
+
+Môi trường: Windows 11, Node `v24.21.0`, pnpm `12.14.0`, Expo SDK `57.0.30`. Component harness dùng `Platform.OS=android`, Expo Router và API mock. **Chưa chạy thiết bị/emulator cho T135**; không ghi pass Android native hay iOS. iOS và Desktop nằm ngoài phạm vi. T134 vẫn mở do chưa có bằng chứng Android thật cho hành trình resume; vì vậy T135 giữ checkbox mở theo dependency T134 dù phần code/component evidence đã xong. Reviewer đề xuất: M3.
