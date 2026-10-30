@@ -1,4 +1,5 @@
 import React from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
   render,
@@ -14,6 +15,9 @@ const mockLogout = jest.fn();
 let mockUser: { id: string } | null = null;
 const mockRequest = jest.fn();
 const mockApi = { request: mockRequest };
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, gcTime: 0 } },
+});
 jest.mock("expo-router", () => ({
   useRouter: () => ({ replace: jest.fn(), push: jest.fn() }),
   useLocalSearchParams: () => ({}),
@@ -28,19 +32,32 @@ jest.mock("../src/features/auth/session-provider", () => ({
 }));
 
 beforeEach(() => {
+  queryClient.clear();
   mockLogin.mockReset();
   mockRequest.mockReset();
   mockLogout.mockReset();
   mockUser = null;
 });
 
+function renderHome() {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <Home />
+    </QueryClientProvider>,
+  );
+}
+
 test("reports a failed logout and lets the signed-in user retry", async () => {
   mockUser = { id: "buyer" };
-  mockRequest.mockResolvedValue([{ id: "p1", name: "Sample product" }]);
+  mockRequest.mockImplementation((path) =>
+    Promise.resolve(
+      path === "/categories" ? [] : [{ id: "p1", name: "Sample product" }],
+    ),
+  );
   mockLogout
     .mockRejectedValueOnce(new TypeError("network unavailable"))
     .mockResolvedValueOnce(undefined);
-  render(<Home />);
+  renderHome();
   await screen.findByText("Sample product");
   await act(async () => {
     fireEvent.press(screen.getByRole("button", { name: "Đăng xuất" }));
@@ -75,20 +92,38 @@ test("logs in with email and password", async () => {
   );
 });
 test("reports an error and retries to an empty list", async () => {
-  mockRequest
-    .mockRejectedValueOnce(new Error("network"))
-    .mockResolvedValueOnce([]);
-  render(<Home />);
-  await screen.findByText("Không thể tải dữ liệu.");
+  let failProducts = true;
+  mockRequest.mockImplementation((path) => {
+    if (path === "/categories") return Promise.resolve([]);
+    if (failProducts) {
+      failProducts = false;
+      return Promise.reject(new Error("network"));
+    }
+    return Promise.resolve([]);
+  });
+  renderHome();
+  await screen.findByText(
+    "Không thể tải dữ liệu. Kiểm tra kết nối rồi thử lại.",
+  );
   await act(async () => {
     fireEvent.press(screen.getByRole("button", { name: "Thử lại" }));
   });
   await screen.findByText("Chưa có sản phẩm.");
-  expect(mockRequest).toHaveBeenCalledTimes(2);
+  expect(
+    mockRequest.mock.calls.filter(([path]) => path !== "/categories"),
+  ).toHaveLength(2);
 });
 test("loads products from the API", async () => {
-  mockRequest.mockResolvedValue([{ id: "p1", name: "Sample product" }]);
-  render(<Home />);
+  mockRequest.mockImplementation((path) =>
+    Promise.resolve(
+      path === "/categories" ? [] : [{ id: "p1", name: "Sample product" }],
+    ),
+  );
+  renderHome();
   await waitFor(() => expect(screen.getByText("Sample product")).toBeTruthy());
-  expect(mockRequest).toHaveBeenCalledWith("/products");
+  expect(
+    mockRequest.mock.calls.some(([path]) =>
+      String(path).startsWith("/products?"),
+    ),
+  ).toBe(true);
 });

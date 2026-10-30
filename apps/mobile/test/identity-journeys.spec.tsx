@@ -7,6 +7,7 @@ import {
   waitFor,
 } from "expo-router/testing-library";
 import type { components } from "@marketplace/api-client";
+import { mobileQueryClient } from "../src/features/api/query-client";
 
 type User = components["schemas"]["User"];
 type Address = components["schemas"]["Address"];
@@ -272,6 +273,7 @@ afterAll(() => {
 });
 
 afterEach(() => {
+  mobileQueryClient.clear();
   jest.useRealTimers();
 });
 

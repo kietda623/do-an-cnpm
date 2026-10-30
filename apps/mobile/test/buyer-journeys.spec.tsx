@@ -70,7 +70,13 @@ function Screens() {
 }
 function Journey() {
   const [queryClient] = useState(
-    () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { retry: false, gcTime: Infinity },
+          mutations: { gcTime: Infinity },
+        },
+      }),
   );
   mockQueryClient = queryClient;
   return (
@@ -120,6 +126,7 @@ beforeEach(() => {
       if (mockLogoutFails) throw new TypeError("network unavailable");
       return new Response(null, { status: 204 });
     }
+    if (path.endsWith("/categories")) return Response.json({ data: [] });
     if (path.endsWith("/auth/login") || path.endsWith("/auth/refresh")) {
       const body = JSON.parse(String(init?.body));
       expect(body.clientPlatform).toBe("ANDROID");
@@ -313,7 +320,12 @@ test("logout cancels and clears cache; an old query cannot populate it after ano
 
     expect(result.succeeded).toBe(false);
     expect(mockQueryClient.getQueryData([...key, "in-flight"])).toBeUndefined();
-    expect(mockQueryClient.getQueryCache().getAll()).toHaveLength(0);
+    expect(
+      mockQueryClient
+        .getQueryCache()
+        .getAll()
+        .some((query) => query.queryKey[0] === "private-orders"),
+    ).toBe(false);
     expect(mockCalls.filter((path) => path.endsWith("/orders"))).toHaveLength(
       1,
     );
@@ -325,11 +337,6 @@ test("logout cancels and clears cache; an old query cannot populate it after ano
 });
 
 const future = [
-  "B01 full home/category grid — T136",
-  "B03 paginated listing — T136",
-  "B04 search/filter — T136",
-  "B05 product detail/variants — T136",
-  "B06 public shop — T136",
   "B07 cart — T137",
   "B08 checkout — T137",
   "B09 order list — T137",
