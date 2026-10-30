@@ -41,15 +41,16 @@ export default function AddressesRoute() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [notice, setNotice] = useState("");
 
   const loadAddresses = useCallback(async () => {
     setLoading(true);
-    setError("");
+    setLoadError("");
     try {
       setAddresses(await api.request<Address[]>("/users/me/addresses"));
     } catch (cause) {
-      setError(
+      setLoadError(
         cause instanceof ApiClientError && cause.status === 403
           ? "Bạn không có quyền xem địa chỉ."
           : apiErrorMessage(cause, "Không thể tải địa chỉ."),
@@ -204,15 +205,16 @@ export default function AddressesRoute() {
     <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
       <Text accessibilityRole="header">Địa chỉ</Text>
       {loading ? <Text>Đang tải địa chỉ…</Text> : null}
+      {loadError ? <Text accessibilityRole="alert">{loadError}</Text> : null}
       {error ? <Text accessibilityRole="alert">{error}</Text> : null}
       {notice ? <Text accessibilityLiveRegion="polite">{notice}</Text> : null}
-      {!loading && error ? (
+      {!loading && loadError ? (
         <Button title="Thử lại" onPress={() => void loadAddresses()} />
       ) : null}
-      {!loading && !error && addresses.length === 0 && !showForm ? (
+      {!loading && !loadError && addresses.length === 0 && !showForm ? (
         <Text>Chưa có địa chỉ.</Text>
       ) : null}
-      {!loading && !error ? (
+      {!loading && !loadError ? (
         <Button title="Thêm địa chỉ" onPress={startCreate} />
       ) : null}
       {addresses.map((address) => (

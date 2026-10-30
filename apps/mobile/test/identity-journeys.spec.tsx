@@ -17,6 +17,7 @@ let mockAddresses: Address[] = [];
 let mockAddressGate: Promise<Response> | null = null;
 let mockAddressStarted: (() => void) | null = null;
 let mockRegisterFailure = false;
+let mockAddressMutationFailure = false;
 let mockCalls: Array<{
   path: string;
   method: string;
@@ -109,6 +110,7 @@ beforeEach(() => {
   mockAddressGate = null;
   mockAddressStarted = null;
   mockRegisterFailure = false;
+  mockAddressMutationFailure = false;
   mockCalls = [];
   mockPickerResult = {
     canceled: false,
@@ -218,6 +220,16 @@ beforeEach(() => {
         return new Response(null, { status: 204 });
       }
       if (method === "PATCH" && current) {
+        if (mockAddressMutationFailure)
+          return Response.json(
+            {
+              error: {
+                code: "INTERNAL_ERROR",
+                message: "Không thể cập nhật địa chỉ mặc định.",
+              },
+            },
+            { status: 500 },
+          );
         const updated = { ...current, ...(body as Partial<Address>) };
         mockAddresses = mockAddresses.map((address) =>
           address.id === id
@@ -230,7 +242,23 @@ beforeEach(() => {
       }
     }
     if (path.endsWith("/users/me") && method === "PATCH") {
-      mockUser = makeUser({ ...mockUser, ...(body as Partial<User>) });
+      const patch = body as Partial<User> & { avatarAssetId?: string };
+      mockUser = makeUser({
+        ...mockUser,
+        ...patch,
+        ...(patch.avatarAssetId
+          ? {
+              avatar: {
+                id: patch.avatarAssetId,
+                url: "https://assets.example.test/avatar.jpg",
+                mimeType: "image/jpeg",
+                byteSize: 128,
+                width: 64,
+                height: 64,
+              },
+            }
+          : {}),
+      });
       return Response.json({ data: mockUser });
     }
     if (path.endsWith("/users/me")) return Response.json({ data: mockUser });
@@ -303,6 +331,28 @@ test("registration blocks a password below the contract minimum", async () => {
   expect(mockCalls.some((call) => call.path.endsWith("/auth/register"))).toBe(
     false,
   );
+});
+
+test("registration displays the API error for a duplicate email", async () => {
+  mockRegisterFailure = true;
+  renderRouter("./src/app", { initialUrl: "/register" });
+  fireEvent.changeText(
+    await screen.findByPlaceholderText("Họ và tên"),
+    "New Buyer",
+  );
+  fireEvent.changeText(
+    screen.getByPlaceholderText("Email"),
+    "new@example.test",
+  );
+  fireEvent.changeText(
+    screen.getByPlaceholderText("Mật khẩu"),
+    "valid-password-123",
+  );
+  await act(async () => {
+    fireEvent.press(screen.getByRole("button", { name: /Tạo tài khoản/i }));
+  });
+
+  expect(await screen.findByText("Email đã được sử dụng.")).toBeTruthy();
 });
 
 test("login validates the contract email before sending a request", async () => {
@@ -395,6 +445,7 @@ test("avatar selection uploads an AVATAR asset and attaches it to the profile", 
     body: { avatarAssetId: "00000000-0000-4000-8000-000000000020" },
   });
   expect(await screen.findByText("Đã cập nhật ảnh đại diện.")).toBeTruthy();
+  expect(await screen.findByLabelText("Ảnh đại diện")).toBeTruthy();
 });
 
 test("avatar rejects files outside the contract size limit", async () => {
@@ -500,6 +551,34 @@ test("addresses create, edit, set default, and delete with confirmation", async 
     ).toBe(true),
   );
   expect(alert).toHaveBeenCalled();
+});
+
+test("address mutation errors do not hide the add action or retry list loading", async () => {
+  mockStored = "refresh-existing";
+  mockAddresses = [
+    makeAddress("00000000-0000-4000-8000-000000000032", {
+      recipientName: "Home Two",
+    }),
+  ];
+  mockAddressMutationFailure = true;
+  renderRouter("./src/app", { initialUrl: "/account/addresses" });
+  expect(await screen.findByText("Home Two")).toBeTruthy();
+
+  fireEvent.press(
+    screen.getByRole("button", { name: /Đặt mặc định cho Home Two/i }),
+  );
+
+  expect(
+    await screen.findByText("Không thể cập nhật địa chỉ mặc định."),
+  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: /Thêm địa chỉ/i })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Thử lại/i })).toBeNull();
+  expect(
+    mockCalls.filter(
+      (call) =>
+        call.method === "GET" && call.path.endsWith("/users/me/addresses"),
+    ),
+  ).toHaveLength(1);
 });
 
 test("addresses enforce contract phone length before create", async () => {
