@@ -24,6 +24,7 @@ test.each([
   [new TypeError("network unavailable"), 0, true],
   [new TypeError("network unavailable"), 1, true],
   [new TypeError("network unavailable"), 2, false],
+  [new Error("unexpected client error"), 0, false],
   [new ApiClientError("server error", 500), 0, true],
   [new ApiClientError("server error", 503), 1, true],
   [new ApiClientError("server error", 500), 2, false],
