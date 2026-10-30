@@ -22,7 +22,17 @@ let mockCalls: Array<{
   method: string;
   body?: unknown;
 }> = [];
-let mockPickerResult = {
+let mockPickerResult: {
+  canceled: boolean;
+  assets: Array<{
+    uri: string;
+    fileName: string;
+    mimeType: string;
+    width: number;
+    height: number;
+    fileSize?: number;
+  }>;
+} = {
   canceled: false,
   assets: [
     {
@@ -51,14 +61,10 @@ jest.mock("expo-secure-store", () => ({
     mockStored = null;
   }),
 }));
-jest.mock(
-  "expo-image-picker",
-  () => ({
-    requestMediaLibraryPermissionsAsync: mockRequestMediaLibraryPermissions,
-    launchImageLibraryAsync: mockLaunchImageLibrary,
-  }),
-  { virtual: true },
-);
+jest.mock("expo-image-picker", () => ({
+  requestMediaLibraryPermissionsAsync: mockRequestMediaLibraryPermissions,
+  launchImageLibraryAsync: mockLaunchImageLibrary,
+}));
 
 function makeUser(overrides: Partial<User> = {}): User {
   return {
@@ -308,6 +314,16 @@ test("login validates the contract email before sending a request", async () => 
   });
 
   expect(await screen.findByText("Vui lòng nhập email hợp lệ.")).toBeTruthy();
+  fireEvent.changeText(
+    screen.getByPlaceholderText("Email"),
+    "buyer@example.test",
+  );
+  await act(async () => {
+    fireEvent.press(screen.getByRole("button", { name: /Đăng nhập/i }));
+  });
+  expect(
+    await screen.findByText("Mật khẩu phải có từ 1 đến 128 ký tự."),
+  ).toBeTruthy();
   expect(mockCalls.some((call) => call.path.endsWith("/auth/login"))).toBe(
     false,
   );
@@ -379,6 +395,21 @@ test("avatar selection uploads an AVATAR asset and attaches it to the profile", 
     body: { avatarAssetId: "00000000-0000-4000-8000-000000000020" },
   });
   expect(await screen.findByText("Đã cập nhật ảnh đại diện.")).toBeTruthy();
+});
+
+test("avatar rejects files outside the contract size limit", async () => {
+  mockStored = "refresh-existing";
+  mockPickerResult.assets[0].fileSize = 5 * 1024 * 1024 + 1;
+  renderRouter("./src/app", { initialUrl: "/account" });
+  await screen.findByPlaceholderText("Họ và tên");
+  fireEvent.press(screen.getByRole("button", { name: /Chọn ảnh đại diện/i }));
+
+  expect(
+    await screen.findByText("Ảnh đại diện phải nhỏ hơn hoặc bằng 5 MB."),
+  ).toBeTruthy();
+  expect(mockCalls.some((call) => call.path.endsWith("/users/me/assets"))).toBe(
+    false,
+  );
 });
 
 test("addresses show loading then a retryable error state", async () => {
@@ -469,4 +500,38 @@ test("addresses create, edit, set default, and delete with confirmation", async 
     ).toBe(true),
   );
   expect(alert).toHaveBeenCalled();
+});
+
+test("addresses enforce contract phone length before create", async () => {
+  mockStored = "refresh-existing";
+  renderRouter("./src/app", { initialUrl: "/account/addresses" });
+  await screen.findByText("Chưa có địa chỉ.");
+  fireEvent.press(screen.getByRole("button", { name: /Thêm địa chỉ/i }));
+  fireEvent.changeText(screen.getByPlaceholderText("Người nhận"), "Buyer");
+  fireEvent.changeText(screen.getByPlaceholderText("Điện thoại"), "1234567");
+  fireEvent.changeText(
+    screen.getByPlaceholderText("Địa chỉ"),
+    "12 Main Street",
+  );
+  fireEvent.changeText(screen.getByPlaceholderText("Phường"), "Ward");
+  fireEvent.changeText(screen.getByPlaceholderText("Quận"), "District");
+  fireEvent.changeText(
+    screen.getByPlaceholderText("Tỉnh / thành phố"),
+    "Province",
+  );
+  await act(async () => {
+    fireEvent.press(screen.getByRole("button", { name: /Lưu địa chỉ/i }));
+  });
+
+  expect(
+    await screen.findByText(
+      "Vui lòng kiểm tra độ dài các trường địa chỉ theo yêu cầu.",
+    ),
+  ).toBeTruthy();
+  expect(
+    mockCalls.some(
+      (call) =>
+        call.method === "POST" && call.path.endsWith("/users/me/addresses"),
+    ),
+  ).toBe(false);
 });

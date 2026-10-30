@@ -326,7 +326,6 @@ test("logout cancels and clears cache; an old query cannot populate it after ano
 
 const future = [
   "B01 full home/category grid — T136",
-  "B02 registration — T135",
   "B03 paginated listing — T136",
   "B04 search/filter — T136",
   "B05 product detail/variants — T136",
@@ -335,8 +334,6 @@ const future = [
   "B08 checkout — T137",
   "B09 order list — T137",
   "B10 order detail/payment — T137",
-  "B11 profile/avatar/password — T135",
-  "B12 addresses — T135",
   "B13 review — T138",
 ];
 for (const title of future) test.todo(title);

@@ -117,6 +117,8 @@ beforeEach(() => {
         );
       return Response.json({ data: buyer });
     }
+    if (pathname.endsWith("/users/me/addresses"))
+      return Response.json({ data: [] });
     if (pathname.endsWith("/products")) {
       if (mockProductsForbidden)
         return Response.json(
@@ -229,11 +231,17 @@ test.each([
     expect(navigation.getPathname()).toBe("/login");
     expect(navigation.getSearchParams().returnTo).toBe(path);
     await signIn();
-    expect(
-      await screen.findByText(new RegExp(`${heading} đang phát triển`)),
-    ).toBeTruthy();
+    if (path === "/account") {
+      expect(await screen.findByPlaceholderText("Họ và tên")).toBeTruthy();
+    } else if (path === "/account/addresses") {
+      expect(await screen.findByText(/Chưa có địa chỉ/)).toBeTruthy();
+    } else {
+      expect(
+        await screen.findByText(new RegExp(`${heading} đang phát triển`)),
+      ).toBeTruthy();
+      expect(screen.getByText(/đang phát triển/i)).toBeTruthy();
+    }
     expect(navigation.getPathname()).toBe(path);
-    expect(screen.getByText(/đang phát triển/i)).toBeTruthy();
   },
 );
 
@@ -444,7 +452,6 @@ function loadAppConfig(environment: Record<string, string>) {
   const previous = Object.fromEntries(
     names.map((name) => [name, process.env[name]]),
   );
-  jest.resetModules();
   for (const name of names) delete process.env[name];
   Object.assign(process.env, environment);
   try {
