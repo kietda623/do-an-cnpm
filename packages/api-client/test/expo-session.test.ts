@@ -293,6 +293,59 @@ describe("native session", () => {
       assert.equal(test.getCleared(), 0);
       assert.equal(test.getNotices(), 0);
     });
+  it("registers with the native platform and persists the returned session securely", async () => {
+    let stored: string | null = null;
+    let requestBody: Record<string, unknown> | undefined;
+    let authorization: string | null = null;
+    const session = new ExpoSession({
+      baseUrl: "https://example.test/api/v1",
+      clientPlatform: "ANDROID",
+      secureStore: {
+        getItemAsync: async () => stored,
+        setItemAsync: async (_, value) => {
+          stored = value;
+        },
+        deleteItemAsync: async () => {
+          stored = null;
+        },
+      },
+      fetcher: async (input, init) => {
+        const path = new URL(String(input)).pathname;
+        if (path.endsWith("/auth/register")) {
+          requestBody = JSON.parse(String(init?.body));
+          return Response.json(
+            {
+              data: {
+                accessToken: "access-registration",
+                refreshToken: "refresh-registration",
+                user: { id: "registered-buyer", roles: ["BUYER"] },
+              },
+            },
+            { status: 201 },
+          );
+        }
+        authorization = new Headers(init?.headers).get("Authorization");
+        return Response.json({ data: [] });
+      },
+    });
+
+    const user = await session.register(
+      "Buyer Name",
+      "buyer@example.test",
+      "a-valid-password",
+    );
+    await session.api.request("/products");
+
+    assert.deepEqual(requestBody, {
+      fullName: "Buyer Name",
+      email: "buyer@example.test",
+      password: "a-valid-password",
+      clientPlatform: "ANDROID",
+    });
+    assert.equal(user.id, "registered-buyer");
+    assert.equal(stored, "refresh-registration");
+    assert.equal(authorization, "Bearer access-registration");
+  });
   it("rotates in secure storage and logout clears credentials", async () => {
     let stored: string | null = null;
     const requests: Array<{

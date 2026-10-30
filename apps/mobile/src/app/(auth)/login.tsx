@@ -2,6 +2,7 @@ import React from "react";
 import { useState } from "react";
 import { Button, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { apiErrorMessage } from "../../features/api/error-message";
 import { useSession } from "../../features/auth/session-provider";
 import { safeBuyerReturnTo } from "../../navigation/return-to";
 
@@ -14,13 +15,28 @@ export default function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   async function submit() {
+    const normalizedEmail = email.trim();
+    if (
+      normalizedEmail.length < 3 ||
+      normalizedEmail.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)
+    ) {
+      setError("Vui lòng nhập email hợp lệ.");
+      return;
+    }
+    if (password.length < 1 || password.length > 128) {
+      setError("Mật khẩu phải có từ 1 đến 128 ký tự.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
-      await login(email.trim(), password);
+      await login(normalizedEmail, password);
       router.replace(safeBuyerReturnTo(returnTo));
-    } catch {
-      setError("Đăng nhập không thành công. Vui lòng thử lại.");
+    } catch (cause) {
+      setError(
+        apiErrorMessage(cause, "Đăng nhập không thành công. Vui lòng thử lại."),
+      );
     } finally {
       setBusy(false);
     }
@@ -32,12 +48,14 @@ export default function Login() {
         placeholder="Email"
         autoCapitalize="none"
         keyboardType="email-address"
+        maxLength={254}
         value={email}
         onChangeText={setEmail}
       />
       <TextInput
         placeholder="Mật khẩu"
         secureTextEntry
+        maxLength={128}
         value={password}
         onChangeText={setPassword}
       />
@@ -48,8 +66,13 @@ export default function Login() {
         onPress={() => void submit()}
       />
       <Button
-        title="Đăng ký (đang phát triển — T135)"
-        onPress={() => router.push("/register")}
+        title="Tạo tài khoản"
+        onPress={() =>
+          router.push({
+            pathname: "/register",
+            params: { returnTo: safeBuyerReturnTo(returnTo) },
+          })
+        }
       />
     </View>
   );

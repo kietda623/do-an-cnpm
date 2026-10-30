@@ -28,6 +28,8 @@ type ContextValue = {
   api: ExpoSession["api"];
   user: User | null;
   login(email: string, password: string): Promise<void>;
+  register(fullName: string, email: string, password: string): Promise<void>;
+  updateUser(user: User): void;
   logout(): Promise<void>;
 };
 const Context = createContext<ContextValue | null>(null);
@@ -172,6 +174,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setResumeError(false);
         focusManager.setFocused(true);
       },
+      register: async (fullName, email, password) => {
+        const nextUser = await session.register(fullName, email, password);
+        await clearCachedData();
+        setUser(nextUser);
+        setResumeError(false);
+        focusManager.setFocused(true);
+      },
+      updateUser: (nextUser) => setUser(nextUser),
       logout: async () => {
         await session.logout();
       },
