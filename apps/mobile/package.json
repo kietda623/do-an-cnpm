@@ -5,6 +5,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@marketplace/api-client": "workspace:*",
+    "@tanstack/react-query": "5.104.5",
     "expo": "57.0.30",
     "expo-build-properties": "57.0.22",
     "expo-constants": "57.0.22",

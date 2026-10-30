@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { AppState, Platform, type AppStateStatus } from "react-native";
 import {
   act,
   fireEvent,
@@ -6,11 +6,17 @@ import {
   screen,
   waitFor,
 } from "expo-router/testing-library";
+import { focusManager } from "@tanstack/react-query";
+import { RESUME_BACKGROUND_THRESHOLD_MS } from "../src/features/auth/session-provider";
 
 let mockStored: string | null = null;
 let mockRefreshUnauthorized = false;
 let mockProductsUnauthorized = false;
 let mockProductsForbidden = false;
+let mockMeStatus: "ok" | "unauthorized" | "account_locked" | "forbidden" = "ok";
+let mockMeGate: Promise<Response> | null = null;
+let mockMeStarted: (() => void) | null = null;
+let mockAppStateListener: ((state: AppStateStatus) => void) | null = null;
 let mockCalls: string[] = [];
 
 jest.mock("expo-constants", () => ({
@@ -42,10 +48,21 @@ const buyer = {
 
 beforeEach(() => {
   jest.replaceProperty(Platform, "OS", "android");
+  mockAppStateListener = null;
+  jest
+    .spyOn(AppState, "addEventListener")
+    .mockImplementation((_type, listener) => {
+      mockAppStateListener = listener;
+      return { remove: jest.fn() };
+    });
+  focusManager.setFocused(true);
   mockStored = null;
   mockRefreshUnauthorized = false;
   mockProductsUnauthorized = false;
   mockProductsForbidden = false;
+  mockMeStatus = "ok";
+  mockMeGate = null;
+  mockMeStarted = null;
   mockCalls = [];
   globalThis.fetch = jest.fn(async (input, init) => {
     const pathname = new URL(String(input)).pathname;
@@ -75,6 +92,31 @@ beforeEach(() => {
       });
     if (pathname.endsWith("/auth/logout"))
       return new Response(null, { status: 204 });
+    if (pathname.endsWith("/users/me")) {
+      if (mockMeGate) {
+        mockMeStarted?.();
+        return mockMeGate;
+      }
+      if (mockMeStatus === "unauthorized")
+        return Response.json(
+          { error: { code: "INVALID_ACCESS_TOKEN", message: "Sign in again" } },
+          { status: 401 },
+        );
+      if (mockMeStatus === "account_locked" || mockMeStatus === "forbidden")
+        return Response.json(
+          {
+            error: {
+              code:
+                mockMeStatus === "account_locked"
+                  ? "ACCOUNT_LOCKED"
+                  : "FORBIDDEN",
+              message: "Not allowed",
+            },
+          },
+          { status: 403 },
+        );
+      return Response.json({ data: buyer });
+    }
     if (pathname.endsWith("/products")) {
       if (mockProductsForbidden)
         return Response.json(
@@ -108,7 +150,14 @@ beforeEach(() => {
 afterAll(() => {
   globalThis.fetch = originalFetch;
   jest.useRealTimers();
+  jest.restoreAllMocks();
 });
+
+function emitAppState(state: AppStateStatus) {
+  if (!mockAppStateListener)
+    throw new Error("AppState listener was not registered");
+  mockAppStateListener(state);
+}
 
 async function signIn() {
   fireEvent.changeText(
@@ -220,6 +269,170 @@ test("a refresh 401 preserves the protected route through reauthentication", asy
   await signIn();
   await waitFor(() => expect(navigation.getPathname()).toBe("/cart"));
   expect(screen.getByText(/Giỏ hàng.*đang phát triển/i)).toBeTruthy();
+});
+
+test("resume does not request /users/me before the exported background threshold", async () => {
+  const navigation = await openRoute("/cart");
+  await signIn();
+  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  let now = 100_000;
+  const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
+  try {
+    await act(async () => {
+      emitAppState("background");
+      now += RESUME_BACKGROUND_THRESHOLD_MS - 1;
+      emitAppState("active");
+      await Promise.resolve();
+    });
+    expect(navigation.getPathname()).toBe("/cart");
+    expect(mockCalls.filter((path) => path.endsWith("/users/me"))).toHaveLength(
+      0,
+    );
+  } finally {
+    nowSpy.mockRestore();
+  }
+});
+
+test("resume revalidates before enabling focus refetch at the threshold", async () => {
+  const navigation = await openRoute("/cart");
+  await signIn();
+  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  let now = 200_000;
+  const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
+  let resumeStarted!: () => void;
+  const started = new Promise<void>((resolve) => {
+    resumeStarted = resolve;
+  });
+  let finishResume!: (response: Response) => void;
+  mockMeGate = new Promise<Response>((resolve) => {
+    finishResume = resolve;
+  });
+  mockMeStarted = resumeStarted;
+  try {
+    emitAppState("background");
+    now += RESUME_BACKGROUND_THRESHOLD_MS;
+    await act(async () => {
+      emitAppState("active");
+    });
+    await started;
+    expect(mockCalls).toContain("/api/v1/users/me");
+    expect(focusManager.isFocused()).toBe(false);
+    await act(async () => {
+      finishResume(Response.json({ data: buyer }));
+    });
+    await waitFor(() => expect(focusManager.isFocused()).toBe(true));
+    expect(navigation.getPathname()).toBe("/cart");
+  } finally {
+    nowSpy.mockRestore();
+  }
+});
+
+test("resume clears an obsolete background timestamp when a second resume is skipped", async () => {
+  const navigation = await openRoute("/cart");
+  await signIn();
+  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  let now = 250_000;
+  const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
+  let resumeStarted!: () => void;
+  const started = new Promise<void>((resolve) => {
+    resumeStarted = resolve;
+  });
+  let finishResume!: (response: Response) => void;
+  mockMeGate = new Promise<Response>((resolve) => {
+    finishResume = resolve;
+  });
+  mockMeStarted = resumeStarted;
+  try {
+    emitAppState("background");
+    now += RESUME_BACKGROUND_THRESHOLD_MS;
+    await act(async () => emitAppState("active"));
+    await started;
+
+    now += 1_000;
+    emitAppState("background");
+    now += 1_000;
+    emitAppState("active");
+
+    await act(async () => finishResume(Response.json({ data: buyer })));
+    await waitFor(() => expect(focusManager.isFocused()).toBe(true));
+    mockMeGate = null;
+    mockMeStarted = null;
+
+    now += RESUME_BACKGROUND_THRESHOLD_MS;
+    emitAppState("background");
+    now += 1_000;
+    await act(async () => emitAppState("active"));
+
+    expect(navigation.getPathname()).toBe("/cart");
+    expect(mockCalls.filter((path) => path.endsWith("/users/me"))).toHaveLength(
+      1,
+    );
+  } finally {
+    nowSpy.mockRestore();
+  }
+});
+
+test("resume 401 after refresh returns to login with the existing returnTo", async () => {
+  mockStored = "t133-refresh-seed";
+  const navigation = await openRoute("/cart");
+  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  mockMeStatus = "unauthorized";
+  mockRefreshUnauthorized = true;
+  let now = 300_000;
+  const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
+  try {
+    emitAppState("background");
+    now += RESUME_BACKGROUND_THRESHOLD_MS;
+    await act(async () => emitAppState("active"));
+    expect(await screen.findByPlaceholderText("Email")).toBeTruthy();
+    expect(navigation.getPathname()).toBe("/login");
+    expect(navigation.getSearchParams().returnTo).toBe("/cart");
+    expect(mockStored).toBeNull();
+  } finally {
+    nowSpy.mockRestore();
+  }
+});
+
+test("resume ACCOUNT_LOCKED clears the session and preserves returnTo", async () => {
+  mockStored = "t133-refresh-seed";
+  const navigation = await openRoute("/cart");
+  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  mockMeStatus = "account_locked";
+  let now = 400_000;
+  const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
+  try {
+    emitAppState("background");
+    now += RESUME_BACKGROUND_THRESHOLD_MS;
+    await act(async () => emitAppState("active"));
+    expect(await screen.findByPlaceholderText("Email")).toBeTruthy();
+    expect(navigation.getPathname()).toBe("/login");
+    expect(navigation.getSearchParams().returnTo).toBe("/cart");
+    expect(mockStored).toBeNull();
+  } finally {
+    nowSpy.mockRestore();
+  }
+});
+
+test("a non-locking 403 on resume reports an error without ending the session", async () => {
+  mockStored = "t133-refresh-seed";
+  const navigation = await openRoute("/cart");
+  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  mockMeStatus = "forbidden";
+  let now = 500_000;
+  const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
+  try {
+    emitAppState("background");
+    now += RESUME_BACKGROUND_THRESHOLD_MS;
+    await act(async () => emitAppState("active"));
+    expect(
+      await screen.findByText("Không thể kiểm tra phiên. Vui lòng thử lại."),
+    ).toBeTruthy();
+    expect(navigation.getPathname()).toBe("/cart");
+    expect(screen.getByText(/Giỏ hàng.*đang phát triển/i)).toBeTruthy();
+    expect(mockStored).toBe("t133-refresh-rotated");
+  } finally {
+    nowSpy.mockRestore();
+  }
 });
 
 function loadAppConfig(environment: Record<string, string>) {

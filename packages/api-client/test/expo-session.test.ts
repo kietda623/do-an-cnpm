@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ExpoSession } from "../src/auth/expo-session.ts";
+import { ExpoSession, SessionChangedError } from "../src/auth/expo-session.ts";
 import { ApiClientError } from "../src/transport.ts";
 
 describe("native session", () => {
@@ -154,6 +154,83 @@ describe("native session", () => {
     await outcome;
     assert.equal(stored, null);
   });
+  it("does not let an old refresh body overwrite credentials after account switch", async () => {
+    let stored: string | null = null;
+    let owner = "";
+    let releaseRefreshBody!: () => void;
+    let refreshBodyStarted!: () => void;
+    const bodyGate = new Promise<void>((resolve) => {
+      releaseRefreshBody = resolve;
+    });
+    const refreshStarted = new Promise<void>((resolve) => {
+      refreshBodyStarted = resolve;
+    });
+    const session = new ExpoSession({
+      baseUrl: "https://example.test/api/v1",
+      clientPlatform: "ANDROID",
+      secureStore: {
+        getItemAsync: async () => stored,
+        setItemAsync: async (_, value) => {
+          stored = value;
+        },
+        deleteItemAsync: async () => {
+          stored = null;
+        },
+      },
+      fetcher: async (input, init) => {
+        const path = new URL(String(input)).pathname;
+        if (path.endsWith("/auth/login")) {
+          owner = String(JSON.parse(String(init?.body)).email).startsWith("b@")
+            ? "buyer-b"
+            : "buyer-a";
+          return Response.json({
+            data: {
+              accessToken: `access-${owner}`,
+              refreshToken: `refresh-${owner}`,
+              user: { id: owner, roles: ["BUYER"] },
+            },
+          });
+        }
+        if (path.endsWith("/auth/logout"))
+          return new Response(null, { status: 204 });
+        if (path.endsWith("/auth/refresh")) {
+          const response = Response.json({
+            data: {
+              accessToken: `access-${owner}`,
+              refreshToken: `refresh-${owner}`,
+              user: { id: owner, roles: ["BUYER"] },
+            },
+          });
+          const parse = response.json.bind(response);
+          response.json = async () => {
+            refreshBodyStarted();
+            await bodyGate;
+            return parse();
+          };
+          return response;
+        }
+        if (path.endsWith("/users/me"))
+          return Response.json(
+            { error: { code: "UNAUTHORIZED" } },
+            { status: 401 },
+          );
+        return Response.json({ data: [] });
+      },
+    });
+
+    await session.login("a@example.test", "fixture-password");
+    const oldRequest = session.api.request("/users/me");
+    const oldRequestFailure = assert.rejects(oldRequest, SessionChangedError);
+    await refreshStarted;
+
+    await session.logout();
+    await session.login("b@example.test", "fixture-password");
+    assert.equal(stored, "refresh-buyer-b");
+
+    releaseRefreshBody();
+    await oldRequestFailure;
+    assert.equal(stored, "refresh-buyer-b");
+  });
   function setup(status: number | "network" | "timeout") {
     let refresh: string | null = "refresh-secret";
     let cleared = 0;
@@ -270,6 +347,234 @@ describe("native session", () => {
     assert.equal(requests[1]?.body.refreshToken, "first-refresh");
     assert.equal(requests[2]?.body.refreshToken, "rotated-refresh");
     assert.equal(requests[0]?.body.clientPlatform, "IOS");
+  });
+  it("resumes through /users/me and shares one refresh with concurrent business requests", async () => {
+    let stored: string | null = null;
+    let serial = 0;
+    let expired = false;
+    let refreshCalls = 0;
+    const user = { id: "buyer-a", roles: ["BUYER"] };
+    const session = new ExpoSession({
+      baseUrl: "https://example.test/api/v1",
+      clientPlatform: "ANDROID",
+      secureStore: {
+        getItemAsync: async () => stored,
+        setItemAsync: async (_, value) => {
+          stored = value;
+        },
+        deleteItemAsync: async () => {
+          stored = null;
+        },
+      },
+      fetcher: async (input) => {
+        const path = new URL(String(input)).pathname;
+        if (path.endsWith("/auth/login") || path.endsWith("/auth/refresh")) {
+          if (path.endsWith("/auth/refresh")) {
+            refreshCalls++;
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            expired = false;
+          }
+          serial++;
+          return Response.json({
+            data: {
+              accessToken: `access-${serial}`,
+              refreshToken: `refresh-${serial}`,
+              user,
+            },
+          });
+        }
+        if (
+          (path.endsWith("/users/me") || path.endsWith("/products")) &&
+          expired
+        )
+          return Response.json(
+            { error: { code: "INVALID_ACCESS_TOKEN" } },
+            { status: 401 },
+          );
+        return Response.json({ data: path.endsWith("/users/me") ? user : [] });
+      },
+    });
+
+    await session.login("buyer@example.test", "fixture-password");
+    expired = true;
+    const [resumed] = await Promise.all([
+      session.resume(),
+      session.api.request("/products"),
+    ]);
+
+    assert.deepEqual(resumed, user);
+    assert.equal(refreshCalls, 1);
+    assert.equal(stored, "refresh-2");
+  });
+  for (const [code, shouldClear] of [
+    ["ACCOUNT_LOCKED", true],
+    ["FORBIDDEN", false],
+  ] as const)
+    it(`resume ${code} ${shouldClear ? "clears" : "keeps"} the session`, async () => {
+      let stored: string | null = null;
+      let invalidations = 0;
+      const session = new ExpoSession({
+        baseUrl: "https://example.test/api/v1",
+        clientPlatform: "ANDROID",
+        secureStore: {
+          getItemAsync: async () => stored,
+          setItemAsync: async (_, value) => {
+            stored = value;
+          },
+          deleteItemAsync: async () => {
+            stored = null;
+          },
+        },
+        fetcher: async (input) =>
+          new URL(String(input)).pathname.endsWith("/auth/login")
+            ? Response.json({
+                data: {
+                  accessToken: "access-1",
+                  refreshToken: "refresh-1",
+                  user: { id: "buyer-a", roles: ["BUYER"] },
+                },
+              })
+            : Response.json(
+                { error: { code, message: "Forbidden" } },
+                { status: 403 },
+              ),
+        onSessionInvalid: () => {
+          invalidations++;
+        },
+      });
+      await session.login("buyer@example.test", "fixture-password");
+
+      await assert.rejects(
+        session.resume(),
+        (error) => error instanceof ApiClientError && error.status === 403,
+      );
+
+      assert.equal(stored, shouldClear ? null : "refresh-1");
+      assert.equal(invalidations, shouldClear ? 1 : 0);
+    });
+  it("does not return an old generation response after logout and another login", async () => {
+    let stored: string | null = null;
+    let owner = "buyer-a";
+    let bodyStarted!: () => void;
+    let controller!: ReadableStreamDefaultController<Uint8Array>;
+    const parsed = new Promise<void>((resolve) => {
+      bodyStarted = resolve;
+    });
+    const session = new ExpoSession({
+      baseUrl: "https://example.test/api/v1",
+      clientPlatform: "ANDROID",
+      secureStore: {
+        getItemAsync: async () => stored,
+        setItemAsync: async (_, value) => {
+          stored = value;
+        },
+        deleteItemAsync: async () => {
+          stored = null;
+        },
+      },
+      fetcher: async (input, init) => {
+        const path = new URL(String(input)).pathname;
+        if (path.endsWith("/auth/login")) {
+          owner = String(JSON.parse(String(init?.body)).email).startsWith("b@")
+            ? "buyer-b"
+            : "buyer-a";
+          return Response.json({
+            data: {
+              accessToken: `access-${owner}`,
+              refreshToken: `refresh-${owner}`,
+              user: { id: owner, roles: ["BUYER"] },
+            },
+          });
+        }
+        if (path.endsWith("/auth/logout"))
+          return new Response(null, { status: 204 });
+        if (path.endsWith("/products"))
+          return new Response(
+            new ReadableStream<Uint8Array>({
+              start(streamController) {
+                controller = streamController;
+              },
+              pull() {
+                bodyStarted();
+                return new Promise<void>(() => {});
+              },
+            }),
+            { headers: { "Content-Type": "application/json" } },
+          );
+        return Response.json({ data: [] });
+      },
+    });
+    await session.login("a@example.test", "fixture-password");
+    const oldRequest = session.api.request("/products");
+    await parsed;
+
+    await session.logout();
+    await session.login("b@example.test", "fixture-password");
+    controller.enqueue(
+      new TextEncoder().encode('{"data":["buyer-a private result"]}'),
+    );
+    controller.close();
+
+    await assert.rejects(oldRequest, /session changed/i);
+    assert.equal(stored, "refresh-buyer-b");
+  });
+  it("classifies a late fetch response as stale after logout and account switch", async () => {
+    let stored: string | null = null;
+    let resolveProducts!: (response: Response) => void;
+    let requestStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      requestStarted = resolve;
+    });
+    const pendingResponse = new Promise<Response>((resolve) => {
+      resolveProducts = resolve;
+    });
+    const session = new ExpoSession({
+      baseUrl: "https://example.test/api/v1",
+      clientPlatform: "ANDROID",
+      secureStore: {
+        getItemAsync: async () => stored,
+        setItemAsync: async (_, value) => {
+          stored = value;
+        },
+        deleteItemAsync: async () => {
+          stored = null;
+        },
+      },
+      fetcher: async (input, init) => {
+        const path = new URL(String(input)).pathname;
+        if (path.endsWith("/auth/login")) {
+          const email = JSON.parse(String(init?.body)).email as string;
+          return Response.json({
+            data: {
+              accessToken: `access-${email}`,
+              refreshToken: `refresh-${email}`,
+              user: { id: email, roles: ["BUYER"] },
+            },
+          });
+        }
+        if (path.endsWith("/auth/logout"))
+          return new Response(null, { status: 204 });
+        if (path.endsWith("/products")) {
+          requestStarted();
+          return pendingResponse;
+        }
+        return Response.json({ data: [] });
+      },
+    });
+    await session.login("buyer@example.test", "fixture-password");
+    const oldRequest = session.api.request("/products");
+    const staleRejection = assert.rejects(
+      oldRequest,
+      (error) => error instanceof SessionChangedError,
+    );
+    await started;
+
+    await session.logout();
+    await session.login("other@example.test", "fixture-password");
+    resolveProducts(Response.json({ data: ["old account result"] }));
+
+    await staleRejection;
+    assert.equal(stored, "refresh-other@example.test");
   });
   for (const deletionFails of [false, true])
     it(`does not retry logout or clear twice after refresh invalidates the session (deletion fails: ${deletionFails})`, async () => {

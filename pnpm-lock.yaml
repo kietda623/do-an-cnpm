@@ -403,6 +403,9 @@ importers:
       '@marketplace/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@tanstack/react-query':
+        specifier: 5.104.5
+        version: 5.104.5(@types/react@19.2.18)(react@19.2.3)
       expo:
         specifier: 57.0.30
         version: 57.0.30(6fad4352094253a7997c5c038a93af0d)
