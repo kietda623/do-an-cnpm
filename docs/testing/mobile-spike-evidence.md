@@ -144,3 +144,33 @@ Windows 11 Home Single Language build 26200; Node `v24.21.0`; pnpm `12.14.0`; Ex
 - Khi `APP_VARIANT` bị bỏ trống, giá trị mặc định `development` cùng `EXPO_ALLOW_HTTP=1` đã khiến config chấp nhận API HTTP và bật cleartext Android. Red test xác nhận config không ném lỗi. Sửa để bắt buộc variant tường minh là `development` hoặc `production`; dev HTTP vẫn cần cờ allow hiện có, production vẫn yêu cầu HTTPS.
 - Red trước sửa: hai regression test mới fail đúng như trên và smoke test provider nhận `replace("/login")` thay vì object có safe return path. Green sau sửa: lệnh `corepack pnpm --filter @marketplace/mobile exec jest --runInBand test/navigation.spec.tsx test/session-provider.smoke.spec.tsx --testNamePattern 'refresh 401 preserves|omitted app variant|returns to login instead'` pass 3 test / 2 suites.
 - Docstring Coverage của CodeRabbit phát cảnh báo chung (0% trên các hàm thay đổi). Không có cấu hình CodeRabbit trong repo hoặc quy ước docstring cho các helper UI đơn giản; cảnh báo không chỉ ra lỗi chức năng cụ thể nên không thêm docstring hình thức. Native release/HTTPS còn chưa xác minh như đã ghi ở phần giới hạn và T139.
+
+## T134 evidence — 2026-10-30
+
+Phạm vi Android: quản lý resume và cache phiên hiện có. Thêm `@tanstack/react-query` 5.104.5; cache chỉ ở RAM; không thêm persister hoặc storage adapter. `apps/mobile/src/app/_layout.tsx` chỉ thêm `QueryClientProvider`, giữ nguyên route, guard, redirect và thứ tự tương đối của `SafeAreaProvider`/`SessionProvider`. Không chuyển màn hiện tại sang query hooks; không sửa backend, iOS hoặc Desktop.
+
+### Red / green
+
+- Red từ test-first: api-client chưa có `ExpoSession.resume()`; response của generation cũ còn có thể resolve; mobile chưa đăng ký AppState; query đang bay chưa bị cancel khi logout; QueryClient/retry policy chưa tồn tại. Các test mới ban đầu fail ở đúng các hành vi này.
+- Red bổ sung: request cũ trả response sau logout ném `Error` thường thay vì `SessionChangedError`; retry-policy test cũng cho thấy lỗi `Error` bất kỳ bị retry như lỗi mạng. Sau sửa, lỗi request thuộc generation cũ và lỗi nghiệp vụ/storage không retry; chỉ lỗi mạng `TypeError` và HTTP 5xx được retry tối đa hai lần.
+- Green: các test bao phủ resume dưới ngưỡng và đúng ngưỡng 30 giây; resume hoàn tất trước khi bật focus; `/users/me` 401 và `403 ACCOUNT_LOCKED` vô hiệu phiên/cache, 403 khác giữ phiên; resume cùng request nghiệp vụ 401 dùng một refresh; logout hủy query, xóa cache và response cũ không vào cache sau khi đổi tài khoản; mutation không retry; mã nguồn/dependencies không dùng persister, AsyncStorage, MMKV hoặc SecureStore làm cache.
+
+### Lệnh và kết quả thực tế
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `corepack pnpm --filter @marketplace/api-client test` | Pass 103/103. |
+| `corepack pnpm --filter @marketplace/mobile exec jest --runInBand --no-cache` | Pass cold: 6 suites, 46 pass, 13 todo, 0 fail. Bao gồm `navigation.spec.tsx`, `session-provider.smoke.spec.tsx`, `login-discovery.smoke.spec.tsx`, `buyer-journeys.spec.tsx`, query retry và no-persister checks. |
+| `corepack pnpm lint:workspaces` | Pass 11/11 workspace tasks; một số task dùng Turbo cache. Lần đầu dừng vì `@eslint/js` link rỗng trong node_modules sau cài offline; `corepack pnpm install --frozen-lockfile` đồng bộ lại dependencies, lint chạy lại pass. |
+| `corepack pnpm typecheck` | Pass 11/11 workspace tasks; một số task dùng Turbo cache, mobile và api-client chạy mới. |
+| `corepack pnpm test` | Pass 3/3 tasks có test. API 59 pass từ Turbo cache; api-client 103 pass và Mobile 46 pass + 13 todo chạy mới. |
+| `corepack pnpm build` | Pass 4/4 build targets; API dùng Turbo cache, Admin/Storefront/Seller Center build mới. Workspace chưa có native Mobile build target; đây không phải APK/device evidence. |
+| `corepack pnpm exec prettier --check` trên các file TS/TSX thay đổi và `git diff --check` | Pass sau khi format có giới hạn đúng các file thay đổi. Không chạy format hàng loạt. |
+
+### Android resume trên thiết bị
+
+- Môi trường: Windows 11, Node 24.21.0, pnpm 12.14.0, Expo SDK 57.0.30; AVD `Marketplace_API_36` (profile Pixel 6, Android 16/API 36, `sdk_gphone64_x86_64`).
+- Đối chiếu backend hiện có: tài khoản bị khóa làm `GET /users/me` trả `401 INVALID_ACCESS_TOKEN`; thao tác khóa thu hồi session nên refresh sau đó trả `401 SESSION_REVOKED`. Route hiện không trả `403 ACCOUNT_LOCKED`; client vẫn xử lý mã này phòng trường hợp contract/backend bổ sung sau.
+- Dựng PostgreSQL 18 riêng trên loopback port 55439, tạo database `mobile_t134_disposable`, áp dụng đủ 8 migration và seed user thử nghiệm; API local port 4000 trả health 200. Không thay backend. API và PostgreSQL đã được dừng sau lần thử.
+- Đã thử khởi động AVD bằng `emulator -avd Marketplace_API_36 -no-snapshot-load -no-boot-anim` và chờ qua `adb wait-for-device`. Lần đầu ADB báo boot complete nhưng tiến trình emulator không giữ được sau lệnh; lần tiếp theo ADB chuyển `offline`/`device offline` và shell đóng kết nối. Đã dừng AVD bằng `adb emu kill`.
+- Chưa mở Expo Go, chưa đăng nhập trên thiết bị, chưa thực hiện HOME → chờ quá ngưỡng → mở lại. Vì vậy **chưa chạy thiết bị** cho resume T134; không ghi pass cho hành trình này. T134 vẫn mở trong `tasks.md` cho tới khi có Android device evidence.
