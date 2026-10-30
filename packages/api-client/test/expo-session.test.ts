@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ExpoSession } from "../src/auth/expo-session.ts";
+import { ExpoSession, SessionChangedError } from "../src/auth/expo-session.ts";
 import { ApiClientError } from "../src/transport.ts";
 
 describe("native session", () => {
@@ -440,6 +440,64 @@ describe("native session", () => {
 
     await assert.rejects(oldRequest, /session changed/i);
     assert.equal(stored, "refresh-buyer-b");
+  });
+  it("classifies a late fetch response as stale after logout and account switch", async () => {
+    let stored: string | null = null;
+    let resolveProducts!: (response: Response) => void;
+    let requestStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      requestStarted = resolve;
+    });
+    const pendingResponse = new Promise<Response>((resolve) => {
+      resolveProducts = resolve;
+    });
+    const session = new ExpoSession({
+      baseUrl: "https://example.test/api/v1",
+      clientPlatform: "ANDROID",
+      secureStore: {
+        getItemAsync: async () => stored,
+        setItemAsync: async (_, value) => {
+          stored = value;
+        },
+        deleteItemAsync: async () => {
+          stored = null;
+        },
+      },
+      fetcher: async (input, init) => {
+        const path = new URL(String(input)).pathname;
+        if (path.endsWith("/auth/login")) {
+          const email = JSON.parse(String(init?.body)).email as string;
+          return Response.json({
+            data: {
+              accessToken: `access-${email}`,
+              refreshToken: `refresh-${email}`,
+              user: { id: email, roles: ["BUYER"] },
+            },
+          });
+        }
+        if (path.endsWith("/auth/logout"))
+          return new Response(null, { status: 204 });
+        if (path.endsWith("/products")) {
+          requestStarted();
+          return pendingResponse;
+        }
+        return Response.json({ data: [] });
+      },
+    });
+    await session.login("buyer@example.test", "fixture-password");
+    const oldRequest = session.api.request("/products");
+    const staleRejection = assert.rejects(
+      oldRequest,
+      (error) => error instanceof SessionChangedError,
+    );
+    await started;
+
+    await session.logout();
+    await session.login("other@example.test", "fixture-password");
+    resolveProducts(Response.json({ data: ["old account result"] }));
+
+    await staleRejection;
+    assert.equal(stored, "refresh-other@example.test");
   });
   for (const deletionFails of [false, true])
     it(`does not retry logout or clear twice after refresh invalidates the session (deletion fails: ${deletionFails})`, async () => {
