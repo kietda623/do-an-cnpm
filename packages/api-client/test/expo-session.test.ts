@@ -271,6 +271,170 @@ describe("native session", () => {
     assert.equal(requests[2]?.body.refreshToken, "rotated-refresh");
     assert.equal(requests[0]?.body.clientPlatform, "IOS");
   });
+  it("resumes through /users/me and shares one refresh with concurrent business requests", async () => {
+    let stored: string | null = null;
+    let serial = 0;
+    let expired = false;
+    let refreshCalls = 0;
+    const user = { id: "buyer-a", roles: ["BUYER"] };
+    const session = new ExpoSession({
+      baseUrl: "https://example.test/api/v1",
+      clientPlatform: "ANDROID",
+      secureStore: {
+        getItemAsync: async () => stored,
+        setItemAsync: async (_, value) => {
+          stored = value;
+        },
+        deleteItemAsync: async () => {
+          stored = null;
+        },
+      },
+      fetcher: async (input) => {
+        const path = new URL(String(input)).pathname;
+        if (path.endsWith("/auth/login") || path.endsWith("/auth/refresh")) {
+          if (path.endsWith("/auth/refresh")) {
+            refreshCalls++;
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            expired = false;
+          }
+          serial++;
+          return Response.json({
+            data: {
+              accessToken: `access-${serial}`,
+              refreshToken: `refresh-${serial}`,
+              user,
+            },
+          });
+        }
+        if ((path.endsWith("/users/me") || path.endsWith("/products")) && expired)
+          return Response.json({ error: { code: "INVALID_ACCESS_TOKEN" } }, { status: 401 });
+        return Response.json({ data: path.endsWith("/users/me") ? user : [] });
+      },
+    });
+
+    await session.login("buyer@example.test", "fixture-password");
+    expired = true;
+    const [resumed] = await Promise.all([
+      session.resume(),
+      session.api.request("/products"),
+    ]);
+
+    assert.deepEqual(resumed, user);
+    assert.equal(refreshCalls, 1);
+    assert.equal(stored, "refresh-2");
+  });
+  for (const [code, shouldClear] of [
+    ["ACCOUNT_LOCKED", true],
+    ["FORBIDDEN", false],
+  ] as const)
+    it(`resume ${code} ${shouldClear ? "clears" : "keeps"} the session`, async () => {
+      let stored: string | null = null;
+      let invalidations = 0;
+      const session = new ExpoSession({
+        baseUrl: "https://example.test/api/v1",
+        clientPlatform: "ANDROID",
+        secureStore: {
+          getItemAsync: async () => stored,
+          setItemAsync: async (_, value) => {
+            stored = value;
+          },
+          deleteItemAsync: async () => {
+            stored = null;
+          },
+        },
+        fetcher: async (input) =>
+          new URL(String(input)).pathname.endsWith("/auth/login")
+            ? Response.json({
+                data: {
+                  accessToken: "access-1",
+                  refreshToken: "refresh-1",
+                  user: { id: "buyer-a", roles: ["BUYER"] },
+                },
+              })
+            : Response.json(
+                { error: { code, message: "Forbidden" } },
+                { status: 403 },
+              ),
+        onSessionInvalid: () => {
+          invalidations++;
+        },
+      });
+      await session.login("buyer@example.test", "fixture-password");
+
+      await assert.rejects(session.resume(), (error) =>
+        error instanceof ApiClientError && error.status === 403,
+      );
+
+      assert.equal(stored, shouldClear ? null : "refresh-1");
+      assert.equal(invalidations, shouldClear ? 1 : 0);
+    });
+  it("does not return an old generation response after logout and another login", async () => {
+    let stored: string | null = null;
+    let owner = "buyer-a";
+    let releaseBody!: () => void;
+    let bodyStarted!: () => void;
+    let controller!: ReadableStreamDefaultController<Uint8Array>;
+    const parsed = new Promise<void>((resolve) => {
+      bodyStarted = resolve;
+    });
+    const session = new ExpoSession({
+      baseUrl: "https://example.test/api/v1",
+      clientPlatform: "ANDROID",
+      secureStore: {
+        getItemAsync: async () => stored,
+        setItemAsync: async (_, value) => {
+          stored = value;
+        },
+        deleteItemAsync: async () => {
+          stored = null;
+        },
+      },
+      fetcher: async (input, init) => {
+        const path = new URL(String(input)).pathname;
+        if (path.endsWith("/auth/login")) {
+          owner = String(JSON.parse(String(init?.body)).email).startsWith("b@")
+            ? "buyer-b"
+            : "buyer-a";
+          return Response.json({
+            data: {
+              accessToken: `access-${owner}`,
+              refreshToken: `refresh-${owner}`,
+              user: { id: owner, roles: ["BUYER"] },
+            },
+          });
+        }
+        if (path.endsWith("/auth/logout")) return new Response(null, { status: 204 });
+        if (path.endsWith("/products"))
+          return new Response(
+            new ReadableStream<Uint8Array>({
+              start(streamController) {
+                controller = streamController;
+              },
+              pull() {
+                bodyStarted();
+                return new Promise<void>(() => {});
+              },
+            }),
+            { headers: { "Content-Type": "application/json" } },
+          );
+        return Response.json({ data: [] });
+      },
+    });
+    await session.login("a@example.test", "fixture-password");
+    const oldRequest = session.api.request("/products");
+    await parsed;
+
+    await session.logout();
+    await session.login("b@example.test", "fixture-password");
+    releaseBody = () => {
+      controller.enqueue(new TextEncoder().encode('{"data":["buyer-a private result"]}'));
+      controller.close();
+    };
+    releaseBody();
+
+    await assert.rejects(oldRequest, /session changed/i);
+    assert.equal(stored, "refresh-buyer-b");
+  });
   for (const deletionFails of [false, true])
     it(`does not retry logout or clear twice after refresh invalidates the session (deletion fails: ${deletionFails})`, async () => {
       let stored: string | null = "r0";

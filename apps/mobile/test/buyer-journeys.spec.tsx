@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Text, Platform } from "react-native";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import Home from "../src/app/(public)/index";
@@ -15,6 +16,11 @@ let mockRefreshFailure: "network" | 401 | undefined;
 let mockLogoutFails = false;
 let mockErrorCode = "SESSION_REVOKED";
 let mockNavigate: (path: string) => void;
+let mockQueryClient: QueryClient;
+let mockSessionApi: { request<T>(path: never, init?: RequestInit): Promise<T> };
+let mockOrdersGate: Promise<Response> | null = null;
+let mockOrdersStarted: (() => void) | null = null;
+let mockOrdersSignal: AbortSignal | null = null;
 const mockWrites: string[] = [];
 const mockCalls: string[] = [];
 const mockRouter = {
@@ -59,11 +65,24 @@ function Screens() {
   );
 }
 function Journey() {
-  return (
-    <SessionProvider>
-      <Screens />
-    </SessionProvider>
+  const [queryClient] = useState(
+    () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
   );
+  mockQueryClient = queryClient;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SessionProvider>
+        <CacheBinding />
+        <Screens />
+      </SessionProvider>
+    </QueryClientProvider>
+  );
+}
+function CacheBinding() {
+  useQueryClient();
+  const { api } = useSession();
+  mockSessionApi = api as typeof mockSessionApi;
+  return null;
 }
 const originalFetch = globalThis.fetch;
 beforeEach(() => {
@@ -76,6 +95,9 @@ beforeEach(() => {
   mockErrorCode = "SESSION_REVOKED";
   mockWrites.length = 0;
   mockCalls.length = 0;
+  mockOrdersGate = null;
+  mockOrdersStarted = null;
+  mockOrdersSignal = null;
   globalThis.fetch = jest.fn(async (input, init) => {
     const path = new URL(String(input)).pathname;
     mockCalls.push(path);
@@ -114,12 +136,23 @@ beforeEach(() => {
       return Response.json({
         data: [{ id: mockAccount, name: `Public product ${mockAccount}` }],
       });
+    if (path.endsWith("/orders")) {
+      mockOrdersSignal = init?.signal ?? null;
+      if (mockOrdersGate) {
+        mockOrdersStarted?.();
+        return mockOrdersGate;
+      }
+      return Response.json({ data: [] });
+    }
     throw new Error(`Unexpected fixture endpoint ${path}`);
   });
 });
 afterAll(() => {
   globalThis.fetch = originalFetch;
   jest.restoreAllMocks();
+});
+afterEach(() => {
+  mockQueryClient?.clear();
 });
 
 async function submitLogin(email = "first@example.test") {
@@ -232,6 +265,59 @@ test("B01/B02: account change does not retain previous user or product component
   expect(screen.getByText("Session: buyer-b")).toBeTruthy();
   expect(screen.queryByText("Session: buyer-a")).toBeNull();
   expect(screen.queryByText("Public product buyer-a")).toBeNull();
+});
+
+test("logout cancels and clears cache; an old query cannot populate it after another login", async () => {
+  render(<Journey />);
+  await screen.findByText("Public product buyer-a");
+  fireEvent.press(screen.getByRole("button", { name: /Đăng nhập/i }));
+  await submitLogin();
+  const key = ["private-orders", "buyer-a"] as const;
+  mockQueryClient.setQueryData(key, { owner: "buyer-a" });
+
+  let started!: () => void;
+  const requestStarted = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  let finishRequest!: (response: Response) => void;
+  mockOrdersGate = new Promise<Response>((resolve) => {
+    finishRequest = resolve;
+  });
+  mockOrdersStarted = started;
+  const pending = mockQueryClient.fetchQuery({
+    queryKey: [...key, "in-flight"],
+    queryFn: ({ signal }) =>
+      mockSessionApi.request("/orders" as never, { signal }),
+  });
+  const outcome = pending.then(
+    (value) => ({ succeeded: true as const, value }),
+    (error) => ({ succeeded: false as const, error }),
+  );
+  try {
+    await requestStarted;
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: /Đăng xuất/i }));
+    });
+    await screen.findByPlaceholderText("Email");
+    expect(mockOrdersSignal?.aborted).toBe(true);
+    expect(mockQueryClient.getQueryData(key)).toBeUndefined();
+
+    await submitLogin("second@example.test");
+    finishRequest(Response.json({ data: [{ owner: "buyer-a" }] }));
+    const result = await outcome;
+
+    expect(result.succeeded).toBe(false);
+    expect(
+      mockQueryClient.getQueryData([...key, "in-flight"]),
+    ).toBeUndefined();
+    expect(mockQueryClient.getQueryCache().getAll()).toHaveLength(0);
+    expect(mockCalls.filter((path) => path.endsWith("/orders"))).toHaveLength(1);
+    expect(screen.getByText("Session: buyer-b")).toBeTruthy();
+  } finally {
+    finishRequest(Response.json({ data: [{ owner: "buyer-a" }] }));
+    await outcome;
+  }
 });
 
 const future = [
