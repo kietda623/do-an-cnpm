@@ -154,18 +154,27 @@ Phạm vi Android: quản lý resume và cache phiên hiện có. Thêm `@tansta
 - Red từ test-first: api-client chưa có `ExpoSession.resume()`; response của generation cũ còn có thể resolve; mobile chưa đăng ký AppState; query đang bay chưa bị cancel khi logout; QueryClient/retry policy chưa tồn tại. Các test mới ban đầu fail ở đúng các hành vi này.
 - Red bổ sung: request cũ trả response sau logout ném `Error` thường thay vì `SessionChangedError`; retry-policy test cũng cho thấy lỗi `Error` bất kỳ bị retry như lỗi mạng. Sau sửa, lỗi request thuộc generation cũ và lỗi nghiệp vụ/storage không retry; chỉ lỗi mạng `TypeError` và HTTP 5xx được retry tối đa hai lần.
 - Green: các test bao phủ resume dưới ngưỡng và đúng ngưỡng 30 giây; resume hoàn tất trước khi bật focus; `/users/me` 401 và `403 ACCOUNT_LOCKED` vô hiệu phiên/cache, 403 khác giữ phiên; resume cùng request nghiệp vụ 401 dùng một refresh; logout hủy query, xóa cache và response cũ không vào cache sau khi đổi tài khoản; mutation không retry; mã nguồn/dependencies không dùng persister, AsyncStorage, MMKV hoặc SecureStore làm cache.
+- Đối chiếu CodeRabbit PR #29 theo test-first: test thiếu `DOMException` global đỏ với `TypeError: Right-hand side of 'instanceof' is not an object`; test AppState đỏ vì resume thứ hai gọi `/users/me` (2 thay vì 1); test đổi tài khoản đỏ vì refresh body của A ghi đè SecureStore của B. Đã sửa retry bằng `Error.name`, xóa timestamp nền khi resume đang chạy, và truyền generation của request đến điểm commit token; cả ba test đều xanh.
 
 ### Lệnh và kết quả thực tế
 
 | Lệnh | Kết quả |
 | --- | --- |
-| `corepack pnpm --filter @marketplace/api-client test` | Pass 103/103. |
-| `corepack pnpm --filter @marketplace/mobile exec jest --runInBand --no-cache` | Pass cold: 6 suites, 46 pass, 13 todo, 0 fail. Bao gồm `navigation.spec.tsx`, `session-provider.smoke.spec.tsx`, `login-discovery.smoke.spec.tsx`, `buyer-journeys.spec.tsx`, query retry và no-persister checks. |
-| `corepack pnpm lint:workspaces` | Pass 11/11 workspace tasks; một số task dùng Turbo cache. Lần đầu dừng vì `@eslint/js` link rỗng trong node_modules sau cài offline; `corepack pnpm install --frozen-lockfile` đồng bộ lại dependencies, lint chạy lại pass. |
-| `corepack pnpm typecheck` | Pass 11/11 workspace tasks; một số task dùng Turbo cache, mobile và api-client chạy mới. |
-| `corepack pnpm test` | Pass 3/3 tasks có test. API 59 pass từ Turbo cache; api-client 103 pass và Mobile 46 pass + 13 todo chạy mới. |
+| `corepack pnpm --filter @marketplace/api-client test` | Pass 104/104 sau đối chiếu CodeRabbit. |
+| `corepack pnpm --filter @marketplace/mobile exec jest --runInBand --no-cache` | Pass cold: 6 suites, 48 pass, 13 todo, 0 fail. Bao gồm các test regression CodeRabbit mới cùng `navigation.spec.tsx`, `session-provider.smoke.spec.tsx`, `login-discovery.smoke.spec.tsx`, `buyer-journeys.spec.tsx`, query retry và no-persister checks. |
+| `corepack pnpm lint:workspaces` | Pass 11/11 workspace tasks; 5 task dùng Turbo cache. |
+| `corepack pnpm typecheck` | Pass 11/11 workspace tasks; 5 task dùng Turbo cache. |
+| `corepack pnpm test` | Pass 3/3 tasks có test. API 59 pass từ Turbo cache; api-client 104 pass và Mobile 48 pass + 13 todo chạy mới. |
 | `corepack pnpm build` | Pass 4/4 build targets; API dùng Turbo cache, Admin/Storefront/Seller Center build mới. Workspace chưa có native Mobile build target; đây không phải APK/device evidence. |
-| `corepack pnpm exec prettier --check` trên các file TS/TSX thay đổi và `git diff --check` | Pass sau khi format có giới hạn đúng các file thay đổi. Không chạy format hàng loạt. |
+| `corepack pnpm exec prettier --check` trên 7 file TS/TSX thay đổi ngoài `transport.ts`; `git diff --check` | Prettier pass 7 file và diff check pass. `transport.ts` vẫn không qua Prettier như ở parent commit; giữ diff nghiệp vụ tối thiểu, không format phần code sẵn có. |
+
+### Đối chiếu nhận xét CodeRabbit — 2026-10-30
+
+- **Sửa:** `DOMException` không được bảo đảm là global trong React Native; retry callback giờ kiểm tra `error instanceof Error && error.name === "AbortError"`. Test buộc global này thành `undefined`, xác nhận lỗi mạng `TypeError` vẫn được retry và AbortError không retry.
+- **Sửa:** active event khi resume đang chạy giờ xóa `backgroundedAt`; test dùng thời gian giả xác nhận một lần quay lại ngắn tiếp theo không kích hoạt `/users/me` thừa.
+- **Sửa cảnh báo kiến trúc đã tái hiện:** refresh của tài khoản A bị giữ ở bước đọc JSON, sau đó đăng xuất và đăng nhập tài khoản B; trước sửa, token A thay refresh token B. `ApiTransport` giờ mang generation của request ban đầu qua refresh và `ExpoSession` chỉ commit token nếu generation đó còn hiện hành. Test mới xác nhận refresh token B vẫn nguyên vẹn.
+- **Bỏ qua nhận xét chưa xác minh:** `userRef.current` được gán trong render được CodeRabbit ghi rõ là “Unverified finding”; không có test/hành vi lỗi tái hiện và không liên quan đến ba lỗi đã xác nhận. Không thay đổi cách đồng bộ ref với AppState handler trong lượt sửa này.
+- Commit test đỏ riêng: `ba74723`; production fix hiện là commit kế tiếp. Không có thay đổi route/provider order, backend, iOS hay Desktop.
 
 ### Android resume trên thiết bị
 
