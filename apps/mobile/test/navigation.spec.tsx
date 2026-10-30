@@ -327,6 +327,51 @@ test("resume revalidates before enabling focus refetch at the threshold", async 
   }
 });
 
+test("resume clears an obsolete background timestamp when a second resume is skipped", async () => {
+  const navigation = await openRoute("/cart");
+  await signIn();
+  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  let now = 250_000;
+  const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
+  let resumeStarted!: () => void;
+  const started = new Promise<void>((resolve) => {
+    resumeStarted = resolve;
+  });
+  let finishResume!: (response: Response) => void;
+  mockMeGate = new Promise<Response>((resolve) => {
+    finishResume = resolve;
+  });
+  mockMeStarted = resumeStarted;
+  try {
+    emitAppState("background");
+    now += RESUME_BACKGROUND_THRESHOLD_MS;
+    await act(async () => emitAppState("active"));
+    await started;
+
+    now += 1_000;
+    emitAppState("background");
+    now += 1_000;
+    emitAppState("active");
+
+    await act(async () => finishResume(Response.json({ data: buyer })));
+    await waitFor(() => expect(focusManager.isFocused()).toBe(true));
+    mockMeGate = null;
+    mockMeStarted = null;
+
+    now += RESUME_BACKGROUND_THRESHOLD_MS;
+    emitAppState("background");
+    now += 1_000;
+    await act(async () => emitAppState("active"));
+
+    expect(navigation.getPathname()).toBe("/cart");
+    expect(mockCalls.filter((path) => path.endsWith("/users/me"))).toHaveLength(
+      1,
+    );
+  } finally {
+    nowSpy.mockRestore();
+  }
+});
+
 test("resume 401 after refresh returns to login with the existing returnTo", async () => {
   mockStored = "t133-refresh-seed";
   const navigation = await openRoute("/cart");

@@ -154,6 +154,83 @@ describe("native session", () => {
     await outcome;
     assert.equal(stored, null);
   });
+  it("does not let an old refresh body overwrite credentials after account switch", async () => {
+    let stored: string | null = null;
+    let owner = "";
+    let releaseRefreshBody!: () => void;
+    let refreshBodyStarted!: () => void;
+    const bodyGate = new Promise<void>((resolve) => {
+      releaseRefreshBody = resolve;
+    });
+    const refreshStarted = new Promise<void>((resolve) => {
+      refreshBodyStarted = resolve;
+    });
+    const session = new ExpoSession({
+      baseUrl: "https://example.test/api/v1",
+      clientPlatform: "ANDROID",
+      secureStore: {
+        getItemAsync: async () => stored,
+        setItemAsync: async (_, value) => {
+          stored = value;
+        },
+        deleteItemAsync: async () => {
+          stored = null;
+        },
+      },
+      fetcher: async (input, init) => {
+        const path = new URL(String(input)).pathname;
+        if (path.endsWith("/auth/login")) {
+          owner = String(JSON.parse(String(init?.body)).email).startsWith("b@")
+            ? "buyer-b"
+            : "buyer-a";
+          return Response.json({
+            data: {
+              accessToken: `access-${owner}`,
+              refreshToken: `refresh-${owner}`,
+              user: { id: owner, roles: ["BUYER"] },
+            },
+          });
+        }
+        if (path.endsWith("/auth/logout"))
+          return new Response(null, { status: 204 });
+        if (path.endsWith("/auth/refresh")) {
+          const response = Response.json({
+            data: {
+              accessToken: `access-${owner}`,
+              refreshToken: `refresh-${owner}`,
+              user: { id: owner, roles: ["BUYER"] },
+            },
+          });
+          const parse = response.json.bind(response);
+          response.json = async () => {
+            refreshBodyStarted();
+            await bodyGate;
+            return parse();
+          };
+          return response;
+        }
+        if (path.endsWith("/users/me"))
+          return Response.json(
+            { error: { code: "UNAUTHORIZED" } },
+            { status: 401 },
+          );
+        return Response.json({ data: [] });
+      },
+    });
+
+    await session.login("a@example.test", "fixture-password");
+    const oldRequest = session.api.request("/users/me");
+    const oldRequestFailure = assert.rejects(oldRequest, SessionChangedError);
+    await refreshStarted;
+
+    await session.logout();
+    await session.login("b@example.test", "fixture-password");
+    assert.equal(stored, "refresh-buyer-b");
+
+    releaseRefreshBody();
+    await oldRequestFailure;
+    assert.equal(stored, "refresh-buyer-b");
+  });
   function setup(status: number | "network" | "timeout") {
     let refresh: string | null = "refresh-secret";
     let cleared = 0;

@@ -3,7 +3,10 @@ import {
   SessionChangedError,
   SessionStorageError,
 } from "@marketplace/api-client/auth/expo-session";
-import { createMobileQueryClient } from "../src/features/api/query-client";
+import {
+  createMobileQueryClient,
+  shouldRetryQuery,
+} from "../src/features/api/query-client";
 
 test("queries do not retry client errors or stale session results", () => {
   const client = createMobileQueryClient();
@@ -41,3 +44,27 @@ test.each([
     client.clear();
   },
 );
+
+test("network retry policy works when the DOMException global is unavailable", () => {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    globalThis,
+    "DOMException",
+  );
+  try {
+    Object.defineProperty(globalThis, "DOMException", {
+      configurable: true,
+      writable: true,
+      value: undefined,
+    });
+    expect(shouldRetryQuery(0, new TypeError("network unavailable"))).toBe(
+      true,
+    );
+    const abortError = new Error("request aborted");
+    abortError.name = "AbortError";
+    expect(shouldRetryQuery(0, abortError)).toBe(false);
+  } finally {
+    if (descriptor)
+      Object.defineProperty(globalThis, "DOMException", descriptor);
+    else Reflect.deleteProperty(globalThis, "DOMException");
+  }
+});
