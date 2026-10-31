@@ -1447,6 +1447,71 @@ test.each([
   },
 );
 
+test("B10 allows a fresh attempt after ATTEMPT_IN_PROGRESS resolves terminally", async () => {
+  const order = makeBuyerOrder({ paymentMethod: "MOCK", version: 11 });
+  const basePayment = makePayment({
+    id: "11111111-2222-4333-8444-555555555560",
+    orderId: order.id,
+    transactionCode: order.orderNumber,
+    status: "PENDING",
+  });
+  const existingAttempt = makePayment({
+    id: "11111111-2222-4333-8444-555555555561",
+    orderId: order.id,
+    transactionCode: "TXN-EXISTING-01",
+    status: "PENDING",
+  });
+  const failedAttempt = { ...existingAttempt, status: "FAILED" as const };
+  const newAttempt = makePayment({
+    id: "11111111-2222-4333-8444-555555555562",
+    orderId: order.id,
+    transactionCode: "TXN-NEW-03",
+    status: "PENDING",
+  });
+  let payments = [basePayment];
+  const attemptCalls: Array<RequestInit | undefined> = [];
+  mockRequest.mockImplementation(async (path, init) => {
+    const route = String(path);
+    if (route === `/orders/${order.id}`) return { ...order, payments };
+    if (route === `/payments?orderId=${order.id}`) return payments;
+    if (route === "/payments/mock-attempts") {
+      attemptCalls.push(init);
+      if (attemptCalls.length === 1) {
+        payments = [existingAttempt];
+        throw new ApiClientError("ATTEMPT_IN_PROGRESS", 409, {
+          error: {
+            code: "ATTEMPT_IN_PROGRESS",
+            message: "A payment attempt is already pending.",
+          },
+        });
+      }
+      payments = [failedAttempt, newAttempt];
+      return newAttempt;
+    }
+    if (route === `/payments/${existingAttempt.id}/mock-result`) {
+      payments = [failedAttempt];
+      return failedAttempt;
+    }
+    throw new Error(`Unexpected request: ${route}`);
+  });
+
+  renderCommerce(<OrderDetailRoute />);
+  fireEvent.press(await screen.findByText("Tạo lần thử thanh toán"));
+  await screen.findByText(
+    "Trạng thái đơn đã thay đổi. Đã tải lại dữ liệu mới nhất.",
+  );
+  fireEvent.press(await screen.findByText("Mô phỏng thất bại"));
+  fireEvent.press(await screen.findByText("Tạo lần thử thanh toán"));
+
+  await waitFor(() => expect(attemptCalls).toHaveLength(2));
+  const firstKey = new Headers(attemptCalls[0]?.headers).get("Idempotency-Key");
+  const secondKey = new Headers(attemptCalls[1]?.headers).get(
+    "Idempotency-Key",
+  );
+  expect(secondKey).not.toBe(firstKey);
+  expect(await screen.findByText(/TXN-NEW-03/)).toBeTruthy();
+});
+
 test.each([
   ["UNPAID", "0", "COD chưa thu"],
   ["PAID", "135000", "COD đã thu"],
