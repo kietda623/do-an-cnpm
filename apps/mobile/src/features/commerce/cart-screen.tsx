@@ -7,11 +7,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ApiClientError,
   type ApiPath,
@@ -49,7 +45,10 @@ const buttonStyle: StyleProp<ViewStyle> = {
 };
 
 function buttonText(disabled = false) {
-  return { color: disabled ? "#57534e" : "#ffffff", fontWeight: "600" as const };
+  return {
+    color: disabled ? "#57534e" : "#ffffff",
+    fontWeight: "600" as const,
+  };
 }
 
 function CartButton({
@@ -97,7 +96,14 @@ function CartLine({
   const attributes = Object.values(item.attributes).join(" / ") || item.sku;
 
   return (
-    <View style={{ gap: 8, borderTopWidth: 1, borderColor: "#e7e5e4", paddingTop: 12 }}>
+    <View
+      style={{
+        gap: 8,
+        borderTopWidth: 1,
+        borderColor: "#e7e5e4",
+        paddingTop: 12,
+      }}
+    >
       <Pressable
         accessibilityRole="checkbox"
         accessibilityLabel={`Chọn ${item.productName}`}
@@ -107,10 +113,14 @@ function CartLine({
         style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
       >
         <Text>{item.selected ? "☑" : "☐"}</Text>
-        <Text style={{ fontSize: 16, fontWeight: "600" }}>{item.productName}</Text>
+        <Text style={{ fontSize: 16, fontWeight: "600" }}>
+          {item.productName}
+        </Text>
       </Pressable>
       <Text style={{ color: "#57534e" }}>{attributes}</Text>
-      <Text style={{ fontWeight: "600" }}>{formatVnd(item.currentUnitPrice)}</Text>
+      <Text style={{ fontWeight: "600" }}>
+        {formatVnd(item.currentUnitPrice)}
+      </Text>
       {!item.purchasable ? (
         <Text accessibilityRole="alert" style={{ color: "#b42318" }}>
           {item.unavailableReason === "INSUFFICIENT_STOCK"
@@ -150,7 +160,9 @@ export function CartScreen() {
   const queryClient = useQueryClient();
   const { api, user } = useSession();
   const userId = user?.id;
-  const queryKey = userId ? cartQueryKey(userId) : (["cart", "signed-out"] as const);
+  const queryKey = userId
+    ? cartQueryKey(userId)
+    : (["cart", "signed-out"] as const);
 
   const cartQuery = useQuery<Cart>({
     queryKey,
@@ -158,7 +170,11 @@ export function CartScreen() {
     queryFn: ({ signal }) => api.request<Cart>("/cart", { signal }),
   });
 
-  const updateItem = useMutation<Cart, Error, { id: string; changes: CartPatch }>({
+  const updateItem = useMutation<
+    Cart,
+    Error,
+    { id: string; changes: CartPatch }
+  >({
     mutationFn: ({ id, changes }) =>
       api.request<Cart>(`/cart/items/${encodeURIComponent(id)}` as ApiPath, {
         method: "PATCH",
@@ -188,7 +204,10 @@ export function CartScreen() {
   if (!userId) {
     return (
       <View style={pageStyle}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Giỏ hàng
         </Text>
         <Text>Vui lòng đăng nhập để xem giỏ hàng.</Text>
@@ -199,7 +218,10 @@ export function CartScreen() {
   if (cartQuery.isPending) {
     return (
       <View style={pageStyle}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Giỏ hàng
         </Text>
         <Text accessibilityRole="progressbar">Đang tải giỏ hàng…</Text>
@@ -210,7 +232,10 @@ export function CartScreen() {
   if (cartQuery.isError || !cartQuery.data) {
     return (
       <View style={pageStyle}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Giỏ hàng
         </Text>
         <Text accessibilityRole="alert">
@@ -231,7 +256,10 @@ export function CartScreen() {
     <ScrollView contentContainerStyle={pageStyle}>
       <View style={{ gap: 8 }}>
         <Text style={{ color: "#57534e" }}>Mua sắm</Text>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Giỏ hàng
         </Text>
         <CartButton
@@ -265,13 +293,17 @@ export function CartScreen() {
         <>
           {groups.map((group) => (
             <View key={group.shopId} style={cardStyle}>
-              <Text style={{ fontSize: 18, fontWeight: "600" }}>{group.shopName}</Text>
+              <Text style={{ fontSize: 18, fontWeight: "600" }}>
+                {group.shopName}
+              </Text>
               {group.items.map((item) => (
                 <CartLine
                   key={item.id}
                   item={item}
                   disabled={pending}
-                  update={(changes) => updateItem.mutate({ id: item.id, changes })}
+                  update={(changes) =>
+                    updateItem.mutate({ id: item.id, changes })
+                  }
                   remove={() => removeItem.mutate(item.id)}
                 />
               ))}
@@ -283,9 +315,13 @@ export function CartScreen() {
 
           <View style={cardStyle}>
             <Text style={{ fontSize: 18, fontWeight: "600" }}>Tạm tính</Text>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <View
+              style={{ flexDirection: "row", justifyContent: "space-between" }}
+            >
               <Text>Tổng đã chọn</Text>
-              <Text style={{ fontWeight: "700" }}>{formatVnd(cart.selectedTotal)}</Text>
+              <Text style={{ fontWeight: "700" }}>
+                {formatVnd(cart.selectedTotal)}
+              </Text>
             </View>
             <CartButton
               label="Tiến hành đặt hàng"

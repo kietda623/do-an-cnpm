@@ -1,10 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ApiClientError,
-  type components,
-} from "@marketplace/api-client";
+import { ApiClientError, type components } from "@marketplace/api-client";
 import { useRouter } from "expo-router";
 import { useSession } from "../auth/session-provider";
 import { formatVnd } from "../catalog/catalog-data";
@@ -61,7 +58,9 @@ function ActionButton({
         disabled ? { backgroundColor: "#e7e5e4" } : undefined,
       ]}
     >
-      <Text style={{ color: disabled ? "#57534e" : "white", fontWeight: "600" }}>
+      <Text
+        style={{ color: disabled ? "#57534e" : "white", fontWeight: "600" }}
+      >
         {label}
       </Text>
     </Pressable>
@@ -70,9 +69,7 @@ function ActionButton({
 
 function apiErrorCode(error: unknown): string | undefined {
   if (!(error instanceof ApiClientError)) return undefined;
-  const payload = error.payload as
-    | { error?: { code?: string } }
-    | undefined;
+  const payload = error.payload as { error?: { code?: string } } | undefined;
   return payload?.error?.code;
 }
 
@@ -116,9 +113,9 @@ export function CheckoutScreen() {
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("COD");
   const [quote, setQuote] = useState<CheckoutQuote | null>(null);
-  const [quoteInputFingerprint, setQuoteInputFingerprint] = useState<string | null>(
-    null,
-  );
+  const [quoteInputFingerprint, setQuoteInputFingerprint] = useState<
+    string | null
+  >(null);
   const [now, setNow] = useState(() => Date.now());
 
   const cartQuery = useQuery<Cart>({
@@ -127,7 +124,9 @@ export function CheckoutScreen() {
     queryFn: ({ signal }) => api.request<Cart>("/cart", { signal }),
   });
   const addressQuery = useQuery<Address[]>({
-    queryKey: userId ? ["addresses", userId] : (["addresses", "signed-out"] as const),
+    queryKey: userId
+      ? ["addresses", userId]
+      : (["addresses", "signed-out"] as const),
     enabled: Boolean(userId),
     queryFn: ({ signal }) =>
       api.request<Address[]>("/users/me/addresses", { signal }),
@@ -176,13 +175,15 @@ export function CheckoutScreen() {
     paymentMethod,
   });
 
-  const quoteMutation = useMutation<CheckoutQuote, Error, CheckoutQuoteRequest>({
-    mutationFn: (request) =>
-      api.request<CheckoutQuote>("/checkout/quotes", {
-        method: "POST",
-        body: JSON.stringify(request),
-      }),
-  });
+  const quoteMutation = useMutation<CheckoutQuote, Error, CheckoutQuoteRequest>(
+    {
+      mutationFn: (request) =>
+        api.request<CheckoutQuote>("/checkout/quotes", {
+          method: "POST",
+          body: JSON.stringify(request),
+        }),
+    },
+  );
 
   const checkoutMutation = useMutation<Order, Error, CheckoutQuote>({
     mutationFn: async (currentQuote) => {
@@ -219,7 +220,10 @@ export function CheckoutScreen() {
         setNow(Date.now());
         return;
       }
-      timeout = setTimeout(checkExpiry, Math.min(remaining, MAX_TIMER_DELAY_MS));
+      timeout = setTimeout(
+        checkExpiry,
+        Math.min(remaining, MAX_TIMER_DELAY_MS),
+      );
     };
     checkExpiry();
     return () => {
@@ -290,7 +294,10 @@ export function CheckoutScreen() {
   if (!userId) {
     return (
       <View style={style.page}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Thanh toán
         </Text>
         <Text>Vui lòng đăng nhập để tiếp tục thanh toán.</Text>
@@ -301,10 +308,15 @@ export function CheckoutScreen() {
   if (isLoading) {
     return (
       <View style={style.page}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Thanh toán
         </Text>
-        <Text accessibilityRole="progressbar">Đang tải thông tin thanh toán…</Text>
+        <Text accessibilityRole="progressbar">
+          Đang tải thông tin thanh toán…
+        </Text>
       </View>
     );
   }
@@ -312,7 +324,10 @@ export function CheckoutScreen() {
   if (readError || !cartQuery.data || !addressQuery.data) {
     return (
       <View style={style.page}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Thanh toán
         </Text>
         <Text accessibilityRole="alert">
@@ -347,7 +362,10 @@ export function CheckoutScreen() {
     <ScrollView contentContainerStyle={style.page}>
       <View style={{ gap: 6 }}>
         <Text style={{ color: "#57534e" }}>Giỏ hàng</Text>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Thanh toán
         </Text>
         <ActionButton
@@ -385,7 +403,9 @@ export function CheckoutScreen() {
       </View>
 
       <View style={style.card}>
-        <Text style={{ fontSize: 18, fontWeight: "600" }}>Sản phẩm đã chọn</Text>
+        <Text style={{ fontSize: 18, fontWeight: "600" }}>
+          Sản phẩm đã chọn
+        </Text>
         {cart.groups.map((group) => {
           const items = group.items.filter((item) => item.selected);
           if (!items.length) return null;
@@ -427,78 +447,83 @@ export function CheckoutScreen() {
         />
       </View>
 
-          {quoteErrorMessage ? (
-            <View style={{ gap: 8 }}>
-              <Text accessibilityRole="alert">{quoteErrorMessage}</Text>
-              <ActionButton label="Thử tạo báo giá lại" onPress={retryQuote} />
-            </View>
-          ) : null}
-          {checkoutErrorMessage ? (
-            <View style={{ gap: 8 }}>
-              <Text accessibilityRole="alert">{checkoutErrorMessage}</Text>
-              {priceChanged ? (
-                <ActionButton
-                  label="Tạo báo giá mới"
-                  onPress={() => void createQuote()}
-                />
-              ) : (
-                <ActionButton
-                  label="Thử đặt hàng lại"
-                  onPress={placeOrder}
-                />
-              )}
-            </View>
-          ) : null}
+      {quoteErrorMessage ? (
+        <View style={{ gap: 8 }}>
+          <Text accessibilityRole="alert">{quoteErrorMessage}</Text>
+          <ActionButton label="Thử tạo báo giá lại" onPress={retryQuote} />
+        </View>
+      ) : null}
+      {checkoutErrorMessage ? (
+        <View style={{ gap: 8 }}>
+          <Text accessibilityRole="alert">{checkoutErrorMessage}</Text>
+          {priceChanged ? (
+            <ActionButton
+              label="Tạo báo giá mới"
+              onPress={() => void createQuote()}
+            />
+          ) : (
+            <ActionButton label="Thử đặt hàng lại" onPress={placeOrder} />
+          )}
+        </View>
+      ) : null}
 
-          {activeQuote ? (
-            <View style={style.card}>
-              <Text style={{ fontSize: 18, fontWeight: "600" }}>
-                Xác nhận đơn hàng
-              </Text>
+      {activeQuote ? (
+        <View style={style.card}>
+          <Text style={{ fontSize: 18, fontWeight: "600" }}>
+            Xác nhận đơn hàng
+          </Text>
+          <Text>
+            Báo giá có hiệu lực đến{" "}
+            {new Date(activeQuote.expiresAt).toLocaleString("vi-VN")}
+          </Text>
+          {quoteExpired ? (
+            <Text accessibilityRole="alert">Báo giá đã hết hạn.</Text>
+          ) : null}
+          {activeQuote.lines.map((line) => (
+            <Text key={line.cartItemId}>
+              {selectedItemNames.get(line.cartItemId) ?? "Sản phẩm"} ×{" "}
+              {line.quantity}: {formatVnd(line.lineTotal)}
+            </Text>
+          ))}
+          {activeQuote.groups.map((group) => (
+            <View key={group.shopId} style={{ gap: 4 }}>
               <Text>
-                Báo giá có hiệu lực đến {new Date(activeQuote.expiresAt).toLocaleString("vi-VN")}
+                {cart.groups.find(
+                  (cartGroup) => cartGroup.shopId === group.shopId,
+                )?.shopName ?? "Cửa hàng"}
               </Text>
-              {quoteExpired ? (
-                <Text accessibilityRole="alert">Báo giá đã hết hạn.</Text>
-              ) : null}
-              {activeQuote.lines.map((line) => (
-                <Text key={line.cartItemId}>
-                  {selectedItemNames.get(line.cartItemId) ?? "Sản phẩm"} × {line.quantity}: {formatVnd(line.lineTotal)}
-                </Text>
-              ))}
-              {activeQuote.groups.map((group) => (
-                <View key={group.shopId} style={{ gap: 4 }}>
-                  <Text>
-                    {cart.groups.find((cartGroup) => cartGroup.shopId === group.shopId)?.shopName ?? "Cửa hàng"}
-                  </Text>
-                  <Text>Tạm tính: {formatVnd(group.subtotal)}</Text>
-                  <Text>Phí giao hàng: {formatVnd(group.shippingFee)}</Text>
-                  <Text>Thành tiền: {formatVnd(group.total)}</Text>
-                </View>
-              ))}
-              {activeQuote.issues.map((issue, index) => (
-                <Text key={`${issue.cartItemId ?? "general"}-${issue.code}-${index}`} accessibilityRole="alert">
-                  {issue.cartItemId ? `${selectedItemNames.get(issue.cartItemId) ?? "Sản phẩm"}: ` : ""}
-                  {issue.message}
-                </Text>
-              ))}
-              <Text style={{ fontSize: 18, fontWeight: "700" }}>
-                Tổng cộng: {formatVnd(activeQuote.total)}
-              </Text>
-              <ActionButton
-                label="Đặt hàng"
-                disabled={!quoteUsable || isBusy || checkoutMutation.isError}
-                onPress={placeOrder}
-              />
+              <Text>Tạm tính: {formatVnd(group.subtotal)}</Text>
+              <Text>Phí giao hàng: {formatVnd(group.shippingFee)}</Text>
+              <Text>Thành tiền: {formatVnd(group.total)}</Text>
             </View>
-          ) : null}
-
+          ))}
+          {activeQuote.issues.map((issue, index) => (
+            <Text
+              key={`${issue.cartItemId ?? "general"}-${issue.code}-${index}`}
+              accessibilityRole="alert"
+            >
+              {issue.cartItemId
+                ? `${selectedItemNames.get(issue.cartItemId) ?? "Sản phẩm"}: `
+                : ""}
+              {issue.message}
+            </Text>
+          ))}
+          <Text style={{ fontSize: 18, fontWeight: "700" }}>
+            Tổng cộng: {formatVnd(activeQuote.total)}
+          </Text>
           <ActionButton
-            label="Tạo báo giá"
-            disabled={!selectedAddress || selectedItemIds.length === 0 || isBusy}
-            onPress={() => void createQuote()}
+            label="Đặt hàng"
+            disabled={!quoteUsable || isBusy || checkoutMutation.isError}
+            onPress={placeOrder}
           />
-      
+        </View>
+      ) : null}
+
+      <ActionButton
+        label="Tạo báo giá"
+        disabled={!selectedAddress || selectedItemIds.length === 0 || isBusy}
+        onPress={() => void createQuote()}
+      />
     </ScrollView>
   );
 }

@@ -1,6 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { ApiClientError, type ApiPath, type components } from "@marketplace/api-client";
+import {
+  ApiClientError,
+  type ApiPath,
+  type components,
+} from "@marketplace/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useSession } from "../auth/session-provider";
@@ -29,7 +33,9 @@ const paymentStatuses = [
 ] as const;
 
 const statusLabels: Record<string, string> = Object.fromEntries(
-  statuses.filter((option) => option.value).map((option) => [option.value, option.label]),
+  statuses
+    .filter((option) => option.value)
+    .map((option) => [option.value, option.label]),
 );
 const paymentStatusLabels: Record<string, string> = Object.fromEntries(
   paymentStatuses
@@ -50,13 +56,19 @@ export function orderListQueryKey(userId: string, filters: OrderFilters) {
   return ["orders", userId, filters] as const;
 }
 
-function dateBound(value: string, endOfDay: boolean): string | undefined | null {
+function dateBound(
+  value: string,
+  endOfDay: boolean,
+): string | undefined | null {
   if (!value) return undefined;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const date = new Date(
     `${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`,
   );
-  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value)
+  if (
+    !Number.isFinite(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== value
+  )
     return null;
   return date.toISOString();
 }
@@ -128,7 +140,9 @@ function ActionButton({
         paddingHorizontal: 16,
       }}
     >
-      <Text style={{ color: disabled ? "#57534e" : "white", fontWeight: "600" }}>
+      <Text
+        style={{ color: disabled ? "#57534e" : "white", fontWeight: "600" }}
+      >
         {label}
       </Text>
     </Pressable>
@@ -143,7 +157,9 @@ export function OrderListScreen() {
   const [paymentStatus, setPaymentStatus] = useState("");
   const [fromInput, setFromInput] = useState("");
   const [toInput, setToInput] = useState("");
-  const [dateFilter, setDateFilter] = useState<{ from?: string; to?: string }>({});
+  const [dateFilter, setDateFilter] = useState<{ from?: string; to?: string }>(
+    {},
+  );
   const [dateError, setDateError] = useState("");
   const [page, setPage] = useState(1);
   const filters: OrderFilters = {
@@ -154,14 +170,17 @@ export function OrderListScreen() {
     pageSize: PAGE_SIZE,
   };
   const queryKey = orderListQueryKey(userId ?? "signed-out", filters);
-  const path = useMemo(() => orderListPath(filters), [
-    filters.status,
-    filters.paymentStatus,
-    filters.from,
-    filters.to,
-    filters.page,
-    filters.pageSize,
-  ]);
+  const path = useMemo(
+    () => orderListPath(filters),
+    [
+      filters.status,
+      filters.paymentStatus,
+      filters.from,
+      filters.to,
+      filters.page,
+      filters.pageSize,
+    ],
+  );
   const ordersQuery = useQuery<OrderSummary[]>({
     queryKey,
     enabled: Boolean(userId),
@@ -192,7 +211,10 @@ export function OrderListScreen() {
   if (!userId) {
     return (
       <View style={{ flex: 1, gap: 16, padding: 20 }}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Đơn hàng
         </Text>
         <Text>Vui lòng đăng nhập để xem đơn hàng.</Text>
@@ -203,7 +225,10 @@ export function OrderListScreen() {
   if (ordersQuery.isPending) {
     return (
       <View style={{ flex: 1, gap: 16, padding: 20 }}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Đơn hàng
         </Text>
         <Text accessibilityRole="progressbar">Đang tải đơn hàng…</Text>
@@ -217,7 +242,10 @@ export function OrderListScreen() {
       ordersQuery.error.status === 403;
     return (
       <View style={{ flex: 1, gap: 16, padding: 20 }}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Đơn hàng
         </Text>
         <Text accessibilityRole="alert">
@@ -225,7 +253,10 @@ export function OrderListScreen() {
             ? "Bạn không có quyền xem đơn hàng."
             : "Không thể tải đơn hàng."}
         </Text>
-        <ActionButton label="Thử lại" onPress={() => void ordersQuery.refetch()} />
+        <ActionButton
+          label="Thử lại"
+          onPress={() => void ordersQuery.refetch()}
+        />
       </View>
     );
   }
@@ -234,7 +265,10 @@ export function OrderListScreen() {
     <ScrollView contentContainerStyle={{ flexGrow: 1, gap: 16, padding: 20 }}>
       <View style={{ gap: 6 }}>
         <Text style={{ color: "#57534e" }}>Tài khoản</Text>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Đơn hàng của tôi
         </Text>
       </View>
@@ -287,7 +321,13 @@ export function OrderListScreen() {
           onChangeText={setFromInput}
           autoCapitalize="none"
           keyboardType="numbers-and-punctuation"
-          style={{ minHeight: 44, borderWidth: 1, borderColor: "#d6d3d1", borderRadius: 8, paddingHorizontal: 12 }}
+          style={{
+            minHeight: 44,
+            borderWidth: 1,
+            borderColor: "#d6d3d1",
+            borderRadius: 8,
+            paddingHorizontal: 12,
+          }}
         />
         <TextInput
           accessibilityLabel="Đến ngày"
@@ -296,14 +336,28 @@ export function OrderListScreen() {
           onChangeText={setToInput}
           autoCapitalize="none"
           keyboardType="numbers-and-punctuation"
-          style={{ minHeight: 44, borderWidth: 1, borderColor: "#d6d3d1", borderRadius: 8, paddingHorizontal: 12 }}
+          style={{
+            minHeight: 44,
+            borderWidth: 1,
+            borderColor: "#d6d3d1",
+            borderRadius: 8,
+            paddingHorizontal: 12,
+          }}
         />
         <ActionButton label="Lọc theo ngày" onPress={applyDates} />
         {dateError ? <Text accessibilityRole="alert">{dateError}</Text> : null}
       </View>
 
       {ordersQuery.data.length === 0 ? (
-        <View style={{ gap: 12, borderWidth: 1, borderColor: "#d6d3d1", borderRadius: 12, padding: 16 }}>
+        <View
+          style={{
+            gap: 12,
+            borderWidth: 1,
+            borderColor: "#d6d3d1",
+            borderRadius: 12,
+            padding: 16,
+          }}
+        >
           <Text>Bạn chưa có đơn hàng nào.</Text>
           <ActionButton
             label="Khám phá sản phẩm"
@@ -318,24 +372,44 @@ export function OrderListScreen() {
               accessibilityRole="button"
               accessibilityLabel={`Đơn hàng ${order.orderNumber}`}
               onPress={() => router.push(`/orders/${order.id}`)}
-              style={{ gap: 8, borderWidth: 1, borderColor: "#d6d3d1", borderRadius: 12, padding: 16 }}
+              style={{
+                gap: 8,
+                borderWidth: 1,
+                borderColor: "#d6d3d1",
+                borderRadius: 12,
+                padding: 16,
+              }}
             >
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
                 <Text style={{ fontWeight: "700" }}>{order.orderNumber}</Text>
                 <Text>{statusLabels[order.status] ?? order.status}</Text>
               </View>
               <Text>
-                {new Date(order.createdAt).toLocaleString("vi-VN")} · {paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}
+                {new Date(order.createdAt).toLocaleString("vi-VN")} ·{" "}
+                {paymentStatusLabels[order.paymentStatus] ??
+                  order.paymentStatus}
               </Text>
-              {order.partiallyCancelled ? (
-                <Text>Đã hủy một phần</Text>
-              ) : null}
+              {order.partiallyCancelled ? <Text>Đã hủy một phần</Text> : null}
               <Text>
-                Tổng đơn: {formatVnd(order.originalTotal)} · Còn phải trả: {formatVnd(order.outstandingAmount)}
+                Tổng đơn: {formatVnd(order.originalTotal)} · Còn phải trả:{" "}
+                {formatVnd(order.outstandingAmount)}
               </Text>
             </Pressable>
           ))}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
             <ActionButton
               label="Trang trước"
               disabled={page <= 1 || ordersQuery.isFetching}
@@ -344,7 +418,9 @@ export function OrderListScreen() {
             <Text accessibilityLabel={`Trang ${page}`}>Trang {page}</Text>
             <ActionButton
               label="Trang sau"
-              disabled={ordersQuery.isFetching || ordersQuery.data.length < PAGE_SIZE}
+              disabled={
+                ordersQuery.isFetching || ordersQuery.data.length < PAGE_SIZE
+              }
               onPress={() => setPage((current) => current + 1)}
             />
           </View>

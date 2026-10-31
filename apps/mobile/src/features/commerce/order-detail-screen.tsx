@@ -10,7 +10,10 @@ import { useRouter } from "expo-router";
 import { useSession } from "../auth/session-provider";
 import { formatVnd } from "../catalog/catalog-data";
 import { OrderActions } from "./order-actions";
-import { orderDetailQueryKey, paymentHistoryQueryKey } from "./order-query-keys";
+import {
+  orderDetailQueryKey,
+  paymentHistoryQueryKey,
+} from "./order-query-keys";
 
 type Order = components["schemas"]["Order"];
 type Payment = components["schemas"]["Payment"];
@@ -47,7 +50,13 @@ function stringField(value: unknown, field: string): string | undefined {
   return typeof fieldValue === "string" ? fieldValue : undefined;
 }
 
-function ActionButton({ label, onPress }: { label: string; onPress: () => void }) {
+function ActionButton({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -67,9 +76,23 @@ function ActionButton({ label, onPress }: { label: string; onPress: () => void }
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <View style={{ gap: 10, borderWidth: 1, borderColor: "#d6d3d1", borderRadius: 12, padding: 16 }}>
+    <View
+      style={{
+        gap: 10,
+        borderWidth: 1,
+        borderColor: "#d6d3d1",
+        borderRadius: 12,
+        padding: 16,
+      }}
+    >
       <Text style={{ fontSize: 18, fontWeight: "700" }}>{title}</Text>
       {children}
     </View>
@@ -78,21 +101,38 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function TrackingTimeline({ sellerOrder }: { sellerOrder: SellerOrder }) {
   const shipment = sellerOrder.shipment;
-  if (!shipment) return <Text>Theo dõi vận chuyển sẽ xuất hiện khi shop bàn giao hàng.</Text>;
+  if (!shipment)
+    return (
+      <Text>Theo dõi vận chuyển sẽ xuất hiện khi shop bàn giao hàng.</Text>
+    );
 
   return (
     <View style={{ gap: 8 }}>
       <Text>Mã vận đơn: {shipment.trackingCode}</Text>
-      <Text>Trạng thái: {shipmentStatusLabels[shipment.status] ?? shipment.status}</Text>
+      <Text>
+        Trạng thái: {shipmentStatusLabels[shipment.status] ?? shipment.status}
+      </Text>
       {shipment.history.map((event, index) => {
-        const status = stringField(event, "toStatus") ?? stringField(event, "event") ?? "Cập nhật";
+        const status =
+          stringField(event, "toStatus") ??
+          stringField(event, "event") ??
+          "Cập nhật";
         const createdAt = stringField(event, "createdAt");
         const reason = stringField(event, "reason");
         const id = stringField(event, "id") ?? `${status}-${index}`;
         return (
-          <View key={id} style={{ borderLeftWidth: 2, borderColor: "#a8a29e", paddingLeft: 10 }}>
+          <View
+            key={id}
+            style={{
+              borderLeftWidth: 2,
+              borderColor: "#a8a29e",
+              paddingLeft: 10,
+            }}
+          >
             <Text>{shipmentStatusLabels[status] ?? status}</Text>
-            {createdAt ? <Text>{new Date(createdAt).toLocaleString("vi-VN")}</Text> : null}
+            {createdAt ? (
+              <Text>{new Date(createdAt).toLocaleString("vi-VN")}</Text>
+            ) : null}
             {reason ? <Text>{reason}</Text> : null}
           </View>
         );
@@ -104,37 +144,67 @@ function TrackingTimeline({ sellerOrder }: { sellerOrder: SellerOrder }) {
 function OrderItemRow({ item }: { item: OrderItem }) {
   const attributes = Object.values(item.attributes).join(" / ") || item.sku;
   return (
-    <View style={{ gap: 4, borderTopWidth: 1, borderColor: "#e7e5e4", paddingTop: 10 }}>
+    <View
+      style={{
+        gap: 4,
+        borderTopWidth: 1,
+        borderColor: "#e7e5e4",
+        paddingTop: 10,
+      }}
+    >
       <Text style={{ fontWeight: "600" }}>
         {item.productName} × {item.quantity} · {formatVnd(item.unitPrice)}
       </Text>
       <Text style={{ color: "#57534e" }}>{attributes}</Text>
       <Text>Thành tiền: {formatVnd(item.lineTotal)}</Text>
       {item.review ? (
-        <Text>Đánh giá hiện có: {item.review.rating}/5 · {item.review.comment}</Text>
+        <Text>
+          Đánh giá hiện có: {item.review.rating}/5 · {item.review.comment}
+        </Text>
       ) : null}
     </View>
   );
 }
 
-function PaymentHistory({ payments, order }: { payments: Payment[]; order: Order }) {
+function PaymentHistory({
+  payments,
+  order,
+}: {
+  payments: Payment[];
+  order: Order;
+}) {
   if (!payments.length) return <Text>Chưa có giao dịch thanh toán.</Text>;
   return (
     <View style={{ gap: 12 }}>
       {payments.map((payment) => (
-        <View key={payment.id} style={{ gap: 5, borderTopWidth: 1, borderColor: "#e7e5e4", paddingTop: 10 }}>
+        <View
+          key={payment.id}
+          style={{
+            gap: 5,
+            borderTopWidth: 1,
+            borderColor: "#e7e5e4",
+            paddingTop: 10,
+          }}
+        >
           <Text style={{ fontWeight: "600" }}>
-            {payment.transactionCode} · {paymentStatusLabels[payment.status] ?? payment.status} · {formatVnd(payment.amount)}
+            {payment.transactionCode} ·{" "}
+            {paymentStatusLabels[payment.status] ?? payment.status} ·{" "}
+            {formatVnd(payment.amount)}
           </Text>
           {payment.settlementKind === "LATE_COMPENSATION" ? (
             <Text>Bù trừ thanh toán muộn</Text>
           ) : null}
-          {payment.originalAttemptId ? <Text>Giao dịch gốc: {payment.originalAttemptId}</Text> : null}
+          {payment.originalAttemptId ? (
+            <Text>Giao dịch gốc: {payment.originalAttemptId}</Text>
+          ) : null}
           {payment.allocations.map((allocation) => {
-            const shop = order.sellerOrders.find((part) => part.id === allocation.sellerOrderId);
+            const shop = order.sellerOrders.find(
+              (part) => part.id === allocation.sellerOrderId,
+            );
             return (
               <Text key={allocation.sellerOrderId}>
-                Phân bổ {shop?.shopNameSnapshot ?? allocation.sellerOrderId}: {formatVnd(allocation.amount)}
+                Phân bổ {shop?.shopNameSnapshot ?? allocation.sellerOrderId}:{" "}
+                {formatVnd(allocation.amount)}
               </Text>
             );
           })}
@@ -142,8 +212,11 @@ function PaymentHistory({ payments, order }: { payments: Payment[]; order: Order
             const amount = stringField(refund, "amount");
             const reason = stringField(refund, "reason");
             const sellerOrderId = stringField(refund, "sellerOrderId");
-            const shopName = order.sellerOrders.find((part) => part.id === sellerOrderId)?.shopNameSnapshot;
-            const refundId = stringField(refund, "id") ?? `${payment.id}-refund-${index}`;
+            const shopName = order.sellerOrders.find(
+              (part) => part.id === sellerOrderId,
+            )?.shopNameSnapshot;
+            const refundId =
+              stringField(refund, "id") ?? `${payment.id}-refund-${index}`;
             return (
               <Text key={refundId}>
                 Hoàn {amount ? formatVnd(amount) : "tiền"}
@@ -172,19 +245,27 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     queryKey: detailKey,
     enabled: Boolean(userId && orderId),
     queryFn: ({ signal }) =>
-      api.request<Order>(`/orders/${encodeURIComponent(orderId)}` as ApiPath, { signal }),
+      api.request<Order>(`/orders/${encodeURIComponent(orderId)}` as ApiPath, {
+        signal,
+      }),
   });
   const paymentQuery = useQuery<Payment[]>({
     queryKey: paymentKey,
     enabled: Boolean(userId && orderId),
     queryFn: ({ signal }) =>
-      api.request<Payment[]>(`/payments?orderId=${encodeURIComponent(orderId)}` as ApiPath, { signal }),
+      api.request<Payment[]>(
+        `/payments?orderId=${encodeURIComponent(orderId)}` as ApiPath,
+        { signal },
+      ),
   });
 
   if (!userId) {
     return (
       <View style={{ flex: 1, gap: 12, padding: 20 }}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Chi tiết đơn hàng
         </Text>
         <Text>Vui lòng đăng nhập để xem đơn hàng.</Text>
@@ -195,7 +276,10 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   if (orderQuery.isPending || paymentQuery.isPending) {
     return (
       <View style={{ flex: 1, gap: 12, padding: 20 }}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           Chi tiết đơn hàng
         </Text>
         <Text accessibilityRole="progressbar">Đang tải đơn hàng…</Text>
@@ -204,8 +288,12 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   }
 
   if (orderQuery.isError || !orderQuery.data) {
-    const forbidden = orderQuery.error instanceof ApiClientError && orderQuery.error.status === 403;
-    const notFound = orderQuery.error instanceof ApiClientError && orderQuery.error.status === 404;
+    const forbidden =
+      orderQuery.error instanceof ApiClientError &&
+      orderQuery.error.status === 403;
+    const notFound =
+      orderQuery.error instanceof ApiClientError &&
+      orderQuery.error.status === 404;
     return (
       <View style={{ flex: 1, gap: 12, padding: 20 }}>
         <Text accessibilityRole="alert">
@@ -215,7 +303,10 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
               ? "Không tìm thấy đơn hàng."
               : "Không thể tải đơn hàng."}
         </Text>
-        <ActionButton label="Danh sách đơn hàng" onPress={() => router.push("/orders")} />
+        <ActionButton
+          label="Danh sách đơn hàng"
+          onPress={() => router.push("/orders")}
+        />
       </View>
     );
   }
@@ -247,50 +338,76 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1, gap: 16, padding: 20 }}>
       <View style={{ gap: 8 }}>
-        <ActionButton label="Đơn hàng của tôi" onPress={() => router.push("/orders")} />
+        <ActionButton
+          label="Đơn hàng của tôi"
+          onPress={() => router.push("/orders")}
+        />
         <Text style={{ color: "#57534e" }}>Chi tiết đơn hàng</Text>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700" }}>
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 28, fontWeight: "700" }}
+        >
           {order.orderNumber}
         </Text>
         <Text>
-          {orderStatusLabels[order.status] ?? order.status} · {new Date(order.createdAt).toLocaleString("vi-VN")}
+          {orderStatusLabels[order.status] ?? order.status} ·{" "}
+          {new Date(order.createdAt).toLocaleString("vi-VN")}
         </Text>
       </View>
 
       {address ? (
         <Section title="Địa chỉ giao hàng">
-          <Text>{address.recipientName} · {address.phone}</Text>
           <Text>
-            {address.line1}, {address.ward}, {address.district}, {address.province}
+            {address.recipientName} · {address.phone}
+          </Text>
+          <Text>
+            {address.line1}, {address.ward}, {address.district},{" "}
+            {address.province}
           </Text>
         </Section>
       ) : null}
 
       {order.sellerOrders.map((sellerOrder) => (
         <Section key={sellerOrder.id} title={sellerOrder.shopNameSnapshot}>
-          <Text>Trạng thái: {orderStatusLabels[sellerOrder.status] ?? sellerOrder.status}</Text>
+          <Text>
+            Trạng thái:{" "}
+            {orderStatusLabels[sellerOrder.status] ?? sellerOrder.status}
+          </Text>
           {sellerOrder.items.map((item) => (
             <OrderItemRow key={item.id} item={item} />
           ))}
           <TrackingTimeline sellerOrder={sellerOrder} />
           <Text>Tổng shop: {formatVnd(sellerOrder.originalTotal)}</Text>
           <Text>
-            Đã thu {formatVnd(sellerOrder.capturedAmount)} · Đã hoàn {formatVnd(sellerOrder.refundedAmount)}
+            Đã thu {formatVnd(sellerOrder.capturedAmount)} · Đã hoàn{" "}
+            {formatVnd(sellerOrder.refundedAmount)}
           </Text>
           <Text>Còn phải trả: {formatVnd(sellerOrder.outstandingAmount)}</Text>
-          {sellerOrder.cancelReason ? <Text>Lý do hủy: {sellerOrder.cancelReason}</Text> : null}
+          {sellerOrder.cancelReason ? (
+            <Text>Lý do hủy: {sellerOrder.cancelReason}</Text>
+          ) : null}
         </Section>
       ))}
 
       <Section title="Thanh toán">
         <Text>
-          {order.paymentMethod === "COD" ? "Thanh toán khi nhận hàng" : "Thanh toán mô phỏng"} · {paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}
+          {order.paymentMethod === "COD"
+            ? "Thanh toán khi nhận hàng"
+            : "Thanh toán mô phỏng"}{" "}
+          · {paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}
         </Text>
         {codLabel ? <Text>{codLabel}</Text> : null}
-        <Text>Đã thu: {formatVnd(order.capturedAmount)} · Đã hoàn: {formatVnd(order.refundedAmount)}</Text>
+        <Text>
+          Đã thu: {formatVnd(order.capturedAmount)} · Đã hoàn:{" "}
+          {formatVnd(order.refundedAmount)}
+        </Text>
         <Text>Còn phải trả: {formatVnd(order.outstandingAmount)}</Text>
         {order.paymentDeadline ? (
-          <Text>Hạn thanh toán: {new Date(order.paymentDeadline).toLocaleString("vi-VN")} (theo thời hạn máy chủ)</Text>
+          <Text>
+            Hạn thanh toán:{" "}
+            {new Date(order.paymentDeadline).toLocaleString("vi-VN")} (theo thời
+            hạn máy chủ)
+          </Text>
         ) : null}
         <PaymentHistory payments={payments} order={order} />
       </Section>

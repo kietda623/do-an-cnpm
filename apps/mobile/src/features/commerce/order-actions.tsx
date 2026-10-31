@@ -8,7 +8,10 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../auth/session-provider";
 import { writeIntentRegistry } from "./write-intents";
-import { orderDetailQueryKey, paymentHistoryQueryKey } from "./order-query-keys";
+import {
+  orderDetailQueryKey,
+  paymentHistoryQueryKey,
+} from "./order-query-keys";
 
 type Order = components["schemas"]["Order"];
 type Payment = components["schemas"]["Payment"];
@@ -41,7 +44,9 @@ function ActionButton({
         paddingHorizontal: 14,
       }}
     >
-      <Text style={{ color: disabled ? "#57534e" : "white", fontWeight: "600" }}>
+      <Text
+        style={{ color: disabled ? "#57534e" : "white", fontWeight: "600" }}
+      >
         {label}
       </Text>
     </Pressable>
@@ -49,7 +54,11 @@ function ActionButton({
 }
 
 function errorPayload(error: unknown): Record<string, unknown> | undefined {
-  if (!(error instanceof ApiClientError) || !error.payload || typeof error.payload !== "object")
+  if (
+    !(error instanceof ApiClientError) ||
+    !error.payload ||
+    typeof error.payload !== "object"
+  )
     return undefined;
   const payload = error.payload as Record<string, unknown>;
   const envelope = payload.error;
@@ -64,7 +73,10 @@ function blockingShopNames(error: unknown, order: Order): string[] {
   return envelope.details.flatMap((detail) => {
     if (!detail || typeof detail !== "object") return [];
     const value = detail as Record<string, unknown>;
-    if (value.field !== "blockingSellerOrderIds" || typeof value.message !== "string")
+    if (
+      value.field !== "blockingSellerOrderIds" ||
+      typeof value.message !== "string"
+    )
       return [];
     const shop = order.sellerOrders.find((part) => part.id === value.message);
     return [shop?.shopNameSnapshot ?? value.message];
@@ -77,7 +89,10 @@ function mutationErrorText(error: unknown, fallback: string) {
   return fallback;
 }
 
-function latestMockAttempt(payments: Payment[], order: Order): Payment | undefined {
+function latestMockAttempt(
+  payments: Payment[],
+  order: Order,
+): Payment | undefined {
   // The API returns attempts in attemptNumber order. createdAt can tie, so it
   // cannot identify the newest attempt. The no-attempt base payment is a
   // synthetic row whose transactionCode is the order number.
@@ -134,11 +149,15 @@ export function OrderActions({
     onError: refreshOnConflict,
   });
 
-  const resultMutation = useMutation<Payment, Error, {
-    attemptId: string;
-    outcome: MockOutcome;
-    expectedVersion: number;
-  }>({
+  const resultMutation = useMutation<
+    Payment,
+    Error,
+    {
+      attemptId: string;
+      outcome: MockOutcome;
+      expectedVersion: number;
+    }
+  >({
     mutationFn: async ({ attemptId, outcome, expectedVersion }) => {
       if (!userId) throw new Error("Buyer session is missing");
       const route = `/payments/${attemptId}/mock-result` as ApiPath;
@@ -158,11 +177,15 @@ export function OrderActions({
     onError: refreshOnConflict,
   });
 
-  const cancelMutation = useMutation<unknown, Error, {
-    target: CancelTarget;
-    reason: string;
-    expectedVersion: number;
-  }>({
+  const cancelMutation = useMutation<
+    unknown,
+    Error,
+    {
+      target: CancelTarget;
+      reason: string;
+      expectedVersion: number;
+    }
+  >({
     mutationFn: async ({ target, reason, expectedVersion }) => {
       if (!userId) throw new Error("Buyer session is missing");
       const route =
@@ -188,13 +211,18 @@ export function OrderActions({
     onError: refreshOnConflict,
   });
 
-  const receiveMutation = useMutation<SellerOrder, Error, {
-    sellerOrderId: string;
-    expectedVersion: number;
-  }>({
+  const receiveMutation = useMutation<
+    SellerOrder,
+    Error,
+    {
+      sellerOrderId: string;
+      expectedVersion: number;
+    }
+  >({
     mutationFn: async ({ sellerOrderId, expectedVersion }) => {
       if (!userId) throw new Error("Buyer session is missing");
-      const route = `/orders/${order.id}/seller-orders/${sellerOrderId}/receive` as ApiPath;
+      const route =
+        `/orders/${order.id}/seller-orders/${sellerOrderId}/receive` as ApiPath;
       const body = { expectedVersion };
       const scope = `${userId}:POST:${route}`;
       const intent = writeIntentRegistry.getOrCreate(scope, body);
@@ -227,7 +255,7 @@ export function OrderActions({
   const selectedCancelLabel =
     cancelTarget === "ALL"
       ? "toàn bộ đơn"
-      : cancelTarget?.shopNameSnapshot ?? "đơn hàng";
+      : (cancelTarget?.shopNameSnapshot ?? "đơn hàng");
   const cancellationBlockers = blockingShopNames(cancelMutation.error, order);
   const cancellationError = cancelMutation.error
     ? `${mutationErrorText(cancelMutation.error, "Không thể hủy đơn. Vui lòng thử lại.")}${cancellationBlockers.length ? ` Cửa hàng đang xử lý: ${cancellationBlockers.join(", ")}.` : ""}`
@@ -238,7 +266,9 @@ export function OrderActions({
     const part =
       cancelTarget === "ALL"
         ? undefined
-        : order.sellerOrders.find((item) => item.id === cancelTarget.sellerOrderId);
+        : order.sellerOrders.find(
+            (item) => item.id === cancelTarget.sellerOrderId,
+          );
     if (cancelTarget !== "ALL" && !part) return;
     cancelMutation.mutate({
       target: cancelTarget,
@@ -273,7 +303,8 @@ export function OrderActions({
           />
         </View>
       ) : null}
-      {order.paymentMethod === "MOCK" && pendingMockAttempt?.status === "PENDING" ? (
+      {order.paymentMethod === "MOCK" &&
+      pendingMockAttempt?.status === "PENDING" ? (
         <View style={{ gap: 8 }}>
           <ActionButton
             label="Mô phỏng thanh toán thành công"
@@ -295,7 +326,10 @@ export function OrderActions({
       {attemptMutation.error ? (
         <View style={{ gap: 8 }}>
           <Text accessibilityRole="alert">
-            {mutationErrorText(attemptMutation.error, "Không thể bắt đầu thanh toán. Vui lòng thử lại.")}
+            {mutationErrorText(
+              attemptMutation.error,
+              "Không thể bắt đầu thanh toán. Vui lòng thử lại.",
+            )}
           </Text>
           <ActionButton
             label="Thử tạo lần thanh toán lại"
@@ -307,18 +341,20 @@ export function OrderActions({
       {resultMutation.error ? (
         <View style={{ gap: 8 }}>
           <Text accessibilityRole="alert">
-            {mutationErrorText(resultMutation.error, "Không thể cập nhật thanh toán. Vui lòng thử lại.")}
+            {mutationErrorText(
+              resultMutation.error,
+              "Không thể cập nhật thanh toán. Vui lòng thử lại.",
+            )}
           </Text>
-          {resultMutation.error instanceof ApiClientError && resultMutation.error.status === 409
-            ? null
-            : resultMutation.variables ? (
-                <ActionButton
-                  label="Thử lại kết quả thanh toán"
-                  disabled={writePending}
-                  onPress={() => resultMutation.mutate(resultMutation.variables!)}
-                />
-              )
-            : null}
+          {resultMutation.error instanceof ApiClientError &&
+          resultMutation.error.status ===
+            409 ? null : resultMutation.variables ? (
+            <ActionButton
+              label="Thử lại kết quả thanh toán"
+              disabled={writePending}
+              onPress={() => resultMutation.mutate(resultMutation.variables!)}
+            />
+          ) : null}
         </View>
       ) : null}
 
@@ -356,10 +392,21 @@ export function OrderActions({
       {cancelTarget ? (
         <View
           accessibilityRole="summary"
-          style={{ gap: 8, borderWidth: 1, borderColor: "#d6d3d1", borderRadius: 12, padding: 16 }}
+          style={{
+            gap: 8,
+            borderWidth: 1,
+            borderColor: "#d6d3d1",
+            borderRadius: 12,
+            padding: 16,
+          }}
         >
-          <Text style={{ fontWeight: "600" }}>Xác nhận hủy {selectedCancelLabel}</Text>
-          <Text>Hệ thống kiểm tra trạng thái mới nhất và cập nhật hoàn kho, hoàn tiền.</Text>
+          <Text style={{ fontWeight: "600" }}>
+            Xác nhận hủy {selectedCancelLabel}
+          </Text>
+          <Text>
+            Hệ thống kiểm tra trạng thái mới nhất và cập nhật hoàn kho, hoàn
+            tiền.
+          </Text>
           <TextInput
             accessibilityLabel="Lý do hủy"
             placeholder="Lý do hủy"
@@ -367,7 +414,13 @@ export function OrderActions({
             onChangeText={setCancelReason}
             maxLength={500}
             multiline
-            style={{ minHeight: 72, borderWidth: 1, borderColor: "#d6d3d1", borderRadius: 8, padding: 12 }}
+            style={{
+              minHeight: 72,
+              borderWidth: 1,
+              borderColor: "#d6d3d1",
+              borderRadius: 8,
+              padding: 12,
+            }}
           />
           {cancellationError ? (
             <Text accessibilityRole="alert">{cancellationError}</Text>
@@ -377,7 +430,11 @@ export function OrderActions({
             disabled={writePending || !cancelReason.trim()}
             onPress={cancelSelected}
           />
-          {cancelMutation.error && !(cancelMutation.error instanceof ApiClientError && cancelMutation.error.status === 409) ? (
+          {cancelMutation.error &&
+          !(
+            cancelMutation.error instanceof ApiClientError &&
+            cancelMutation.error.status === 409
+          ) ? (
             <ActionButton
               label="Thử hủy lại"
               disabled={writePending || !cancelReason.trim()}
@@ -393,7 +450,10 @@ export function OrderActions({
       ) : null}
 
       {order.sellerOrders
-        .filter((part) => part.status === "DELIVERED" && part.outstandingAmount === "0")
+        .filter(
+          (part) =>
+            part.status === "DELIVERED" && part.outstandingAmount === "0",
+        )
         .map((part) => (
           <View key={part.id} style={{ gap: 8 }}>
             <ActionButton
@@ -401,18 +461,25 @@ export function OrderActions({
               disabled={writePending}
               onPress={() => submitReceive(part)}
             />
-            {receiveMutation.error && receiveMutation.variables?.sellerOrderId === part.id ? (
+            {receiveMutation.error &&
+            receiveMutation.variables?.sellerOrderId === part.id ? (
               <>
                 <Text accessibilityRole="alert">
-                  {mutationErrorText(receiveMutation.error, "Không thể xác nhận đã nhận hàng. Vui lòng thử lại.")}
+                  {mutationErrorText(
+                    receiveMutation.error,
+                    "Không thể xác nhận đã nhận hàng. Vui lòng thử lại.",
+                  )}
                 </Text>
-                {receiveMutation.error instanceof ApiClientError && receiveMutation.error.status === 409
-                  ? null
-                  : <ActionButton
-                      label="Thử xác nhận đã nhận lại"
-                      disabled={writePending}
-                      onPress={() => receiveMutation.mutate(receiveMutation.variables!)}
-                    />}
+                {receiveMutation.error instanceof ApiClientError &&
+                receiveMutation.error.status === 409 ? null : (
+                  <ActionButton
+                    label="Thử xác nhận đã nhận lại"
+                    disabled={writePending}
+                    onPress={() =>
+                      receiveMutation.mutate(receiveMutation.variables!)
+                    }
+                  />
+                )}
               </>
             ) : null}
           </View>

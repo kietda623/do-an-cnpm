@@ -2,8 +2,7 @@ import { WriteIntentRegistry } from "../src/features/commerce/write-intents";
 
 function createIdFactory() {
   let next = 1;
-  return () =>
-    `00000000-0000-4000-8000-${String(next++).padStart(12, "0")}`;
+  return () => `00000000-0000-4000-8000-${String(next++).padStart(12, "0")}`;
 }
 
 describe("WriteIntentRegistry", () => {
@@ -85,12 +84,15 @@ describe("WriteIntentRegistry", () => {
     const body = { quantity: 1 };
 
     const firstBuyer = registry.getOrCreate("buyer-1:PATCH:/cart/item-1", body);
-    const secondBuyer = registry.getOrCreate("buyer-2:PATCH:/cart/item-1", body);
+    const secondBuyer = registry.getOrCreate(
+      "buyer-2:PATCH:/cart/item-1",
+      body,
+    );
 
     expect(secondBuyer.idempotencyKey).not.toBe(firstBuyer.idempotencyKey);
-    expect(
-      registry.getOrCreate("buyer-1:PATCH:/cart/item-1", body),
-    ).toEqual(firstBuyer);
+    expect(registry.getOrCreate("buyer-1:PATCH:/cart/item-1", body)).toEqual(
+      firstBuyer,
+    );
   });
 
   test("generates UUIDv4-shaped keys and event IDs by default", () => {

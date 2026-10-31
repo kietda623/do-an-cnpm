@@ -5,7 +5,8 @@ export type WriteIntent = {
 
 function createUuidV4(): string {
   const cryptoApi = globalThis.crypto;
-  if (typeof cryptoApi?.randomUUID === "function") return cryptoApi.randomUUID();
+  if (typeof cryptoApi?.randomUUID === "function")
+    return cryptoApi.randomUUID();
 
   const bytes = new Uint8Array(16);
   if (typeof cryptoApi?.getRandomValues === "function") {

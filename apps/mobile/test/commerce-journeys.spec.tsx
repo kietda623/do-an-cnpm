@@ -1,12 +1,7 @@
 import React from "react";
 import { ApiClientError, type components } from "@marketplace/api-client";
 import { focusManager } from "@tanstack/react-query";
-import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-} from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import {
   CART_ITEM_ID,
   CART_SHOP_ID,
@@ -209,7 +204,9 @@ test("B07 quantity controls enforce the positive and available-stock bounds", as
 
   renderCommerce(<CartRoute />);
 
-  const decrement = await screen.findByLabelText("Giảm số lượng Bình giữ nhiệt");
+  const decrement = await screen.findByLabelText(
+    "Giảm số lượng Bình giữ nhiệt",
+  );
   expect(decrement.props.accessibilityState?.disabled).toBe(true);
   fireEvent.press(screen.getByLabelText("Tăng số lượng Bình giữ nhiệt"));
   await waitFor(() =>
@@ -267,14 +264,21 @@ test("B07 forbidden cart access is shown without pretending it is empty", async 
 
   renderCommerce(<CartRoute />);
 
-  expect(await screen.findByText("Bạn không có quyền xem giỏ hàng.")).toBeTruthy();
+  expect(
+    await screen.findByText("Bạn không có quyền xem giỏ hàng."),
+  ).toBeTruthy();
   expect(screen.queryByText("Giỏ hàng đang trống.")).toBeNull();
 });
 
 test("B07 account switch loads the other buyer cart without showing cached data", async () => {
   const buyerCart = makeCart(
     [
-      makeCartGroup(CART_SHOP_ID, "Giỏ của buyer 1", [makeCartItem()], "125000"),
+      makeCartGroup(
+        CART_SHOP_ID,
+        "Giỏ của buyer 1",
+        [makeCartItem()],
+        "125000",
+      ),
     ],
     "125000",
   );
@@ -297,7 +301,8 @@ test("B07 account switch loads the other buyer cart without showing cached data"
   );
   let cartReads = 0;
   mockRequest.mockImplementation(async (path) => {
-    if (String(path) !== "/cart") throw new Error(`Unexpected request: ${path}`);
+    if (String(path) !== "/cart")
+      throw new Error(`Unexpected request: ${path}`);
     cartReads += 1;
     return cartReads === 1 ? buyerCart : otherBuyerCart;
   });
@@ -309,9 +314,7 @@ test("B07 account switch loads the other buyer cart without showing cached data"
 
   expect(await screen.findByText("Giỏ của buyer 2")).toBeTruthy();
   expect(screen.queryByText("Giỏ của buyer 1")).toBeNull();
-  expect(view.queryClient.getQueryData(["cart", "buyer-1"])).toEqual(
-    buyerCart,
-  );
+  expect(view.queryClient.getQueryData(["cart", "buyer-1"])).toEqual(buyerCart);
 });
 
 test("B08 shows loading until the cart and saved addresses are both loaded", async () => {
@@ -375,7 +378,9 @@ test("B08 empty cart and missing address block quote creation", async () => {
   expect(screen.getByText("Chưa có địa chỉ nhận hàng.")).toBeTruthy();
   expect(screen.getByText("Thêm địa chỉ")).toBeTruthy();
   expect(
-    mockRequest.mock.calls.some(([path]) => String(path) === "/checkout/quotes"),
+    mockRequest.mock.calls.some(
+      ([path]) => String(path) === "/checkout/quotes",
+    ),
   ).toBe(false);
 });
 
@@ -399,7 +404,9 @@ test("B08 selects the saved default address", async () => {
 
   renderCommerce(<CheckoutRoute />);
 
-  const selected = await screen.findByLabelText("Địa chỉ của Lê Bình (Mặc định)");
+  const selected = await screen.findByLabelText(
+    "Địa chỉ của Lê Bình (Mặc định)",
+  );
   expect(selected.props.accessibilityState?.checked).toBe(true);
   expect(
     screen.getByLabelText("Địa chỉ của Nguyễn An").props.accessibilityState
@@ -531,9 +538,9 @@ test("B08 shows per-line server issues and does not infer quote totals", async (
     await screen.findByText(/Tồn kho không đủ cho sản phẩm này\./),
   ).toBeTruthy();
   expect(screen.getByText("Tổng cộng: 110.000₫")).toBeTruthy();
-  expect(screen.getByLabelText("Đặt hàng").props.accessibilityState?.disabled).toBe(
-    true,
-  );
+  expect(
+    screen.getByLabelText("Đặt hàng").props.accessibilityState?.disabled,
+  ).toBe(true);
 });
 
 test("B08 disables a quote that has expired according to its server deadline", async () => {
@@ -585,7 +592,11 @@ test("B08 invalidates the quote when address or payment method changes", async (
   expect(screen.queryByText(/Tổng cộng:/)).toBeNull();
   fireEvent.press(screen.getByText("Tạo báo giá"));
   await waitFor(() => expect(quoteReads).toBe(2));
-  expect(mockRequest.mock.calls.filter(([path]) => path === "/checkout/quotes")[1]?.[1]?.body).toBe(
+  expect(
+    mockRequest.mock.calls.filter(
+      ([path]) => path === "/checkout/quotes",
+    )[1]?.[1]?.body,
+  ).toBe(
     JSON.stringify({
       cartItemIds: [CART_ITEM_ID],
       addressId: secondAddress.id,
@@ -597,7 +608,11 @@ test("B08 invalidates the quote when address or payment method changes", async (
   expect(screen.queryByText(/Tổng cộng:/)).toBeNull();
   fireEvent.press(screen.getByText("Tạo báo giá"));
   await waitFor(() => expect(quoteReads).toBe(3));
-  expect(mockRequest.mock.calls.filter(([path]) => path === "/checkout/quotes")[2]?.[1]?.body).toBe(
+  expect(
+    mockRequest.mock.calls.filter(
+      ([path]) => path === "/checkout/quotes",
+    )[2]?.[1]?.body,
+  ).toBe(
     JSON.stringify({
       cartItemIds: [CART_ITEM_ID],
       addressId: secondAddress.id,
@@ -650,7 +665,11 @@ test("B08 hides an old quote when selected cart lines change", async () => {
   fireEvent.press(screen.getByText("Tạo báo giá"));
 
   await waitFor(() => expect(quoteReads).toBe(2));
-  expect(mockRequest.mock.calls.filter(([path]) => path === "/checkout/quotes")[1]?.[1]?.body).toBe(
+  expect(
+    mockRequest.mock.calls.filter(
+      ([path]) => path === "/checkout/quotes",
+    )[1]?.[1]?.body,
+  ).toBe(
     JSON.stringify({
       cartItemIds: [SECOND_CART_ITEM_ID],
       addressId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -690,7 +709,9 @@ test("B08 confirms all-or-none checkout with server quote and invalidates Buyer 
     expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ quoteId: quote.quoteId }),
-      headers: expect.objectContaining({ "Idempotency-Key": expect.any(String) }),
+      headers: expect.objectContaining({
+        "Idempotency-Key": expect.any(String),
+      }),
     }),
   );
   expect(cartReads).toBeGreaterThanOrEqual(2);
@@ -728,7 +749,9 @@ test("B08 retry after a network error reuses the checkout key and request body",
     ([path]) => String(path) === "/checkout",
   );
   expect(checkoutCalls).toHaveLength(2);
-  expect(checkoutCalls[1]?.[1]?.headers).toEqual(checkoutCalls[0]?.[1]?.headers);
+  expect(checkoutCalls[1]?.[1]?.headers).toEqual(
+    checkoutCalls[0]?.[1]?.headers,
+  );
   expect(checkoutCalls[1]?.[1]?.body).toBe(checkoutCalls[0]?.[1]?.body);
 });
 
@@ -769,7 +792,8 @@ test("B08 PRICE_CHANGED requires an explicit new quote and has no replacement qu
 });
 
 test("B09 shows loading while the buyer's orders are being fetched", async () => {
-  let resolveOrders: ((orders: ReturnType<typeof makeOrderSummary>[]) => void) | undefined;
+  let resolveOrders:
+    ((orders: ReturnType<typeof makeOrderSummary>[]) => void) | undefined;
   mockRequest.mockImplementationOnce(
     () =>
       new Promise((resolve) => {
@@ -807,8 +831,21 @@ test("B09 sends status and payment filters to the server", async () => {
 
   await waitFor(() => {
     const paths = mockRequest.mock.calls.map(([path]) => String(path));
-    expect(paths.some((path) => new URL(path, "https://example.test").searchParams.get("status") === "DELIVERED")).toBe(true);
-    expect(paths.some((path) => new URL(path, "https://example.test").searchParams.get("paymentStatus") === "PAID")).toBe(true);
+    expect(
+      paths.some(
+        (path) =>
+          new URL(path, "https://example.test").searchParams.get("status") ===
+          "DELIVERED",
+      ),
+    ).toBe(true);
+    expect(
+      paths.some(
+        (path) =>
+          new URL(path, "https://example.test").searchParams.get(
+            "paymentStatus",
+          ) === "PAID",
+      ),
+    ).toBe(true);
   });
 });
 
@@ -839,17 +876,25 @@ test("B09 rejects an invalid date range without sending it", async () => {
   fireEvent.changeText(screen.getByLabelText("Từ ngày"), "2026-02-30");
   fireEvent.press(screen.getByText("Lọc theo ngày"));
 
-  expect(await screen.findByText("Nhập ngày hợp lệ theo định dạng YYYY-MM-DD.")).toBeTruthy();
-  expect(mockRequest.mock.calls.some(([path]) => String(path).includes("from="))).toBe(false);
+  expect(
+    await screen.findByText("Nhập ngày hợp lệ theo định dạng YYYY-MM-DD."),
+  ).toBeTruthy();
+  expect(
+    mockRequest.mock.calls.some(([path]) => String(path).includes("from=")),
+  ).toBe(false);
 });
 
 test("B09 pages through server results with page size 20", async () => {
   const firstPage = Array.from({ length: 20 }, (_, index) =>
-    makeOrderSummary({ orderNumber: `MP-P1-${String(index + 1).padStart(2, "0")}` }),
+    makeOrderSummary({
+      orderNumber: `MP-P1-${String(index + 1).padStart(2, "0")}`,
+    }),
   );
   const secondPage = [makeOrderSummary({ orderNumber: "MP-P2-01" })];
   mockRequest.mockImplementation(async (path) => {
-    const page = new URL(String(path), "https://example.test").searchParams.get("page");
+    const page = new URL(String(path), "https://example.test").searchParams.get(
+      "page",
+    );
     return page === "2" ? secondPage : firstPage;
   });
 
@@ -859,12 +904,17 @@ test("B09 pages through server results with page size 20", async () => {
   expect(await screen.findByText("MP-P2-01")).toBeTruthy();
   expect(screen.queryByText("MP-P1-01")).toBeNull();
   expect(screen.getByText("Trang 2")).toBeTruthy();
-  expect(screen.getByLabelText("Trang sau").props.accessibilityState?.disabled).toBe(true);
+  expect(
+    screen.getByLabelText("Trang sau").props.accessibilityState?.disabled,
+  ).toBe(true);
   fireEvent.press(screen.getByText("Trang trước"));
   expect(await screen.findByText("MP-P1-01")).toBeTruthy();
   expect(
     mockRequest.mock.calls.some(
-      ([path]) => new URL(String(path), "https://example.test").searchParams.get("pageSize") === "20",
+      ([path]) =>
+        new URL(String(path), "https://example.test").searchParams.get(
+          "pageSize",
+        ) === "20",
     ),
   ).toBe(true);
 });
@@ -886,7 +936,9 @@ test("B09 displays payment and partial-cancellation labels from the server", asy
   expect(await screen.findByText("MP-PARTIAL-1")).toBeTruthy();
   expect(screen.getByText("Đã hủy một phần")).toBeTruthy();
   expect(screen.getByText("Đã hoàn một phần")).toBeTruthy();
-  expect(screen.getByText("Tổng đơn: 250.000₫ · Còn phải trả: 100.000₫")).toBeTruthy();
+  expect(
+    screen.getByText("Tổng đơn: 250.000₫ · Còn phải trả: 100.000₫"),
+  ).toBeTruthy();
   fireEvent.press(screen.getByLabelText("Đơn hàng MP-PARTIAL-1"));
   expect(mockRouter.push).toHaveBeenCalledWith(`/orders/${order.id}`);
 });
@@ -915,25 +967,28 @@ test("B09 shows a forbidden state instead of treating 403 as an empty list", asy
 
   renderCommerce(<OrdersRoute />);
 
-  expect(await screen.findByText("Bạn không có quyền xem đơn hàng.")).toBeTruthy();
+  expect(
+    await screen.findByText("Bạn không có quyền xem đơn hàng."),
+  ).toBeTruthy();
   expect(screen.queryByText("Bạn chưa có đơn hàng nào.")).toBeNull();
   expect(screen.queryByText("Hidden server detail")).toBeNull();
 });
 
 test("B09 account switch uses a separate query and never shows the previous buyer's rows", async () => {
   let resolveBuyerTwo:
-    | ((orders: ReturnType<typeof makeOrderSummary>[]) => void)
-    | undefined;
-  mockRequest.mockImplementationOnce(async () => [
-    makeOrderSummary({ orderNumber: "BUYER-ONE-ORDER" }),
-  ]).mockImplementationOnce(
-    () =>
-      new Promise((resolve) => {
-        resolveBuyerTwo = resolve as (
-          orders: ReturnType<typeof makeOrderSummary>[],
-        ) => void;
-      }),
-  );
+    ((orders: ReturnType<typeof makeOrderSummary>[]) => void) | undefined;
+  mockRequest
+    .mockImplementationOnce(async () => [
+      makeOrderSummary({ orderNumber: "BUYER-ONE-ORDER" }),
+    ])
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveBuyerTwo = resolve as (
+            orders: ReturnType<typeof makeOrderSummary>[],
+          ) => void;
+        }),
+    );
   const view = renderCommerce(<OrdersRoute />);
 
   expect(await screen.findByText("BUYER-ONE-ORDER")).toBeTruthy();
@@ -945,19 +1000,25 @@ test("B09 account switch uses a separate query and never shows the previous buye
   );
   expect(await screen.findByText("BUYER-TWO-ORDER")).toBeTruthy();
   expect(screen.queryByText("BUYER-ONE-ORDER")).toBeNull();
-  expect(view.queryClient.getQueryData(["orders", "buyer-1", expect.anything()])).toBeUndefined();
+  expect(
+    view.queryClient.getQueryData(["orders", "buyer-1", expect.anything()]),
+  ).toBeUndefined();
 });
 
 test("B09 query key is scoped by buyer, filters and page", async () => {
   mockRequest.mockResolvedValue(
-    Array.from({ length: 20 }, (_, index) => makeOrderSummary({ orderNumber: `MP-KEY-${index}` })),
+    Array.from({ length: 20 }, (_, index) =>
+      makeOrderSummary({ orderNumber: `MP-KEY-${index}` }),
+    ),
   );
   const view = renderCommerce(<OrdersRoute />);
 
   await screen.findByText("MP-KEY-0");
   fireEvent.press(screen.getByLabelText("Trạng thái: Đã giao"));
   await waitFor(() =>
-    expect(screen.getByLabelText("Trang sau").props.accessibilityState?.disabled).toBe(false),
+    expect(
+      screen.getByLabelText("Trang sau").props.accessibilityState?.disabled,
+    ).toBe(false),
   );
   fireEvent.press(screen.getByLabelText("Trang sau"));
 
@@ -980,12 +1041,10 @@ test("B09 query key is scoped by buyer, filters and page", async () => {
 
 test("B09 aborts the request when the screen is removed", async () => {
   let requestSignal: AbortSignal | undefined;
-  mockRequest.mockImplementationOnce(
-    (_path, init) => {
-      requestSignal = init?.signal as AbortSignal | undefined;
-      return new Promise(() => undefined);
-    },
-  );
+  mockRequest.mockImplementationOnce((_path, init) => {
+    requestSignal = init?.signal as AbortSignal | undefined;
+    return new Promise(() => undefined);
+  });
   const view = renderCommerce(<OrdersRoute />);
   await waitFor(() => expect(requestSignal).toBeDefined());
 
@@ -1060,7 +1119,9 @@ test("B10 renders server snapshots, payments/refunds, tracking and payment deadl
 
   expect(await screen.findByText("MP-DETAIL-01")).toBeTruthy();
   expect(screen.getByText("Nhà Bếp Mộc")).toBeTruthy();
-  expect(screen.getByText("1 Đường A, Phường 1, Quận 1, TP Hồ Chí Minh")).toBeTruthy();
+  expect(
+    screen.getByText("1 Đường A, Phường 1, Quận 1, TP Hồ Chí Minh"),
+  ).toBeTruthy();
   expect(screen.getByText("Bình giữ nhiệt × 1 · 125.000₫")).toBeTruthy();
   expect(screen.getByText("Tổng ban đầu: 135.000₫")).toBeTruthy();
   expect(screen.getByText("Đã thu 135.000₫ · Đã hoàn 25.000₫")).toBeTruthy();
@@ -1076,25 +1137,31 @@ test("B10 renders server snapshots, payments/refunds, tracking and payment deadl
 test.each([
   [403, "FORBIDDEN", "Bạn không có quyền xem đơn hàng này."],
   [404, "NOT_FOUND", "Không tìm thấy đơn hàng."],
-] as const)("B10 presents a safe detail error for HTTP %s", async (status, code, message) => {
-  const order = makeBuyerOrder();
-  mockRequest.mockImplementation(async (path) => {
-    if (String(path) === `/orders/${order.id}`)
-      throw new ApiClientError(code, status, {
-        error: { code, message: "Hidden server details" },
-      });
-    if (String(path) === `/payments?orderId=${order.id}`) return [];
-    throw new Error(`Unexpected request: ${path}`);
-  });
+] as const)(
+  "B10 presents a safe detail error for HTTP %s",
+  async (status, code, message) => {
+    const order = makeBuyerOrder();
+    mockRequest.mockImplementation(async (path) => {
+      if (String(path) === `/orders/${order.id}`)
+        throw new ApiClientError(code, status, {
+          error: { code, message: "Hidden server details" },
+        });
+      if (String(path) === `/payments?orderId=${order.id}`) return [];
+      throw new Error(`Unexpected request: ${path}`);
+    });
 
-  renderCommerce(<OrderDetailRoute />);
+    renderCommerce(<OrderDetailRoute />);
 
-  expect(await screen.findByText(message)).toBeTruthy();
-  expect(screen.queryByText("Hidden server details")).toBeNull();
-});
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect(screen.queryByText("Hidden server details")).toBeNull();
+  },
+);
 
 test("B10 treats the base payment row as no mock attempt after a cold cache", async () => {
-  const order = makeBuyerOrder({ paymentMethod: "MOCK", paymentStatus: "UNPAID" });
+  const order = makeBuyerOrder({
+    paymentMethod: "MOCK",
+    paymentStatus: "UNPAID",
+  });
   const basePayment = makePayment({
     id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1",
     orderId: order.id,
@@ -1116,53 +1183,62 @@ test.each([
   ["SUCCEEDED", "Mô phỏng thanh toán thành công"],
   ["FAILED", "Mô phỏng thất bại"],
   ["CANCELLED", "Hủy lần thử thanh toán"],
-] as const)("B10 posts MOCK result %s with current Order.version", async (outcome, label) => {
-  let order = makeBuyerOrder({ paymentMethod: "MOCK", version: 19 });
-  const attempt = makePayment({
-    id: "cccccccc-cccc-4ccc-8ccc-ccccccccccc1",
-    orderId: order.id,
-    transactionCode: "TXN-PENDING-01",
-    status: "PENDING",
-  });
-  order.payments = [attempt];
-  let payments = [attempt];
-  const resultCalls: Array<[string, RequestInit?]> = [];
-  mockRequest.mockImplementation(async (path, init) => {
-    const route = String(path);
-    if (route === `/orders/${order.id}`) return order;
-    if (route === `/payments?orderId=${order.id}`) return payments;
-    if (route === `/payments/${attempt.id}/mock-result`) {
-      resultCalls.push([route, init]);
-      const body = JSON.parse(String(init?.body)) as {
-        eventId: string;
-        outcome: string;
-        expectedVersion: number;
-      };
-      expect(body.outcome).toBe(outcome);
-      payments = [{ ...attempt, status: outcome }];
-      order = { ...order, version: order.version + 1, payments };
-      return payments[0];
-    }
-    throw new Error(`Unexpected request: ${route}`);
-  });
+] as const)(
+  "B10 posts MOCK result %s with current Order.version",
+  async (outcome, label) => {
+    let order = makeBuyerOrder({ paymentMethod: "MOCK", version: 19 });
+    const attempt = makePayment({
+      id: "cccccccc-cccc-4ccc-8ccc-ccccccccccc1",
+      orderId: order.id,
+      transactionCode: "TXN-PENDING-01",
+      status: "PENDING",
+    });
+    order.payments = [attempt];
+    let payments = [attempt];
+    const resultCalls: Array<[string, RequestInit?]> = [];
+    mockRequest.mockImplementation(async (path, init) => {
+      const route = String(path);
+      if (route === `/orders/${order.id}`) return order;
+      if (route === `/payments?orderId=${order.id}`) return payments;
+      if (route === `/payments/${attempt.id}/mock-result`) {
+        resultCalls.push([route, init]);
+        const body = JSON.parse(String(init?.body)) as {
+          eventId: string;
+          outcome: string;
+          expectedVersion: number;
+        };
+        expect(body.outcome).toBe(outcome);
+        payments = [{ ...attempt, status: outcome }];
+        order = { ...order, version: order.version + 1, payments };
+        return payments[0];
+      }
+      throw new Error(`Unexpected request: ${route}`);
+    });
 
-  renderCommerce(<OrderDetailRoute />);
-  fireEvent.press(await screen.findByText(label));
+    renderCommerce(<OrderDetailRoute />);
+    fireEvent.press(await screen.findByText(label));
 
-  await waitFor(() => expect(resultCalls).toHaveLength(1));
-  const sentBody = JSON.parse(String(resultCalls[0]?.[1]?.body));
-  expect(sentBody).toEqual(
-    expect.objectContaining({
-      outcome,
-      expectedVersion: 19,
-      eventId: expect.stringMatching(/^[0-9a-f-]{36}$/i),
-    }),
-  );
-  expect(resultCalls[0]?.[1]?.headers).toEqual({
-    "Idempotency-Key": expect.stringMatching(/^[0-9a-f-]{36}$/i),
-  });
-  await waitFor(() => expect(mockRequest.mock.calls.filter(([path]) => String(path) === `/orders/${order.id}`).length).toBeGreaterThan(1));
-});
+    await waitFor(() => expect(resultCalls).toHaveLength(1));
+    const sentBody = JSON.parse(String(resultCalls[0]?.[1]?.body));
+    expect(sentBody).toEqual(
+      expect.objectContaining({
+        outcome,
+        expectedVersion: 19,
+        eventId: expect.stringMatching(/^[0-9a-f-]{36}$/i),
+      }),
+    );
+    expect(resultCalls[0]?.[1]?.headers).toEqual({
+      "Idempotency-Key": expect.stringMatching(/^[0-9a-f-]{36}$/i),
+    });
+    await waitFor(() =>
+      expect(
+        mockRequest.mock.calls.filter(
+          ([path]) => String(path) === `/orders/${order.id}`,
+        ).length,
+      ).toBeGreaterThan(1),
+    );
+  },
+);
 
 test("B10 retries mock-attempt creation with the same key and body", async () => {
   const order = makeBuyerOrder({ paymentMethod: "MOCK" });
@@ -1195,13 +1271,17 @@ test("B10 retries mock-attempt creation with the same key and body", async () =>
 
   renderCommerce(<OrderDetailRoute />);
   fireEvent.press(await screen.findByText("Tạo lần thử thanh toán"));
-  expect(await screen.findByText("Không thể bắt đầu thanh toán. Vui lòng thử lại.")).toBeTruthy();
+  expect(
+    await screen.findByText("Không thể bắt đầu thanh toán. Vui lòng thử lại."),
+  ).toBeTruthy();
   fireEvent.press(screen.getByText("Thử tạo lần thanh toán lại"));
 
   await waitFor(() => expect(attemptCalls).toHaveLength(2));
   expect(attemptCalls[1]?.headers).toEqual(attemptCalls[0]?.headers);
   expect(attemptCalls[1]?.body).toBe(attemptCalls[0]?.body);
-  expect(JSON.parse(String(attemptCalls[0]?.body))).toEqual({ orderId: order.id });
+  expect(JSON.parse(String(attemptCalls[0]?.body))).toEqual({
+    orderId: order.id,
+  });
   expect(screen.queryByText("Thu COD")).toBeNull();
 });
 
@@ -1230,106 +1310,126 @@ test("B10 retries mock-result with the same event, key and body", async () => {
 
   renderCommerce(<OrderDetailRoute />);
   fireEvent.press(await screen.findByText("Mô phỏng thất bại"));
-  expect(await screen.findByText("Không thể cập nhật thanh toán. Vui lòng thử lại.")).toBeTruthy();
+  expect(
+    await screen.findByText("Không thể cập nhật thanh toán. Vui lòng thử lại."),
+  ).toBeTruthy();
   fireEvent.press(screen.getByText("Thử lại kết quả thanh toán"));
 
   await waitFor(() => expect(resultCalls).toHaveLength(2));
   expect(resultCalls[1]?.headers).toEqual(resultCalls[0]?.headers);
   expect(resultCalls[1]?.body).toBe(resultCalls[0]?.body);
   const body = JSON.parse(String(resultCalls[0]?.body));
-  expect(body).toEqual(expect.objectContaining({ eventId: expect.any(String), outcome: "FAILED", expectedVersion: 5 }));
+  expect(body).toEqual(
+    expect.objectContaining({
+      eventId: expect.any(String),
+      outcome: "FAILED",
+      expectedVersion: 5,
+    }),
+  );
 });
 
 test.each([
   ["FAILED", "Mô phỏng thất bại"],
   ["CANCELLED", "Hủy lần thử thanh toán"],
-] as const)("B10 starts a new payment attempt after a terminal %s attempt", async (terminalOutcome, resultLabel) => {
-  let order = makeBuyerOrder({ paymentMethod: "MOCK", version: 7 });
-  const basePayment = makePayment({
-    id: "11111111-2222-4333-8444-555555555550",
-    orderId: order.id,
-    transactionCode: order.orderNumber,
-    status: "PENDING",
-  });
-  const firstAttempt = makePayment({
-    id: "11111111-2222-4333-8444-555555555553",
-    orderId: order.id,
-    transactionCode: "TXN-FIRST-01",
-    status: "PENDING",
-  });
-  const terminalAttempt = makePayment({
-    id: "11111111-2222-4333-8444-555555555551",
-    orderId: order.id,
-    transactionCode: `TXN-${terminalOutcome}-01`,
-    status: terminalOutcome,
-  });
-  const newAttempt = makePayment({
-    id: "11111111-2222-4333-8444-555555555552",
-    orderId: order.id,
-    transactionCode: "TXN-NEW-02",
-    status: "PENDING",
-  });
-  let payments = [basePayment];
-  const attemptCalls: Array<RequestInit | undefined> = [];
-  mockRequest.mockImplementation(async (path, init) => {
-    const route = String(path);
-    if (route === `/orders/${order.id}`) return { ...order, payments };
-    if (route === `/payments?orderId=${order.id}`) return payments;
-    if (route === "/payments/mock-attempts") {
-      attemptCalls.push(init);
-      if (attemptCalls.length === 1) {
-        payments = [firstAttempt];
-        return firstAttempt;
+] as const)(
+  "B10 starts a new payment attempt after a terminal %s attempt",
+  async (terminalOutcome, resultLabel) => {
+    let order = makeBuyerOrder({ paymentMethod: "MOCK", version: 7 });
+    const basePayment = makePayment({
+      id: "11111111-2222-4333-8444-555555555550",
+      orderId: order.id,
+      transactionCode: order.orderNumber,
+      status: "PENDING",
+    });
+    const firstAttempt = makePayment({
+      id: "11111111-2222-4333-8444-555555555553",
+      orderId: order.id,
+      transactionCode: "TXN-FIRST-01",
+      status: "PENDING",
+    });
+    const terminalAttempt = makePayment({
+      id: "11111111-2222-4333-8444-555555555551",
+      orderId: order.id,
+      transactionCode: `TXN-${terminalOutcome}-01`,
+      status: terminalOutcome,
+    });
+    const newAttempt = makePayment({
+      id: "11111111-2222-4333-8444-555555555552",
+      orderId: order.id,
+      transactionCode: "TXN-NEW-02",
+      status: "PENDING",
+    });
+    let payments = [basePayment];
+    const attemptCalls: Array<RequestInit | undefined> = [];
+    mockRequest.mockImplementation(async (path, init) => {
+      const route = String(path);
+      if (route === `/orders/${order.id}`) return { ...order, payments };
+      if (route === `/payments?orderId=${order.id}`) return payments;
+      if (route === "/payments/mock-attempts") {
+        attemptCalls.push(init);
+        if (attemptCalls.length === 1) {
+          payments = [firstAttempt];
+          return firstAttempt;
+        }
+        payments = [terminalAttempt, newAttempt];
+        return newAttempt;
       }
-      payments = [terminalAttempt, newAttempt];
-      return newAttempt;
-    }
-    if (route === `/payments/${firstAttempt.id}/mock-result`) {
-      payments = [terminalAttempt];
-      order = { ...order, version: order.version + 1, payments };
-      return terminalAttempt;
-    }
-    throw new Error(`Unexpected request: ${route}`);
-  });
+      if (route === `/payments/${firstAttempt.id}/mock-result`) {
+        payments = [terminalAttempt];
+        order = { ...order, version: order.version + 1, payments };
+        return terminalAttempt;
+      }
+      throw new Error(`Unexpected request: ${route}`);
+    });
 
-  renderCommerce(<OrderDetailRoute />);
-  expect(await screen.findByText("Tạo lần thử thanh toán")).toBeTruthy();
-  fireEvent.press(screen.getByText("Tạo lần thử thanh toán"));
-  await screen.findByText(resultLabel);
-  fireEvent.press(screen.getByText(resultLabel));
-  await screen.findByText("Tạo lần thử thanh toán");
-  fireEvent.press(screen.getByText("Tạo lần thử thanh toán"));
+    renderCommerce(<OrderDetailRoute />);
+    expect(await screen.findByText("Tạo lần thử thanh toán")).toBeTruthy();
+    fireEvent.press(screen.getByText("Tạo lần thử thanh toán"));
+    await screen.findByText(resultLabel);
+    fireEvent.press(screen.getByText(resultLabel));
+    await screen.findByText("Tạo lần thử thanh toán");
+    fireEvent.press(screen.getByText("Tạo lần thử thanh toán"));
 
-  await waitFor(() => expect(attemptCalls).toHaveLength(2));
-  const firstKey = new Headers(attemptCalls[0]?.headers).get("Idempotency-Key");
-  const secondKey = new Headers(attemptCalls[1]?.headers).get("Idempotency-Key");
-  expect(firstKey).toMatch(/^[0-9a-f-]{36}$/i);
-  expect(secondKey).toMatch(/^[0-9a-f-]{36}$/i);
-  expect(secondKey).not.toBe(firstKey);
-  await screen.findByText(/TXN-NEW-02/);
-  expect(screen.getByText("Mô phỏng thất bại")).toBeTruthy();
-});
+    await waitFor(() => expect(attemptCalls).toHaveLength(2));
+    const firstKey = new Headers(attemptCalls[0]?.headers).get(
+      "Idempotency-Key",
+    );
+    const secondKey = new Headers(attemptCalls[1]?.headers).get(
+      "Idempotency-Key",
+    );
+    expect(firstKey).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(secondKey).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(secondKey).not.toBe(firstKey);
+    await screen.findByText(/TXN-NEW-02/);
+    expect(screen.getByText("Mô phỏng thất bại")).toBeTruthy();
+  },
+);
 
 test.each([
   ["UNPAID", "0", "COD chưa thu"],
   ["PAID", "135000", "COD đã thu"],
-] as const)("B10 labels COD %s without a Buyer collection request", async (paymentStatus, capturedAmount, label) => {
-  const order = makeBuyerOrder({
-    paymentMethod: "COD",
-    paymentStatus,
-    capturedAmount,
-    outstandingAmount: paymentStatus === "PAID" ? "0" : "135000",
-  });
-  mockOrderReads(order, order.payments);
+] as const)(
+  "B10 labels COD %s without a Buyer collection request",
+  async (paymentStatus, capturedAmount, label) => {
+    const order = makeBuyerOrder({
+      paymentMethod: "COD",
+      paymentStatus,
+      capturedAmount,
+      outstandingAmount: paymentStatus === "PAID" ? "0" : "135000",
+    });
+    mockOrderReads(order, order.payments);
 
-  renderCommerce(<OrderDetailRoute />);
+    renderCommerce(<OrderDetailRoute />);
 
-  expect(await screen.findByText(label)).toBeTruthy();
-  expect(screen.queryByText("Mô phỏng thanh toán thành công")).toBeNull();
-  expect(
-    mockRequest.mock.calls.some(([path]) => String(path).includes("collection")),
-  ).toBe(false);
-});
+    expect(await screen.findByText(label)).toBeTruthy();
+    expect(screen.queryByText("Mô phỏng thanh toán thành công")).toBeNull();
+    expect(
+      mockRequest.mock.calls.some(([path]) =>
+        String(path).includes("collection"),
+      ),
+    ).toBe(false);
+  },
+);
 
 test("B10 sends whole-order cancellation with the MarketplaceOrder version", async () => {
   let order = makeBuyerOrder({ version: 23, status: "PENDING" });
@@ -1354,9 +1454,16 @@ test("B10 sends whole-order cancellation with the MarketplaceOrder version", asy
         ...order,
         status: "CANCELLED",
         version: order.version + 1,
-        sellerOrders: order.sellerOrders.map((part) => ({ ...part, status: "CANCELLED" })),
+        sellerOrders: order.sellerOrders.map((part) => ({
+          ...part,
+          status: "CANCELLED",
+        })),
       };
-      return { orderId: order.id, status: "CANCELLED", cancelledSellerOrderIds: parts.map((part) => part.id) };
+      return {
+        orderId: order.id,
+        status: "CANCELLED",
+        cancelledSellerOrderIds: parts.map((part) => part.id),
+      };
     }
     throw new Error(`Unexpected request: ${route}`);
   });
@@ -1367,7 +1474,9 @@ test("B10 sends whole-order cancellation with the MarketplaceOrder version", asy
   fireEvent.press(screen.getByText("Xác nhận hủy"));
 
   await waitFor(() => expect(cancelCalls).toHaveLength(1));
-  expect(cancelCalls[0]?.[1]?.body).toBe(JSON.stringify({ reason: "Đổi ý", expectedVersion: 23 }));
+  expect(cancelCalls[0]?.[1]?.body).toBe(
+    JSON.stringify({ reason: "Đổi ý", expectedVersion: 23 }),
+  );
   expect(cancelCalls[0]?.[1]?.headers).toEqual({
     "Idempotency-Key": expect.stringMatching(/^[0-9a-f-]{36}$/i),
   });
@@ -1404,8 +1513,12 @@ test("B10 sends part cancellation with the SellerOrder version", async () => {
   fireEvent.press(screen.getByText("Xác nhận hủy"));
 
   await waitFor(() => expect(cancelCalls).toHaveLength(1));
-  expect(cancelCalls[0]?.[0]).toBe(`/orders/${order.id}/seller-orders/${part.id}/cancel`);
-  expect(cancelCalls[0]?.[1]?.body).toBe(JSON.stringify({ reason: "Không còn nhu cầu", expectedVersion: 13 }));
+  expect(cancelCalls[0]?.[0]).toBe(
+    `/orders/${order.id}/seller-orders/${part.id}/cancel`,
+  );
+  expect(cancelCalls[0]?.[1]?.body).toBe(
+    JSON.stringify({ reason: "Không còn nhu cầu", expectedVersion: 13 }),
+  );
 });
 
 test("B10 cancellation retry reuses its idempotency key and body", async () => {
@@ -1419,7 +1532,11 @@ test("B10 cancellation retry reuses its idempotency key and body", async () => {
     if (route === `/orders/${order.id}/cancel`) {
       cancelCalls.push(init);
       if (cancelCalls.length === 1) throw new TypeError("timeout");
-      return { orderId: order.id, status: "CANCELLED", cancelledSellerOrderIds: [] };
+      return {
+        orderId: order.id,
+        status: "CANCELLED",
+        cancelledSellerOrderIds: [],
+      };
     }
     throw new Error(`Unexpected request: ${route}`);
   });
@@ -1428,7 +1545,9 @@ test("B10 cancellation retry reuses its idempotency key and body", async () => {
   fireEvent.press(await screen.findByText("Hủy toàn đơn"));
   fireEvent.changeText(screen.getByLabelText("Lý do hủy"), "Đổi ý");
   fireEvent.press(screen.getByText("Xác nhận hủy"));
-  expect(await screen.findByText("Không thể hủy đơn. Vui lòng thử lại.")).toBeTruthy();
+  expect(
+    await screen.findByText("Không thể hủy đơn. Vui lòng thử lại."),
+  ).toBeTruthy();
   fireEvent.press(screen.getByText("Thử hủy lại"));
 
   await waitFor(() => expect(cancelCalls).toHaveLength(2));
@@ -1459,7 +1578,11 @@ test("B10 whole-cancel 409 names blocking seller shops and refetches", async () 
           code: "ORDER_NOT_CANCELLABLE",
           message: "Some seller orders have entered fulfillment.",
           details: [
-            { field: "blockingSellerOrderIds", code: "ORDER_IN_PROGRESS", message: blocked.id },
+            {
+              field: "blockingSellerOrderIds",
+              code: "ORDER_IN_PROGRESS",
+              message: blocked.id,
+            },
           ],
         },
       });
@@ -1479,20 +1602,25 @@ test.each([
   ["DELIVERED", "0", true],
   ["DELIVERED", "1000", false],
   ["PACKING", "0", false],
-] as const)("B10 receive action requires delivered and settled state (%s, %s)", async (status, outstandingAmount, visible) => {
-  const order = makeBuyerOrder();
-  order.sellerOrders = [makeSellerOrder({ orderId: order.id, status, outstandingAmount })];
-  mockOrderReads(order);
+] as const)(
+  "B10 receive action requires delivered and settled state (%s, %s)",
+  async (status, outstandingAmount, visible) => {
+    const order = makeBuyerOrder();
+    order.sellerOrders = [
+      makeSellerOrder({ orderId: order.id, status, outstandingAmount }),
+    ];
+    mockOrderReads(order);
 
-  renderCommerce(<OrderDetailRoute />);
+    renderCommerce(<OrderDetailRoute />);
 
-  if (visible) {
-    expect(await screen.findByText("Tôi đã nhận đủ hàng")).toBeTruthy();
-  } else {
-    await screen.findByText(order.orderNumber);
-    expect(screen.queryByText("Tôi đã nhận đủ hàng")).toBeNull();
-  }
-});
+    if (visible) {
+      expect(await screen.findByText("Tôi đã nhận đủ hàng")).toBeTruthy();
+    } else {
+      await screen.findByText(order.orderNumber);
+      expect(screen.queryByText("Tôi đã nhận đủ hàng")).toBeNull();
+    }
+  },
+);
 
 test("B10 receive retry reuses key/body and sends SellerOrder.version", async () => {
   let order = makeBuyerOrder({ status: "DELIVERED", version: 30 });
@@ -1514,7 +1642,9 @@ test("B10 receive retry reuses key/body and sends SellerOrder.version", async ()
       order = {
         ...order,
         status: "COMPLETED",
-        sellerOrders: [{ ...part, status: "COMPLETED", version: part.version + 1 }],
+        sellerOrders: [
+          { ...part, status: "COMPLETED", version: part.version + 1 },
+        ],
       };
       return order.sellerOrders[0];
     }
@@ -1523,11 +1653,17 @@ test("B10 receive retry reuses key/body and sends SellerOrder.version", async ()
 
   renderCommerce(<OrderDetailRoute />);
   fireEvent.press(await screen.findByText("Tôi đã nhận đủ hàng"));
-  expect(await screen.findByText("Không thể xác nhận đã nhận hàng. Vui lòng thử lại.")).toBeTruthy();
+  expect(
+    await screen.findByText(
+      "Không thể xác nhận đã nhận hàng. Vui lòng thử lại.",
+    ),
+  ).toBeTruthy();
   fireEvent.press(screen.getByText("Thử xác nhận đã nhận lại"));
 
   await waitFor(() => expect(receiveCalls).toHaveLength(2));
   expect(receiveCalls[1]?.headers).toEqual(receiveCalls[0]?.headers);
   expect(receiveCalls[1]?.body).toBe(receiveCalls[0]?.body);
-  expect(JSON.parse(String(receiveCalls[0]?.body))).toEqual({ expectedVersion: 17 });
+  expect(JSON.parse(String(receiveCalls[0]?.body))).toEqual({
+    expectedVersion: 17,
+  });
 });

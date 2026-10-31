@@ -54,9 +54,7 @@ export function setCommerceOrderId(orderId: string) {
   mockOrderId = orderId;
 }
 
-export function makeCartItem(
-  overrides: Partial<CartItem> = {},
-): CartItem {
+export function makeCartItem(overrides: Partial<CartItem> = {}): CartItem {
   return {
     id: CART_ITEM_ID,
     variantId: "55555555-5555-4555-8555-555555555555",
@@ -86,12 +84,7 @@ export function makeCartGroup(
 
 export function makeCart(
   groups: CartGroup[] = [
-    makeCartGroup(
-      CART_SHOP_ID,
-      "Nhà Bếp Mộc",
-      [makeCartItem()],
-      "125000",
-    ),
+    makeCartGroup(CART_SHOP_ID, "Nhà Bếp Mộc", [makeCartItem()], "125000"),
   ],
   selectedTotal = "125000",
 ): Cart {
@@ -326,14 +319,18 @@ export function renderCommerce(element: React.ReactElement) {
     ...view,
     rerender: (nextElement: React.ReactElement) =>
       view.rerender(
-        <QueryClientProvider client={queryClient}>{nextElement}</QueryClientProvider>,
+        <QueryClientProvider client={queryClient}>
+          {nextElement}
+        </QueryClientProvider>,
       ),
   };
 }
 
 export async function cleanupCommerceTests() {
   cleanup();
-  await Promise.all(queryClients.map((queryClient) => queryClient.cancelQueries()));
+  await Promise.all(
+    queryClients.map((queryClient) => queryClient.cancelQueries()),
+  );
   queryClients.forEach((queryClient) => queryClient.clear());
   queryClients.length = 0;
   await act(async () => {
