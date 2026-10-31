@@ -169,10 +169,14 @@ describe("shop onboarding PostgreSQL integration", () => {
     const pendingLogo = await createShop(second.body.data.accessToken, unverified.id);
     expect([403, 404, 422]).toContain(pendingLogo.status);
 
-    const persistedLogo = await app.get(DatabaseService).prisma.asset.findUniqueOrThrow({
-      where: { id: firstLogo.id },
-    });
-    expect(persistedLogo.shopId).toBe(results.find(({ status }) => status === 201)?.body.data.id);
+    const logos = await Promise.all(
+      [firstLogo, secondLogo].map(({ id }) =>
+        app.get(DatabaseService).prisma.asset.findUniqueOrThrow({ where: { id } }),
+      ),
+    );
+    const winner = results.findIndex(({ status }) => status === 201);
+    expect(logos[winner].shopId).toBe(results[winner].body.data.id);
+    expect(logos[1 - winner].shopId).toBeNull();
   });
 
   it("enforces moderation states, optimistic versions, immutable approved slugs, and audit records", async () => {
