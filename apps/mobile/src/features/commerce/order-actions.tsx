@@ -10,6 +10,7 @@ import { useSession } from "../auth/session-provider";
 import { writeIntentRegistry } from "./write-intents";
 import {
   orderDetailQueryKey,
+  orderListQueryPrefix,
   paymentHistoryQueryKey,
 } from "./order-query-keys";
 
@@ -121,6 +122,9 @@ export function OrderActions({
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: orderKey }),
       queryClient.invalidateQueries({ queryKey: paymentsKey }),
+      queryClient.invalidateQueries({
+        queryKey: orderListQueryPrefix(userId),
+      }),
     ]);
   }, [orderKey, paymentsKey, queryClient, userId]);
   const refreshOnConflict = useCallback(
@@ -239,14 +243,23 @@ export function OrderActions({
   });
 
   const pendingMockAttempt = latestMockAttempt(payments, order);
+  const attemptConflict =
+    attemptMutation.error instanceof ApiClientError &&
+    attemptMutation.error.status === 409;
   const canStartMockAttempt =
     order.paymentMethod === "MOCK" &&
     order.status !== "CANCELLED" &&
     order.outstandingAmount !== "0" &&
-    pendingMockAttempt?.status !== "PENDING";
+    pendingMockAttempt?.status !== "PENDING" &&
+    !attemptConflict;
+  const liveSellerOrders = order.sellerOrders.filter(
+    (part) => part.status !== "CANCELLED",
+  );
   const canCancelOrder =
-    order.status !== "CANCELLED" &&
-    order.sellerOrders.some((part) => part.status !== "CANCELLED");
+    order.status !== "CANCELLED" && liveSellerOrders.length > 0;
+  const canCancelAll =
+    canCancelOrder &&
+    liveSellerOrders.every((part) => part.status === "PENDING");
   const writePending =
     attemptMutation.isPending ||
     resultMutation.isPending ||
@@ -331,11 +344,13 @@ export function OrderActions({
               "Không thể bắt đầu thanh toán. Vui lòng thử lại.",
             )}
           </Text>
-          <ActionButton
-            label="Thử tạo lần thanh toán lại"
-            disabled={writePending}
-            onPress={() => attemptMutation.mutate()}
-          />
+          {!attemptConflict ? (
+            <ActionButton
+              label="Thử tạo lần thanh toán lại"
+              disabled={writePending}
+              onPress={() => attemptMutation.mutate()}
+            />
+          ) : null}
         </View>
       ) : null}
       {resultMutation.error ? (
@@ -361,15 +376,17 @@ export function OrderActions({
       {canCancelOrder ? (
         <View style={{ gap: 8 }}>
           <Text style={{ fontSize: 18, fontWeight: "600" }}>Hủy đơn</Text>
-          <ActionButton
-            label="Hủy toàn đơn"
-            disabled={writePending}
-            onPress={() => {
-              cancelMutation.reset();
-              setCancelReason("");
-              setCancelTarget("ALL");
-            }}
-          />
+          {canCancelAll ? (
+            <ActionButton
+              label="Hủy toàn đơn"
+              disabled={writePending}
+              onPress={() => {
+                cancelMutation.reset();
+                setCancelReason("");
+                setCancelTarget("ALL");
+              }}
+            />
+          ) : null}
           {order.sellerOrders
             .filter((part) => part.status === "PENDING")
             .map((part) => (

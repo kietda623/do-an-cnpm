@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useSession } from "../auth/session-provider";
 import { formatVnd } from "../catalog/catalog-data";
+import { orderListQueryPrefix } from "./order-query-keys";
 
 type OrderSummary = components["schemas"]["OrderSummary"];
 
@@ -53,7 +54,7 @@ type OrderFilters = {
 };
 
 export function orderListQueryKey(userId: string, filters: OrderFilters) {
-  return ["orders", userId, filters] as const;
+  return [...orderListQueryPrefix(userId), filters] as const;
 }
 
 function dateBound(

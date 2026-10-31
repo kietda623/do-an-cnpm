@@ -1285,6 +1285,48 @@ test("B10 retries mock-attempt creation with the same key and body", async () =>
   expect(screen.queryByText("Thu COD")).toBeNull();
 });
 
+test.each(["ORDER_EXPIRED", "ORDER_NOT_PAYABLE", "ALREADY_PAID"] as const)(
+  "B10 does not offer a mock-attempt retry after server 409 %s",
+  async (code) => {
+    const order = makeBuyerOrder({ paymentMethod: "MOCK" });
+    const basePayment = makePayment({
+      orderId: order.id,
+      transactionCode: order.orderNumber,
+      status: "PENDING",
+    });
+    let orderReads = 0;
+    const attemptCalls: Array<RequestInit | undefined> = [];
+    mockRequest.mockImplementation(async (path, init) => {
+      const route = String(path);
+      if (route === `/orders/${order.id}`) {
+        orderReads += 1;
+        return order;
+      }
+      if (route === `/payments?orderId=${order.id}`) return [basePayment];
+      if (route === "/payments/mock-attempts") {
+        attemptCalls.push(init);
+        throw new ApiClientError(code, 409, {
+          error: { code, message: "State no longer allows payment." },
+        });
+      }
+      throw new Error(`Unexpected request: ${route}`);
+    });
+
+    renderCommerce(<OrderDetailRoute />);
+    fireEvent.press(await screen.findByText("Tạo lần thử thanh toán"));
+
+    expect(
+      await screen.findByText(
+        "Trạng thái đơn đã thay đổi. Đã tải lại dữ liệu mới nhất.",
+      ),
+    ).toBeTruthy();
+    await waitFor(() => expect(orderReads).toBeGreaterThan(1));
+    expect(screen.queryByText("Tạo lần thử thanh toán")).toBeNull();
+    expect(screen.queryByText("Thử tạo lần thanh toán lại")).toBeNull();
+    expect(attemptCalls).toHaveLength(1);
+  },
+);
+
 test("B10 retries mock-result with the same event, key and body", async () => {
   const order = makeBuyerOrder({ paymentMethod: "MOCK", version: 5 });
   const attempt = makePayment({
@@ -1468,7 +1510,13 @@ test("B10 sends whole-order cancellation with the MarketplaceOrder version", asy
     throw new Error(`Unexpected request: ${route}`);
   });
 
-  renderCommerce(<OrderDetailRoute />);
+  const { queryClient } = renderCommerce(<OrderDetailRoute />);
+  const orderListKey = [
+    "orders",
+    "buyer-1",
+    { page: 1, pageSize: 20 },
+  ] as const;
+  queryClient.setQueryData(orderListKey, [{ id: "stale-order-summary" }]);
   fireEvent.press(await screen.findByText("Hủy toàn đơn"));
   fireEvent.changeText(screen.getByLabelText("Lý do hủy"), "Đổi ý");
   fireEvent.press(screen.getByText("Xác nhận hủy"));
@@ -1481,6 +1529,9 @@ test("B10 sends whole-order cancellation with the MarketplaceOrder version", asy
     "Idempotency-Key": expect.stringMatching(/^[0-9a-f-]{36}$/i),
   });
   await waitFor(() => expect(order.status).toBe("CANCELLED"));
+  await waitFor(() =>
+    expect(queryClient.getQueryState(orderListKey)?.isInvalidated).toBe(true),
+  );
 });
 
 test("B10 sends part cancellation with the SellerOrder version", async () => {
@@ -1509,6 +1560,7 @@ test("B10 sends part cancellation with the SellerOrder version", async () => {
 
   renderCommerce(<OrderDetailRoute />);
   fireEvent.press(await screen.findByText("Hủy riêng Nhà Bếp Mộc"));
+  expect(screen.queryByText("Hủy toàn đơn")).toBeNull();
   fireEvent.changeText(screen.getByLabelText("Lý do hủy"), "Không còn nhu cầu");
   fireEvent.press(screen.getByText("Xác nhận hủy"));
 
