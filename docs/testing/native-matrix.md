@@ -112,7 +112,7 @@ Review CodeRabbit được đối chiếu lại: logout dùng chung error với 
 
 ## T137 — Buyer commerce component evidence — 2026-11-01
 
-`apps/mobile/test/commerce-journeys.spec.tsx` có 55 test component pass cho B07–B10. B07 kiểm tra giỏ theo shop, chọn dòng hàng, giới hạn số lượng, xóa, retry, lỗi 403 và cô lập account. B08 kiểm tra báo giá do server tính, lựa chọn dòng hàng/địa chỉ/phương thức, hạn quote, đổi input, `PRICE_CHANGED` và retry cùng idempotency key. B09 kiểm tra lọc/trang/ngày, retry, 403, đổi buyer, hủy request và refetch khi focus quay lại. B10 kiểm tra snapshot đơn, payments/refunds, tracking/deadline, MOCK outcomes, retry/idempotency, attempt mới sau FAILED/CANCELLED, nhãn COD, hủy toàn bộ/một phần, blocker 409 và điều kiện xác nhận đã nhận hàng. API được mock; đây là component evidence, không phải live API hoặc thiết bị evidence.
+`apps/mobile/test/commerce-journeys.spec.tsx` có 58 test component pass cho B07–B10. B07 kiểm tra giỏ theo shop, chọn dòng hàng, giới hạn số lượng, xóa, retry, lỗi 403 và cô lập account. B08 kiểm tra báo giá do server tính, lựa chọn dòng hàng/địa chỉ/phương thức, hạn quote, đổi input, `PRICE_CHANGED` và retry cùng idempotency key. B09 kiểm tra lọc/trang/ngày, retry, 403, đổi buyer, hủy request và refetch khi focus quay lại. B10 kiểm tra snapshot đơn, payments/refunds, tracking/deadline, MOCK outcomes, retry/idempotency, attempt mới sau FAILED/CANCELLED, nhãn COD, hủy toàn bộ/một phần, blocker 409 và điều kiện xác nhận đã nhận hàng. API được mock; đây là component evidence, không phải live API hoặc thiết bị evidence.
 
 Red/green: B10 ban đầu fail vì route chi tiết còn placeholder. Regression test tiếp theo tái hiện việc chọn sai attempt mới khi `createdAt` trùng nhau; sửa bằng cách bỏ synthetic base-payment và dùng thứ tự attemptNumber server trả về. Lần chạy Mobile đầu sau B10 cũng bắt navigation test còn đòi placeholder; fixture nay trả 404 cho order giả và test vẫn xác nhận quay lại đúng protected path, đồng thời kiểm tra trạng thái not-found thật.
 
@@ -120,11 +120,15 @@ Môi trường: Windows 11 Home Single Language build 26200, Node `v24.21.0`, pn
 
 | Lệnh | Kết quả thực tế |
 | --- | --- |
-| `corepack pnpm --filter @marketplace/mobile exec jest test/commerce-journeys.spec.tsx --runInBand` | Pass 55/55 B07–B10, exit 0. |
-| `corepack pnpm --filter @marketplace/mobile exec jest --runInBand --silent` | Pass 10 suites, 130 pass, 1 TODO (B13), 0 fail. |
+| `corepack pnpm --filter @marketplace/mobile exec jest test/commerce-journeys.spec.tsx --runInBand --silent` | Pass 58/58 B07–B10, exit 0. |
+| `corepack pnpm --filter @marketplace/mobile exec jest --runInBand --silent` | Pass 10 suites, 133 pass, 1 TODO (B13), 0 fail. |
 | `corepack pnpm lint:workspaces` | Pass 11/11 workspace tasks (10 cache). |
 | `corepack pnpm typecheck` | Pass 11/11 workspace tasks (10 cache). |
-| `corepack pnpm test` | Pass 3/3 test tasks: API 59 pass (cache); api-client 105 pass (cache); Mobile 130 pass + 1 TODO. |
+| `corepack pnpm test` | Pass 3/3 test tasks: API 59 pass (cache); api-client 105 pass (cache); Mobile 133 pass + 1 TODO. |
 | `corepack pnpm build` | Pass 4/4 build targets (4 cache); không có native Mobile APK target, không phải Android device evidence. |
 | Prettier check scoped cho `apps/mobile/src/features/commerce/*`, buyer commerce routes và test files; `git diff --check` | Prettier pass sau khi format các file T137 liên quan; diff check pass. Không format repo/phần ngoài T137. Trên Windows, dùng PowerShell wrapper `node_modules/.bin/prettier.ps1` để CLI nhận đúng route path có ngoặc. |
 | Android/iOS device run | Chưa chạy theo phạm vi đã duyệt; iOS hoãn. |
+
+### Rà soát độc lập sau khi hoàn tất B10 — 2026-11-01
+
+Ba nhóm regression tests ban đầu đỏ (5 test instances): trạng thái một SellerOrder `CONFIRMED` vẫn làm hiện nút hủy toàn đơn; danh sách Buyer không bị stale-mark sau mutation ở chi tiết; `ORDER_EXPIRED`, `ORDER_NOT_PAYABLE` và `ALREADY_PAID` vẫn hiện nút gửi lại mock attempt. Đối chiếu `cancellation.service.ts`, `payment.service.ts` và query key của B09 xác nhận các trường hợp này còn hiệu lực. Sau sửa, nút hủy toàn đơn chỉ hiện khi mọi phần chưa hủy đều `PENDING` (hủy phần còn `PENDING` vẫn dùng được); các thao tác chi tiết invalidate prefix danh sách theo buyer; HTTP 409 mock-attempt refetch trạng thái rồi ẩn cả retry lẫn nút tạo lần mới trong màn hiện tại. Test B10 tăng từ 21 lên 24; commerce suite pass 58/58.
