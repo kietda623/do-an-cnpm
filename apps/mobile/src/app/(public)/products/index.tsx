@@ -1,6 +1,6 @@
 import React from "react";
-import { ScreenPlaceholder } from "../../../features/navigation/screen-placeholder";
+import { ProductBrowser } from "../../../features/catalog/product-browser";
 
 export default function ProductListRoute() {
-  return <ScreenPlaceholder title="Danh sách sản phẩm" task="T136" />;
+  return <ProductBrowser pathname="/products" title="Khám phá sản phẩm" />;
 }

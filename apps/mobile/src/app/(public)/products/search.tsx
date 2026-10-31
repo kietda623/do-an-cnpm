@@ -1,6 +1,11 @@
 import React from "react";
-import { ScreenPlaceholder } from "../../../features/navigation/screen-placeholder";
+import { ProductBrowser } from "../../../features/catalog/product-browser";
 
 export default function ProductSearchRoute() {
-  return <ScreenPlaceholder title="Tìm kiếm và lọc sản phẩm" task="T136" />;
+  return (
+    <ProductBrowser
+      pathname="/products/search"
+      title="Tìm kiếm và lọc sản phẩm"
+    />
+  );
 }

@@ -8,6 +8,7 @@ import {
 } from "expo-router/testing-library";
 import { focusManager } from "@tanstack/react-query";
 import { RESUME_BACKGROUND_THRESHOLD_MS } from "../src/features/auth/session-provider";
+import { mobileQueryClient } from "../src/features/api/query-client";
 
 let mockStored: string | null = null;
 let mockRefreshUnauthorized = false;
@@ -64,6 +65,7 @@ beforeEach(() => {
   mockMeGate = null;
   mockMeStarted = null;
   mockCalls = [];
+  mobileQueryClient.clear();
   globalThis.fetch = jest.fn(async (input, init) => {
     const pathname = new URL(String(input)).pathname;
     mockCalls.push(pathname);
@@ -119,6 +121,7 @@ beforeEach(() => {
     }
     if (pathname.endsWith("/users/me/addresses"))
       return Response.json({ data: [] });
+    if (pathname.endsWith("/categories")) return Response.json({ data: [] });
     if (pathname.endsWith("/products")) {
       if (mockProductsForbidden)
         return Response.json(
@@ -145,8 +148,17 @@ beforeEach(() => {
         ],
       });
     }
+    if (/\/products\/[^/]+$/.test(pathname) || /\/shops\/[^/]+$/.test(pathname))
+      return Response.json(
+        { error: { code: "NOT_FOUND", message: "Not found" } },
+        { status: 404 },
+      );
     throw new Error(`Unexpected T133 fixture endpoint: ${pathname}`);
   });
+});
+
+afterEach(() => {
+  mobileQueryClient.clear();
 });
 
 afterAll(() => {
@@ -201,18 +213,18 @@ test("shared API state presents forbidden responses without exposing server mess
 });
 
 test.each([
-  ["/products", "Danh sách sản phẩm"],
+  ["/products", "Khám phá sản phẩm"],
   ["/products/search", "Tìm kiếm và lọc sản phẩm"],
-  ["/products/public-product", "Chi tiết sản phẩm"],
-  ["/shops/public-shop", "Cửa hàng"],
+  [
+    "/products/public-product",
+    "Sản phẩm không tồn tại hoặc hiện không được bán công khai.",
+  ],
+  ["/shops/public-shop", "Cửa hàng không tồn tại hoặc chưa mở bán công khai."],
 ])("guest can open public route %s", async (path, heading) => {
   const navigation = await openRoute(path);
-  expect(
-    await screen.findByText(new RegExp(`${heading} đang phát triển`)),
-  ).toBeTruthy();
+  expect(await screen.findByText(heading, { exact: false })).toBeTruthy();
   expect(navigation.getPathname()).toBe(path);
   expect(screen.queryByPlaceholderText("Email")).toBeNull();
-  expect(screen.getByText(/đang phát triển/i)).toBeTruthy();
 });
 
 test.each([
