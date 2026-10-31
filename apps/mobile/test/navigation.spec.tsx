@@ -131,7 +131,13 @@ beforeEach(() => {
           updatedAt: "2026-10-29T00:00:00.000Z",
         },
       });
+    if (pathname.endsWith("/orders/order-123"))
+      return Response.json(
+        { error: { code: "NOT_FOUND", message: "Not found" } },
+        { status: 404 },
+      );
     if (pathname.endsWith("/orders")) return Response.json({ data: [] });
+    if (pathname.endsWith("/payments")) return Response.json({ data: [] });
     if (pathname.endsWith("/categories")) return Response.json({ data: [] });
     if (pathname.endsWith("/products")) {
       if (mockProductsForbidden)
@@ -266,6 +272,8 @@ test.each([
       ).toBeTruthy();
     } else if (path === "/orders") {
       expect(await screen.findByText("Bạn chưa có đơn hàng nào.")).toBeTruthy();
+    } else if (path === "/orders/order-123") {
+      expect(await screen.findByText("Không tìm thấy đơn hàng.")).toBeTruthy();
     } else {
       expect(
         await screen.findByText(new RegExp(`${heading} đang phát triển`)),

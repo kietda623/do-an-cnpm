@@ -336,11 +336,5 @@ test("logout cancels and clears cache; an old query cannot populate it after ano
   }
 });
 
-const future = [
-  "B07 cart — T137",
-  "B08 checkout — T137",
-  "B09 order list — T137",
-  "B10 order detail/payment — T137",
-  "B13 review — T138",
-];
+const future = ["B13 review — T138"];
 for (const title of future) test.todo(title);
