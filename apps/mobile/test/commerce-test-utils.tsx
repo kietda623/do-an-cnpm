@@ -10,12 +10,14 @@ type CartItem = components["schemas"]["CartItem"];
 type Address = components["schemas"]["Address"];
 type CheckoutQuote = components["schemas"]["CheckoutQuote"];
 type Order = components["schemas"]["Order"];
+type OrderSummary = components["schemas"]["OrderSummary"];
 
 export const CART_ITEM_ID = "11111111-1111-4111-8111-111111111111";
 export const SECOND_CART_ITEM_ID = "22222222-2222-4222-8222-222222222222";
 export const CART_SHOP_ID = "33333333-3333-4333-8333-333333333333";
 export const SECOND_CART_SHOP_ID = "44444444-4444-4444-8444-444444444444";
 let quoteSequence = 1;
+let orderSequence = 1;
 
 export const mockRouter = { push: jest.fn(), replace: jest.fn() };
 export const mockRequest = jest.fn<Promise<unknown>, [ApiPath, RequestInit?]>();
@@ -176,6 +178,23 @@ export function makeOrder(id = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"): Order {
   };
 }
 
+export function makeOrderSummary(
+  overrides: Partial<OrderSummary> = {},
+): OrderSummary {
+  const sequence = orderSequence++;
+  return {
+    id: `dddddddd-dddd-4ddd-8ddd-${String(sequence).padStart(12, "0")}`,
+    orderNumber: `MP-2026-${String(sequence).padStart(5, "0")}`,
+    status: "PENDING",
+    partiallyCancelled: false,
+    originalTotal: "135000",
+    outstandingAmount: "135000",
+    paymentStatus: "UNPAID",
+    createdAt: "2026-11-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 export function createCommerceQueryClient() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -214,6 +233,8 @@ export async function cleanupCommerceTests() {
 
 export function resetCommerceMocks() {
   mockUser = null;
+  quoteSequence = 1;
+  orderSequence = 1;
   mockRouter.push.mockReset();
   mockRouter.replace.mockReset();
   mockRequest.mockReset();

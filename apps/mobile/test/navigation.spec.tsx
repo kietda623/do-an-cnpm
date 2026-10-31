@@ -131,6 +131,7 @@ beforeEach(() => {
           updatedAt: "2026-10-29T00:00:00.000Z",
         },
       });
+    if (pathname.endsWith("/orders")) return Response.json({ data: [] });
     if (pathname.endsWith("/categories")) return Response.json({ data: [] });
     if (pathname.endsWith("/products")) {
       if (mockProductsForbidden)
@@ -263,6 +264,8 @@ test.each([
       expect(
         await screen.findByText("Chưa có sản phẩm được chọn."),
       ).toBeTruthy();
+    } else if (path === "/orders") {
+      expect(await screen.findByText("Bạn chưa có đơn hàng nào.")).toBeTruthy();
     } else {
       expect(
         await screen.findByText(new RegExp(`${heading} đang phát triển`)),

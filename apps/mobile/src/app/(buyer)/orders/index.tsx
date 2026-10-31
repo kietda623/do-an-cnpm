@@ -1,6 +1,6 @@
 import React from "react";
-import { ScreenPlaceholder } from "../../../features/navigation/screen-placeholder";
+import { OrderListScreen } from "../../../features/commerce/order-list-screen";
 
 export default function OrdersRoute() {
-  return <ScreenPlaceholder title="Đơn hàng" task="T137" />;
+  return <OrderListScreen />;
 }

@@ -1,5 +1,6 @@
 import React from "react";
 import { ApiClientError } from "@marketplace/api-client";
+import { focusManager } from "@tanstack/react-query";
 import {
   act,
   fireEvent,
@@ -17,6 +18,7 @@ import {
   makeCartGroup,
   makeCartItem,
   makeOrder,
+  makeOrderSummary,
   makeQuote,
   mockRequest,
   mockRouter,
@@ -26,6 +28,7 @@ import {
 } from "./commerce-test-utils";
 import CartRoute from "../src/app/(buyer)/cart";
 import CheckoutRoute from "../src/app/(buyer)/checkout";
+import OrdersRoute from "../src/app/(buyer)/orders";
 
 beforeEach(() => {
   resetCommerceMocks();
@@ -736,4 +739,247 @@ test("B08 PRICE_CHANGED requires an explicit new quote and has no replacement qu
   await waitFor(() => expect(quoteReads).toBe(2));
   expect(screen.getByText("Tổng cộng: 150.000₫")).toBeTruthy();
   expect(checkoutReads).toBe(1);
+});
+
+test("B09 shows loading while the buyer's orders are being fetched", async () => {
+  let resolveOrders: ((orders: ReturnType<typeof makeOrderSummary>[]) => void) | undefined;
+  mockRequest.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        resolveOrders = resolve as (
+          orders: ReturnType<typeof makeOrderSummary>[],
+        ) => void;
+      }),
+  );
+
+  renderCommerce(<OrdersRoute />);
+
+  expect(screen.getByText("Đang tải đơn hàng…")).toBeTruthy();
+  await act(async () => resolveOrders?.([makeOrderSummary()]));
+  expect(await screen.findByText("MP-2026-00001")).toBeTruthy();
+});
+
+test("B09 empty order history offers product discovery", async () => {
+  mockRequest.mockResolvedValue([]);
+
+  renderCommerce(<OrdersRoute />);
+
+  expect(await screen.findByText("Bạn chưa có đơn hàng nào.")).toBeTruthy();
+  fireEvent.press(screen.getByText("Khám phá sản phẩm"));
+  expect(mockRouter.push).toHaveBeenCalledWith("/products");
+});
+
+test("B09 sends status and payment filters to the server", async () => {
+  mockRequest.mockResolvedValue([makeOrderSummary()]);
+
+  renderCommerce(<OrdersRoute />);
+  await screen.findByText("MP-2026-00001");
+  fireEvent.press(screen.getByLabelText("Trạng thái: Đã giao"));
+  expect(screen.getByLabelText("Thanh toán: Đã thanh toán")).toBeTruthy();
+  fireEvent.press(screen.getByLabelText("Thanh toán: Đã thanh toán"));
+
+  await waitFor(() => {
+    const paths = mockRequest.mock.calls.map(([path]) => String(path));
+    expect(paths.some((path) => new URL(path, "https://example.test").searchParams.get("status") === "DELIVERED")).toBe(true);
+    expect(paths.some((path) => new URL(path, "https://example.test").searchParams.get("paymentStatus") === "PAID")).toBe(true);
+  });
+});
+
+test("B09 converts inclusive ISO date filters to RFC3339 UTC bounds", async () => {
+  mockRequest.mockResolvedValue([]);
+
+  renderCommerce(<OrdersRoute />);
+  await screen.findByText("Bạn chưa có đơn hàng nào.");
+  fireEvent.changeText(screen.getByLabelText("Từ ngày"), "2026-10-20");
+  fireEvent.changeText(screen.getByLabelText("Đến ngày"), "2026-10-21");
+  fireEvent.press(screen.getByText("Lọc theo ngày"));
+
+  await waitFor(() => {
+    const paths = mockRequest.mock.calls.map(([path]) => String(path));
+    const filteredPath = paths.find((path) => path.includes("from="));
+    expect(filteredPath).toBeTruthy();
+    const params = new URL(filteredPath!, "https://example.test").searchParams;
+    expect(params.get("from")).toBe("2026-10-20T00:00:00.000Z");
+    expect(params.get("to")).toBe("2026-10-21T23:59:59.999Z");
+  });
+});
+
+test("B09 rejects an invalid date range without sending it", async () => {
+  mockRequest.mockResolvedValue([]);
+
+  renderCommerce(<OrdersRoute />);
+  await screen.findByText("Bạn chưa có đơn hàng nào.");
+  fireEvent.changeText(screen.getByLabelText("Từ ngày"), "2026-02-30");
+  fireEvent.press(screen.getByText("Lọc theo ngày"));
+
+  expect(await screen.findByText("Nhập ngày hợp lệ theo định dạng YYYY-MM-DD.")).toBeTruthy();
+  expect(mockRequest.mock.calls.some(([path]) => String(path).includes("from="))).toBe(false);
+});
+
+test("B09 pages through server results with page size 20", async () => {
+  const firstPage = Array.from({ length: 20 }, (_, index) =>
+    makeOrderSummary({ orderNumber: `MP-P1-${String(index + 1).padStart(2, "0")}` }),
+  );
+  const secondPage = [makeOrderSummary({ orderNumber: "MP-P2-01" })];
+  mockRequest.mockImplementation(async (path) => {
+    const page = new URL(String(path), "https://example.test").searchParams.get("page");
+    return page === "2" ? secondPage : firstPage;
+  });
+
+  renderCommerce(<OrdersRoute />);
+  expect(await screen.findByText("MP-P1-01")).toBeTruthy();
+  fireEvent.press(screen.getByText("Trang sau"));
+  expect(await screen.findByText("MP-P2-01")).toBeTruthy();
+  expect(screen.queryByText("MP-P1-01")).toBeNull();
+  expect(screen.getByText("Trang 2")).toBeTruthy();
+  expect(screen.getByLabelText("Trang sau").props.accessibilityState?.disabled).toBe(true);
+  fireEvent.press(screen.getByText("Trang trước"));
+  expect(await screen.findByText("MP-P1-01")).toBeTruthy();
+  expect(
+    mockRequest.mock.calls.some(
+      ([path]) => new URL(String(path), "https://example.test").searchParams.get("pageSize") === "20",
+    ),
+  ).toBe(true);
+});
+
+test("B09 displays payment and partial-cancellation labels from the server", async () => {
+  const order = makeOrderSummary({
+    id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+    orderNumber: "MP-PARTIAL-1",
+    status: "CANCELLED",
+    partiallyCancelled: true,
+    paymentStatus: "PARTIALLY_REFUNDED",
+    originalTotal: "250000",
+    outstandingAmount: "100000",
+  });
+  mockRequest.mockResolvedValue([order]);
+
+  renderCommerce(<OrdersRoute />);
+
+  expect(await screen.findByText("MP-PARTIAL-1")).toBeTruthy();
+  expect(screen.getByText("Đã hủy một phần")).toBeTruthy();
+  expect(screen.getByText("Đã hoàn một phần")).toBeTruthy();
+  expect(screen.getByText("Tổng đơn: 250.000₫ · Còn phải trả: 100.000₫")).toBeTruthy();
+  fireEvent.press(screen.getByLabelText("Đơn hàng MP-PARTIAL-1"));
+  expect(mockRouter.push).toHaveBeenCalledWith(`/orders/${order.id}`);
+});
+
+test("B09 lets the buyer retry after a list request fails", async () => {
+  let reads = 0;
+  mockRequest.mockImplementation(async () => {
+    reads += 1;
+    if (reads === 1) throw new TypeError("offline");
+    return [makeOrderSummary()];
+  });
+
+  renderCommerce(<OrdersRoute />);
+  expect(await screen.findByText("Không thể tải đơn hàng.")).toBeTruthy();
+  fireEvent.press(screen.getByText("Thử lại"));
+  expect(await screen.findByText("MP-2026-00001")).toBeTruthy();
+  expect(reads).toBeGreaterThanOrEqual(2);
+});
+
+test("B09 shows a forbidden state instead of treating 403 as an empty list", async () => {
+  mockRequest.mockRejectedValue(
+    new ApiClientError("FORBIDDEN", 403, {
+      error: { code: "FORBIDDEN", message: "Hidden server detail" },
+    }),
+  );
+
+  renderCommerce(<OrdersRoute />);
+
+  expect(await screen.findByText("Bạn không có quyền xem đơn hàng.")).toBeTruthy();
+  expect(screen.queryByText("Bạn chưa có đơn hàng nào.")).toBeNull();
+  expect(screen.queryByText("Hidden server detail")).toBeNull();
+});
+
+test("B09 account switch uses a separate query and never shows the previous buyer's rows", async () => {
+  let resolveBuyerTwo:
+    | ((orders: ReturnType<typeof makeOrderSummary>[]) => void)
+    | undefined;
+  mockRequest.mockImplementationOnce(async () => [
+    makeOrderSummary({ orderNumber: "BUYER-ONE-ORDER" }),
+  ]).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        resolveBuyerTwo = resolve as (
+          orders: ReturnType<typeof makeOrderSummary>[],
+        ) => void;
+      }),
+  );
+  const view = renderCommerce(<OrdersRoute />);
+
+  expect(await screen.findByText("BUYER-ONE-ORDER")).toBeTruthy();
+  setCommerceUser({ id: "buyer-2" });
+  act(() => view.rerender(<OrdersRoute />));
+  expect(screen.queryByText("BUYER-ONE-ORDER")).toBeNull();
+  await act(async () =>
+    resolveBuyerTwo?.([makeOrderSummary({ orderNumber: "BUYER-TWO-ORDER" })]),
+  );
+  expect(await screen.findByText("BUYER-TWO-ORDER")).toBeTruthy();
+  expect(screen.queryByText("BUYER-ONE-ORDER")).toBeNull();
+  expect(view.queryClient.getQueryData(["orders", "buyer-1", expect.anything()])).toBeUndefined();
+});
+
+test("B09 query key is scoped by buyer, filters and page", async () => {
+  mockRequest.mockResolvedValue(
+    Array.from({ length: 20 }, (_, index) => makeOrderSummary({ orderNumber: `MP-KEY-${index}` })),
+  );
+  const view = renderCommerce(<OrdersRoute />);
+
+  await screen.findByText("MP-KEY-0");
+  fireEvent.press(screen.getByLabelText("Trạng thái: Đã giao"));
+  await waitFor(() =>
+    expect(screen.getByLabelText("Trang sau").props.accessibilityState?.disabled).toBe(false),
+  );
+  fireEvent.press(screen.getByLabelText("Trang sau"));
+
+  await waitFor(() => {
+    const orderKeys = view.queryClient
+      .getQueryCache()
+      .getAll()
+      .map((query) => query.queryKey)
+      .filter((key) => key[0] === "orders" && key[1] === "buyer-1");
+    expect(orderKeys.length).toBeGreaterThanOrEqual(2);
+    expect(
+      orderKeys.some(
+        (key) =>
+          JSON.stringify(key).includes('"status":"DELIVERED"') &&
+          JSON.stringify(key).includes('"page":2'),
+      ),
+    ).toBe(true);
+  });
+});
+
+test("B09 aborts the request when the screen is removed", async () => {
+  let requestSignal: AbortSignal | undefined;
+  mockRequest.mockImplementationOnce(
+    (_path, init) => {
+      requestSignal = init?.signal as AbortSignal | undefined;
+      return new Promise(() => undefined);
+    },
+  );
+  const view = renderCommerce(<OrdersRoute />);
+  await waitFor(() => expect(requestSignal).toBeDefined());
+
+  view.unmount();
+  await view.queryClient.cancelQueries({ queryKey: ["orders", "buyer-1"] });
+
+  expect(requestSignal?.aborted).toBe(true);
+});
+
+test("B09 refetches when React Query regains focus", async () => {
+  let reads = 0;
+  mockRequest.mockImplementation(async () => {
+    reads += 1;
+    return [makeOrderSummary()];
+  });
+  renderCommerce(<OrdersRoute />);
+  await screen.findByText("MP-2026-00001");
+  expect(reads).toBe(1);
+
+  act(() => focusManager.setFocused(false));
+  act(() => focusManager.setFocused(true));
+
+  await waitFor(() => expect(reads).toBeGreaterThanOrEqual(2));
 });
