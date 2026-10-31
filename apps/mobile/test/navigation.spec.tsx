@@ -121,6 +121,23 @@ beforeEach(() => {
     }
     if (pathname.endsWith("/users/me/addresses"))
       return Response.json({ data: [] });
+    if (pathname.endsWith("/cart"))
+      return Response.json({
+        data: {
+          id: "00000000-0000-4000-8000-000000000010",
+          groups: [],
+          selectedTotal: "0",
+          currency: "VND",
+          updatedAt: "2026-10-29T00:00:00.000Z",
+        },
+      });
+    if (pathname.endsWith("/orders/order-123"))
+      return Response.json(
+        { error: { code: "NOT_FOUND", message: "Not found" } },
+        { status: 404 },
+      );
+    if (pathname.endsWith("/orders")) return Response.json({ data: [] });
+    if (pathname.endsWith("/payments")) return Response.json({ data: [] });
     if (pathname.endsWith("/categories")) return Response.json({ data: [] });
     if (pathname.endsWith("/products")) {
       if (mockProductsForbidden)
@@ -247,6 +264,16 @@ test.each([
       expect(await screen.findByPlaceholderText("Họ và tên")).toBeTruthy();
     } else if (path === "/account/addresses") {
       expect(await screen.findByText(/Chưa có địa chỉ/)).toBeTruthy();
+    } else if (path === "/cart") {
+      expect(await screen.findByText("Giỏ hàng đang trống.")).toBeTruthy();
+    } else if (path === "/checkout") {
+      expect(
+        await screen.findByText("Chưa có sản phẩm được chọn."),
+      ).toBeTruthy();
+    } else if (path === "/orders") {
+      expect(await screen.findByText("Bạn chưa có đơn hàng nào.")).toBeTruthy();
+    } else if (path === "/orders/order-123") {
+      expect(await screen.findByText("Không tìm thấy đơn hàng.")).toBeTruthy();
     } else {
       expect(
         await screen.findByText(new RegExp(`${heading} đang phát triển`)),
@@ -260,14 +287,14 @@ test.each([
 test("logout clears the session and replaces the protected screen with login", async () => {
   mockStored = "t133-refresh-seed";
   const navigation = await openRoute("/cart");
-  expect(await screen.findByText(/Giỏ hàng.*đang phát triển/i)).toBeTruthy();
+  expect(await screen.findByText("Giỏ hàng đang trống.")).toBeTruthy();
   await act(async () => {
     fireEvent.press(screen.getByRole("button", { name: /Đăng xuất/i }));
   });
   expect(await screen.findByPlaceholderText("Email")).toBeTruthy();
   expect(navigation.getPathname()).toBe("/login");
   expect(mockStored).toBeNull();
-  expect(screen.queryByText(/Giỏ hàng.*đang phát triển/i)).toBeNull();
+  expect(screen.queryByText("Giỏ hàng đang trống.")).toBeNull();
 });
 
 test("a refresh 401 clears session and protected screen state", async () => {
@@ -277,7 +304,7 @@ test("a refresh 401 clears session and protected screen state", async () => {
   expect(await screen.findByPlaceholderText("Email")).toBeTruthy();
   expect(navigation.getPathname()).toBe("/login");
   expect(mockStored).toBeNull();
-  expect(screen.queryByText(/Giỏ hàng.*đang phát triển/i)).toBeNull();
+  expect(screen.queryByText("Giỏ hàng đang trống.")).toBeNull();
 });
 
 test("a refresh 401 preserves the protected route through reauthentication", async () => {
@@ -288,13 +315,13 @@ test("a refresh 401 preserves the protected route through reauthentication", asy
   expect(navigation.getSearchParams().returnTo).toBe("/cart");
   await signIn();
   await waitFor(() => expect(navigation.getPathname()).toBe("/cart"));
-  expect(screen.getByText(/Giỏ hàng.*đang phát triển/i)).toBeTruthy();
+  expect(await screen.findByText("Giỏ hàng đang trống.")).toBeTruthy();
 });
 
 test("resume does not request /users/me before the exported background threshold", async () => {
   const navigation = await openRoute("/cart");
   await signIn();
-  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  await screen.findByText("Giỏ hàng đang trống.");
   let now = 100_000;
   const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
   try {
@@ -316,7 +343,7 @@ test("resume does not request /users/me before the exported background threshold
 test("resume revalidates before enabling focus refetch at the threshold", async () => {
   const navigation = await openRoute("/cart");
   await signIn();
-  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  await screen.findByText("Giỏ hàng đang trống.");
   let now = 200_000;
   const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
   let resumeStarted!: () => void;
@@ -350,7 +377,7 @@ test("resume revalidates before enabling focus refetch at the threshold", async 
 test("resume clears an obsolete background timestamp when a second resume is skipped", async () => {
   const navigation = await openRoute("/cart");
   await signIn();
-  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  await screen.findByText("Giỏ hàng đang trống.");
   let now = 250_000;
   const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
   let resumeStarted!: () => void;
@@ -395,7 +422,7 @@ test("resume clears an obsolete background timestamp when a second resume is ski
 test("resume 401 after refresh returns to login with the existing returnTo", async () => {
   mockStored = "t133-refresh-seed";
   const navigation = await openRoute("/cart");
-  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  await screen.findByText("Giỏ hàng đang trống.");
   mockMeStatus = "unauthorized";
   mockRefreshUnauthorized = true;
   let now = 300_000;
@@ -416,7 +443,7 @@ test("resume 401 after refresh returns to login with the existing returnTo", asy
 test("resume ACCOUNT_LOCKED clears the session and preserves returnTo", async () => {
   mockStored = "t133-refresh-seed";
   const navigation = await openRoute("/cart");
-  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  await screen.findByText("Giỏ hàng đang trống.");
   mockMeStatus = "account_locked";
   let now = 400_000;
   const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
@@ -436,7 +463,7 @@ test("resume ACCOUNT_LOCKED clears the session and preserves returnTo", async ()
 test("a non-locking 403 on resume reports an error without ending the session", async () => {
   mockStored = "t133-refresh-seed";
   const navigation = await openRoute("/cart");
-  await screen.findByText(/Giỏ hàng.*đang phát triển/i);
+  await screen.findByText("Giỏ hàng đang trống.");
   mockMeStatus = "forbidden";
   let now = 500_000;
   const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
@@ -448,7 +475,7 @@ test("a non-locking 403 on resume reports an error without ending the session", 
       await screen.findByText("Không thể kiểm tra phiên. Vui lòng thử lại."),
     ).toBeTruthy();
     expect(navigation.getPathname()).toBe("/cart");
-    expect(screen.getByText(/Giỏ hàng.*đang phát triển/i)).toBeTruthy();
+    expect(screen.getByText("Giỏ hàng đang trống.")).toBeTruthy();
     expect(mockStored).toBe("t133-refresh-rotated");
   } finally {
     nowSpy.mockRestore();
