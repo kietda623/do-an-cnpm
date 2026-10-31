@@ -150,7 +150,14 @@ export function OrderActions({
       return attempt;
     },
     onSuccess: refreshOrder,
-    onError: refreshOnConflict,
+    onError: async (error) => {
+      if (error instanceof ApiClientError && error.status === 409) {
+        writeIntentRegistry.complete(`${userId}:POST:/payments/mock-attempts`, {
+          orderId: order.id,
+        });
+        await refreshOrder();
+      }
+    },
   });
 
   const resultMutation = useMutation<
@@ -177,7 +184,10 @@ export function OrderActions({
       writeIntentRegistry.complete(scope, request);
       return result;
     },
-    onSuccess: refreshOrder,
+    onSuccess: async () => {
+      attemptMutation.reset();
+      await refreshOrder();
+    },
     onError: refreshOnConflict,
   });
 
