@@ -1,6 +1,6 @@
 import React from "react";
-import { ScreenPlaceholder } from "../../features/navigation/screen-placeholder";
+import { CartScreen } from "../../features/commerce/cart-screen";
 
 export default function CartRoute() {
-  return <ScreenPlaceholder title="Giỏ hàng" task="T137" />;
+  return <CartScreen />;
 }
