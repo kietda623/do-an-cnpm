@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { WriteIntentRegistry } from "../src/features/commerce/write-intents";
 
 function createIdFactory() {
@@ -79,6 +81,19 @@ describe("WriteIntentRegistry", () => {
     ).not.toBe(first.idempotencyKey);
   });
 
+  test("clears all unresolved intents", () => {
+    const registry = new WriteIntentRegistry(createIdFactory());
+    const scope = "buyer-1:POST:/checkout";
+    const body = { quoteId: "quote-1" };
+    const first = registry.getOrCreate(scope, body);
+
+    registry.clear();
+
+    const second = registry.getOrCreate(scope, body);
+    expect(second.idempotencyKey).not.toBe(first.idempotencyKey);
+    expect(second.eventId).not.toBe(first.eventId);
+  });
+
   test("isolates intents between buyer accounts", () => {
     const registry = new WriteIntentRegistry(createIdFactory());
     const body = { quantity: 1 };
@@ -105,5 +120,14 @@ describe("WriteIntentRegistry", () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     expect(intent.idempotencyKey).toMatch(uuidV4);
     expect(intent.eventId).toMatch(uuidV4);
+  });
+
+  test("does not use Math.random as a fallback for commerce identifiers", async () => {
+    const source = await readFile(
+      join(__dirname, "../src/features/commerce/write-intents.ts"),
+      "utf8",
+    );
+
+    expect(source).not.toMatch(/\bMath\.random\s*\(/);
   });
 });

@@ -29,6 +29,7 @@ import CartRoute from "../src/app/(buyer)/cart";
 import CheckoutRoute from "../src/app/(buyer)/checkout";
 import OrdersRoute from "../src/app/(buyer)/orders";
 import OrderDetailRoute from "../src/app/(buyer)/orders/[orderId]";
+import { writeIntentRegistry } from "../src/features/commerce/write-intents";
 
 type Order = components["schemas"]["Order"];
 let detailOrderSequence = 1;
@@ -259,6 +260,54 @@ test("B07 fetch failure can be retried", async () => {
   expect(await screen.findByText("Bình giữ nhiệt")).toBeTruthy();
 });
 
+test.each([
+  [
+    "forbidden",
+    () =>
+      new ApiClientError("Hidden permission detail", 403, {
+        error: { code: "FORBIDDEN", message: "Hidden permission detail" },
+      }),
+    "Bạn không có quyền thực hiện thao tác này.",
+    "Hidden permission detail",
+  ],
+  [
+    "network",
+    () => new TypeError("Network request failed"),
+    "Không thể cập nhật giỏ hàng.",
+    "Network request failed",
+  ],
+] as const)(
+  "B07 shows safe localized action copy for %s errors",
+  async (_kind, makeError, expectedMessage, rawMessage) => {
+    const cart = makeCart();
+    mockRequest.mockImplementation(async (path, init) => {
+      if (String(path) === "/cart" && init?.method !== "PATCH") return cart;
+      if (String(path) === `/cart/items/${CART_ITEM_ID}`) throw makeError();
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    renderCommerce(<CartRoute />);
+    fireEvent.press(
+      await screen.findByLabelText("Tăng số lượng Bình giữ nhiệt"),
+    );
+
+    expect(await screen.findByText(expectedMessage)).toBeTruthy();
+    expect(screen.queryByText(rawMessage)).toBeNull();
+  },
+);
+
+test("commerce mock reset clears write intents between tests", () => {
+  const scope = "buyer-1:POST:/checkout:quote-reset-check";
+  const body = { quoteId: "quote-reset-check" };
+  const first = writeIntentRegistry.getOrCreate(scope, body);
+
+  resetCommerceMocks();
+
+  const second = writeIntentRegistry.getOrCreate(scope, body);
+  expect(second.idempotencyKey).not.toBe(first.idempotencyKey);
+  expect(second.eventId).not.toBe(first.eventId);
+});
+
 test("B07 forbidden cart access is shown without pretending it is empty", async () => {
   mockRequest.mockRejectedValue(new ApiClientError("Not allowed", 403));
 
@@ -340,7 +389,8 @@ test("B08 shows loading until the cart and saved addresses are both loaded", asy
     resolveCart?.(makeCart());
     resolveAddresses?.([makeAddress()]);
   });
-  expect(await screen.findByText("Thanh toán")).toBeTruthy();
+  expect(await screen.findByText("Tạo báo giá")).toBeTruthy();
+  expect(screen.queryByText("Đang tải thông tin thanh toán…")).toBeNull();
 });
 
 test("B08 lets the buyer retry when cart or address loading fails", async () => {
@@ -361,7 +411,8 @@ test("B08 lets the buyer retry when cart or address loading fails", async () => 
     await screen.findByText("Không thể tải thông tin thanh toán."),
   ).toBeTruthy();
   fireEvent.press(screen.getByText("Thử lại"));
-  expect(await screen.findByText("Thanh toán")).toBeTruthy();
+  expect(await screen.findByText("Tạo báo giá")).toBeTruthy();
+  expect(screen.queryByText("Không thể tải thông tin thanh toán.")).toBeNull();
   expect(cartReads).toBeGreaterThanOrEqual(2);
 });
 
@@ -755,6 +806,52 @@ test("B08 retry after a network error reuses the checkout key and request body",
   expect(checkoutCalls[1]?.[1]?.body).toBe(checkoutCalls[0]?.[1]?.body);
 });
 
+test("B08 replaces a rejected checkout quote instead of retrying it", async () => {
+  const quoteResponses = [makeQuote(), makeQuote()];
+  let quoteReads = 0;
+  const checkoutCalls: Array<RequestInit | undefined> = [];
+  mockRequest.mockImplementation(async (path, init) => {
+    if (String(path) === "/cart") return makeCart();
+    if (String(path) === "/users/me/addresses") return [makeAddress()];
+    if (String(path) === "/checkout/quotes")
+      return quoteResponses[quoteReads++]!;
+    if (String(path) === "/checkout") {
+      checkoutCalls.push(init);
+      throw new ApiClientError("QUOTE_EXPIRED", 409, {
+        error: { code: "QUOTE_EXPIRED", message: "Quote expired" },
+      });
+    }
+    throw new Error(`Unexpected request: ${path}`);
+  });
+
+  renderCommerce(<CheckoutRoute />);
+  fireEvent.press(await screen.findByText("Tạo báo giá"));
+  fireEvent.press(await screen.findByLabelText("Đặt hàng"));
+
+  expect(
+    await screen.findByText("Không thể xác nhận đơn hàng. Vui lòng thử lại."),
+  ).toBeTruthy();
+  expect(screen.queryByText("Thử đặt hàng lại")).toBeNull();
+  const firstKey = new Headers(checkoutCalls[0]?.headers).get(
+    "Idempotency-Key",
+  );
+  expect(firstKey).toBeTruthy();
+  expect(
+    writeIntentRegistry.getOrCreate(
+      `buyer-1:POST:/checkout:${quoteResponses[0]!.quoteId}`,
+      { quoteId: quoteResponses[0]!.quoteId },
+    ).idempotencyKey,
+  ).not.toBe(firstKey);
+
+  fireEvent.press(screen.getByText("Tạo báo giá mới"));
+  await waitFor(() => expect(quoteReads).toBe(2));
+  fireEvent.press(await screen.findByLabelText("Đặt hàng"));
+  await waitFor(() => expect(checkoutCalls).toHaveLength(2));
+  expect(
+    new Headers(checkoutCalls[1]?.headers).get("Idempotency-Key"),
+  ).not.toBe(firstKey);
+});
+
 test("B08 PRICE_CHANGED requires an explicit new quote and has no replacement quote", async () => {
   const quoteResponses = [makeQuote(), makeQuote({ total: "150000" })];
   let quoteReads = 0;
@@ -818,6 +915,19 @@ test("B09 empty order history offers product discovery", async () => {
   expect(await screen.findByText("Bạn chưa có đơn hàng nào.")).toBeTruthy();
   fireEvent.press(screen.getByText("Khám phá sản phẩm"));
   expect(mockRouter.push).toHaveBeenCalledWith("/products");
+});
+
+test("B09 distinguishes an empty filter result from an empty order history", async () => {
+  mockRequest.mockResolvedValue([]);
+
+  renderCommerce(<OrdersRoute />);
+  expect(await screen.findByText("Bạn chưa có đơn hàng nào.")).toBeTruthy();
+  fireEvent.press(screen.getByLabelText("Trạng thái: Đã giao"));
+
+  expect(
+    await screen.findByText("Không tìm thấy đơn hàng phù hợp."),
+  ).toBeTruthy();
+  expect(screen.queryByText("Khám phá sản phẩm")).toBeNull();
 });
 
 test("B09 sends status and payment filters to the server", async () => {
@@ -1368,6 +1478,30 @@ test("B10 retries mock-result with the same event, key and body", async () => {
       expectedVersion: 5,
     }),
   );
+});
+
+test("B09 keeps pagination controls when a later page is empty", async () => {
+  const firstPage = Array.from({ length: 20 }, (_, index) =>
+    makeOrderSummary({
+      orderNumber: `MP-P1-${String(index + 1).padStart(2, "0")}`,
+    }),
+  );
+  mockRequest.mockImplementation(async (path) => {
+    const page = new URL(String(path), "https://example.test").searchParams.get(
+      "page",
+    );
+    return page === "2" ? [] : firstPage;
+  });
+
+  renderCommerce(<OrdersRoute />);
+  expect(await screen.findByText("MP-P1-01")).toBeTruthy();
+  fireEvent.press(screen.getByText("Trang sau"));
+
+  expect(
+    await screen.findByText("Không có đơn hàng ở trang này."),
+  ).toBeTruthy();
+  fireEvent.press(screen.getByText("Trang trước"));
+  expect(await screen.findByText("MP-P1-01")).toBeTruthy();
 });
 
 test.each([
