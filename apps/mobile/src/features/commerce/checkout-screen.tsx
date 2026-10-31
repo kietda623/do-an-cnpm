@@ -209,6 +209,12 @@ export function CheckoutScreen() {
       }
       router.push(`/orders/${order.id}`);
     },
+    onError: (error, currentQuote) => {
+      if (!(error instanceof ApiClientError) || !userId) return;
+      const body: CheckoutCreate = { quoteId: currentQuote.quoteId };
+      const scope = `${userId}:POST:/checkout:${currentQuote.quoteId}`;
+      writeIntentRegistry.complete(scope, body);
+    },
   });
 
   useEffect(() => {
@@ -456,7 +462,7 @@ export function CheckoutScreen() {
       {checkoutErrorMessage ? (
         <View style={{ gap: 8 }}>
           <Text accessibilityRole="alert">{checkoutErrorMessage}</Text>
-          {priceChanged ? (
+          {checkoutMutation.error instanceof ApiClientError ? (
             <ActionButton
               label="Tạo báo giá mới"
               onPress={() => void createQuote()}

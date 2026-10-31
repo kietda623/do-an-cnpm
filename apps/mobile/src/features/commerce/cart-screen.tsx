@@ -272,7 +272,9 @@ export function CartScreen() {
       {actionError ? (
         <View style={{ gap: 8 }}>
           <Text accessibilityRole="alert">
-            {actionError.message || "Không thể cập nhật giỏ hàng."}
+            {actionError instanceof ApiClientError && actionError.status === 403
+              ? "Bạn không có quyền thực hiện thao tác này."
+              : "Không thể cập nhật giỏ hàng."}
           </Text>
           <CartButton
             label="Đồng bộ lại giỏ hàng"

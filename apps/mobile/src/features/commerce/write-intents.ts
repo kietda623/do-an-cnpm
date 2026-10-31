@@ -8,13 +8,11 @@ function createUuidV4(): string {
   if (typeof cryptoApi?.randomUUID === "function")
     return cryptoApi.randomUUID();
 
+  if (typeof cryptoApi?.getRandomValues !== "function")
+    throw new Error("Secure random number generation is unavailable.");
+
   const bytes = new Uint8Array(16);
-  if (typeof cryptoApi?.getRandomValues === "function") {
-    cryptoApi.getRandomValues(bytes);
-  } else {
-    for (let index = 0; index < bytes.length; index += 1)
-      bytes[index] = Math.floor(Math.random() * 256);
-  }
+  cryptoApi.getRandomValues(bytes);
 
   bytes[6] = (bytes[6]! & 0x0f) | 0x40;
   bytes[8] = (bytes[8]! & 0x3f) | 0x80;
@@ -41,6 +39,10 @@ export class WriteIntentRegistry {
   private readonly intents = new Map<string, WriteIntent>();
 
   constructor(private readonly createId: () => string = createUuidV4) {}
+
+  clear(): void {
+    this.intents.clear();
+  }
 
   getOrCreate(scope: string, body: unknown): WriteIntent {
     const fingerprint = JSON.stringify([scope, canonicalize(body)]);

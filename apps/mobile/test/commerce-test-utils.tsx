@@ -2,6 +2,7 @@ import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render } from "@testing-library/react-native";
 import type { ApiPath, components } from "@marketplace/api-client";
+import { writeIntentRegistry } from "../src/features/commerce/write-intents";
 
 type User = { id: string } | null;
 type Cart = components["schemas"]["Cart"];
@@ -343,6 +344,7 @@ export function resetCommerceMocks() {
   quoteSequence = 1;
   orderSequence = 1;
   mockOrderId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  writeIntentRegistry.clear();
   mockRouter.push.mockReset();
   mockRouter.replace.mockReset();
   mockRequest.mockReset();

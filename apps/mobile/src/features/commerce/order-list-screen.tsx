@@ -171,6 +171,9 @@ export function OrderListScreen() {
     pageSize: PAGE_SIZE,
   };
   const queryKey = orderListQueryKey(userId ?? "signed-out", filters);
+  const hasFilters = Boolean(
+    status || paymentStatus || dateFilter.from || dateFilter.to,
+  );
   const path = useMemo(
     () => orderListPath(filters),
     [
@@ -359,11 +362,19 @@ export function OrderListScreen() {
             padding: 16,
           }}
         >
-          <Text>Bạn chưa có đơn hàng nào.</Text>
-          <ActionButton
-            label="Khám phá sản phẩm"
-            onPress={() => router.push("/products")}
-          />
+          <Text>
+            {page > 1
+              ? "Không có đơn hàng ở trang này."
+              : hasFilters
+                ? "Không tìm thấy đơn hàng phù hợp."
+                : "Bạn chưa có đơn hàng nào."}
+          </Text>
+          {page === 1 && !hasFilters ? (
+            <ActionButton
+              label="Khám phá sản phẩm"
+              onPress={() => router.push("/products")}
+            />
+          ) : null}
         </View>
       ) : (
         <View style={{ gap: 12 }}>
@@ -403,30 +414,32 @@ export function OrderListScreen() {
               </Text>
             </Pressable>
           ))}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-            }}
-          >
-            <ActionButton
-              label="Trang trước"
-              disabled={page <= 1 || ordersQuery.isFetching}
-              onPress={() => setPage((current) => Math.max(1, current - 1))}
-            />
-            <Text accessibilityLabel={`Trang ${page}`}>Trang {page}</Text>
-            <ActionButton
-              label="Trang sau"
-              disabled={
-                ordersQuery.isFetching || ordersQuery.data.length < PAGE_SIZE
-              }
-              onPress={() => setPage((current) => current + 1)}
-            />
-          </View>
         </View>
       )}
+      {ordersQuery.data.length > 0 || page > 1 ? (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <ActionButton
+            label="Trang trước"
+            disabled={page <= 1 || ordersQuery.isFetching}
+            onPress={() => setPage((current) => Math.max(1, current - 1))}
+          />
+          <Text accessibilityLabel={`Trang ${page}`}>Trang {page}</Text>
+          <ActionButton
+            label="Trang sau"
+            disabled={
+              ordersQuery.isFetching || ordersQuery.data.length < PAGE_SIZE
+            }
+            onPress={() => setPage((current) => current + 1)}
+          />
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
