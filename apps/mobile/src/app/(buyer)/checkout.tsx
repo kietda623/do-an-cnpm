@@ -1,6 +1,6 @@
 import React from "react";
-import { ScreenPlaceholder } from "../../features/navigation/screen-placeholder";
+import { CheckoutScreen } from "../../features/commerce/checkout-screen";
 
 export default function CheckoutRoute() {
-  return <ScreenPlaceholder title="Thanh toán" task="T137" />;
+  return <CheckoutScreen />;
 }

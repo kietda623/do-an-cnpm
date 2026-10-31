@@ -259,6 +259,10 @@ test.each([
       expect(await screen.findByText(/Chưa có địa chỉ/)).toBeTruthy();
     } else if (path === "/cart") {
       expect(await screen.findByText("Giỏ hàng đang trống.")).toBeTruthy();
+    } else if (path === "/checkout") {
+      expect(
+        await screen.findByText("Chưa có sản phẩm được chọn."),
+      ).toBeTruthy();
     } else {
       expect(
         await screen.findByText(new RegExp(`${heading} đang phát triển`)),
