@@ -1,6 +1,8 @@
 import React from "react";
-import { ScreenPlaceholder } from "../../../features/navigation/screen-placeholder";
+import { useLocalSearchParams } from "expo-router";
+import { OrderDetailScreen } from "../../../features/commerce/order-detail-screen";
 
 export default function OrderDetailRoute() {
-  return <ScreenPlaceholder title="Chi tiết đơn hàng" task="T137" />;
+  const { orderId } = useLocalSearchParams<{ orderId: string }>();
+  return <OrderDetailScreen orderId={orderId} />;
 }

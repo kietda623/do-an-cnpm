@@ -1,5 +1,5 @@
 import React from "react";
-import { ApiClientError } from "@marketplace/api-client";
+import { ApiClientError, type components } from "@marketplace/api-client";
 import { focusManager } from "@tanstack/react-query";
 import {
   act,
@@ -19,16 +19,43 @@ import {
   makeCartItem,
   makeOrder,
   makeOrderSummary,
+  makePayment,
   makeQuote,
+  makeSellerOrder,
+  makeShipment,
   mockRequest,
   mockRouter,
   renderCommerce,
   resetCommerceMocks,
   setCommerceUser,
+  setCommerceOrderId,
 } from "./commerce-test-utils";
 import CartRoute from "../src/app/(buyer)/cart";
 import CheckoutRoute from "../src/app/(buyer)/checkout";
 import OrdersRoute from "../src/app/(buyer)/orders";
+import OrderDetailRoute from "../src/app/(buyer)/orders/[orderId]";
+
+type Order = components["schemas"]["Order"];
+let detailOrderSequence = 1;
+
+function makeBuyerOrder(overrides: Partial<Order> = {}): Order {
+  const id =
+    overrides.id ??
+    `aaaaaaaa-aaaa-4aaa-8aaa-${String(detailOrderSequence++).padStart(12, "0")}`;
+  setCommerceOrderId(id);
+  return { ...makeOrder(), ...overrides, id };
+}
+
+function mockOrderReads(
+  order: Order,
+  payments: ReturnType<typeof makePayment>[] = order.payments,
+) {
+  mockRequest.mockImplementation(async (path) => {
+    if (String(path) === `/orders/${order.id}`) return order;
+    if (String(path) === `/payments?orderId=${order.id}`) return payments;
+    throw new Error(`Unexpected order-detail request: ${path}`);
+  });
+}
 
 beforeEach(() => {
   resetCommerceMocks();
@@ -982,4 +1009,525 @@ test("B09 refetches when React Query regains focus", async () => {
   act(() => focusManager.setFocused(true));
 
   await waitFor(() => expect(reads).toBeGreaterThanOrEqual(2));
+});
+
+test("B10 renders server snapshots, payments/refunds, tracking and payment deadline", async () => {
+  const order = makeBuyerOrder({
+    orderNumber: "MP-DETAIL-01",
+    status: "SHIPPING",
+    partiallyCancelled: false,
+    originalTotal: "135000",
+    capturedAmount: "135000",
+    refundedAmount: "25000",
+    outstandingAmount: "25000",
+    paymentMethod: "MOCK",
+    paymentStatus: "PARTIALLY_REFUNDED",
+    paymentDeadline: "2026-11-01T12:00:00.000Z",
+    version: 8,
+  });
+  const sellerOrder = makeSellerOrder({
+    orderId: order.id,
+    status: "SHIPPING",
+    capturedAmount: "135000",
+    refundedAmount: "25000",
+    outstandingAmount: "25000",
+    shipment: makeShipment(),
+  });
+  order.sellerOrders = [sellerOrder];
+  const payment = makePayment({
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    orderId: order.id,
+    transactionCode: "TXN-LATE-01",
+    status: "SUCCEEDED",
+    settlementKind: "LATE_COMPENSATION",
+    originalAttemptId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    amount: "25000",
+    allocations: [{ sellerOrderId: sellerOrder.id, amount: "25000" }],
+    refunds: [
+      {
+        id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        sellerOrderId: sellerOrder.id,
+        amount: "25000",
+        reason: "BUYER_CANCELLED",
+        createdAt: "2026-11-01T11:00:00.000Z",
+      },
+    ],
+  });
+  order.payments = [payment];
+  mockOrderReads(order, [payment]);
+
+  renderCommerce(<OrderDetailRoute />);
+
+  expect(await screen.findByText("MP-DETAIL-01")).toBeTruthy();
+  expect(screen.getByText("Nhà Bếp Mộc")).toBeTruthy();
+  expect(screen.getByText("1 Đường A, Phường 1, Quận 1, TP Hồ Chí Minh")).toBeTruthy();
+  expect(screen.getByText("Bình giữ nhiệt × 1 · 125.000₫")).toBeTruthy();
+  expect(screen.getByText("Tổng ban đầu: 135.000₫")).toBeTruthy();
+  expect(screen.getByText("Đã thu 135.000₫ · Đã hoàn 25.000₫")).toBeTruthy();
+  expect(screen.getByText(/Hạn thanh toán:/)).toBeTruthy();
+  expect(screen.getByText("Mã vận đơn: SHIP-TEST-001")).toBeTruthy();
+  expect(screen.getAllByText("Trạng thái: Đang giao")).toHaveLength(2);
+  expect(screen.getByText(/TXN-LATE-01/)).toBeTruthy();
+  expect(screen.getByText(/bù trừ thanh toán muộn/i)).toBeTruthy();
+  expect(screen.getByText(/Hoàn 25\.000₫/)).toBeTruthy();
+  expect(screen.getAllByText(/Còn phải trả: 25\.000₫/)).toHaveLength(3);
+});
+
+test.each([
+  [403, "FORBIDDEN", "Bạn không có quyền xem đơn hàng này."],
+  [404, "NOT_FOUND", "Không tìm thấy đơn hàng."],
+] as const)("B10 presents a safe detail error for HTTP %s", async (status, code, message) => {
+  const order = makeBuyerOrder();
+  mockRequest.mockImplementation(async (path) => {
+    if (String(path) === `/orders/${order.id}`)
+      throw new ApiClientError(code, status, {
+        error: { code, message: "Hidden server details" },
+      });
+    if (String(path) === `/payments?orderId=${order.id}`) return [];
+    throw new Error(`Unexpected request: ${path}`);
+  });
+
+  renderCommerce(<OrderDetailRoute />);
+
+  expect(await screen.findByText(message)).toBeTruthy();
+  expect(screen.queryByText("Hidden server details")).toBeNull();
+});
+
+test("B10 treats the base payment row as no mock attempt after a cold cache", async () => {
+  const order = makeBuyerOrder({ paymentMethod: "MOCK", paymentStatus: "UNPAID" });
+  const basePayment = makePayment({
+    id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1",
+    orderId: order.id,
+    transactionCode: order.orderNumber,
+    status: "PENDING",
+  });
+  order.payments = [basePayment];
+  mockOrderReads(order, [basePayment]);
+
+  renderCommerce(<OrderDetailRoute />);
+
+  expect(await screen.findByText("Tạo lần thử thanh toán")).toBeTruthy();
+  expect(screen.queryByText("Mô phỏng thanh toán thành công")).toBeNull();
+  expect(screen.queryByText("Mô phỏng thất bại")).toBeNull();
+  expect(screen.queryByText("Hủy lần thử thanh toán")).toBeNull();
+});
+
+test.each([
+  ["SUCCEEDED", "Mô phỏng thanh toán thành công"],
+  ["FAILED", "Mô phỏng thất bại"],
+  ["CANCELLED", "Hủy lần thử thanh toán"],
+] as const)("B10 posts MOCK result %s with current Order.version", async (outcome, label) => {
+  let order = makeBuyerOrder({ paymentMethod: "MOCK", version: 19 });
+  const attempt = makePayment({
+    id: "cccccccc-cccc-4ccc-8ccc-ccccccccccc1",
+    orderId: order.id,
+    transactionCode: "TXN-PENDING-01",
+    status: "PENDING",
+  });
+  order.payments = [attempt];
+  let payments = [attempt];
+  const resultCalls: Array<[string, RequestInit?]> = [];
+  mockRequest.mockImplementation(async (path, init) => {
+    const route = String(path);
+    if (route === `/orders/${order.id}`) return order;
+    if (route === `/payments?orderId=${order.id}`) return payments;
+    if (route === `/payments/${attempt.id}/mock-result`) {
+      resultCalls.push([route, init]);
+      const body = JSON.parse(String(init?.body)) as {
+        eventId: string;
+        outcome: string;
+        expectedVersion: number;
+      };
+      expect(body.outcome).toBe(outcome);
+      payments = [{ ...attempt, status: outcome }];
+      order = { ...order, version: order.version + 1, payments };
+      return payments[0];
+    }
+    throw new Error(`Unexpected request: ${route}`);
+  });
+
+  renderCommerce(<OrderDetailRoute />);
+  fireEvent.press(await screen.findByText(label));
+
+  await waitFor(() => expect(resultCalls).toHaveLength(1));
+  const sentBody = JSON.parse(String(resultCalls[0]?.[1]?.body));
+  expect(sentBody).toEqual(
+    expect.objectContaining({
+      outcome,
+      expectedVersion: 19,
+      eventId: expect.stringMatching(/^[0-9a-f-]{36}$/i),
+    }),
+  );
+  expect(resultCalls[0]?.[1]?.headers).toEqual({
+    "Idempotency-Key": expect.stringMatching(/^[0-9a-f-]{36}$/i),
+  });
+  await waitFor(() => expect(mockRequest.mock.calls.filter(([path]) => String(path) === `/orders/${order.id}`).length).toBeGreaterThan(1));
+});
+
+test("B10 retries mock-attempt creation with the same key and body", async () => {
+  const order = makeBuyerOrder({ paymentMethod: "MOCK" });
+  const basePayment = makePayment({
+    id: "dddddddd-dddd-4ddd-8ddd-ddddddddddd1",
+    orderId: order.id,
+    transactionCode: order.orderNumber,
+    status: "PENDING",
+  });
+  const attempt = makePayment({
+    id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee1",
+    orderId: order.id,
+    transactionCode: "TXN-NEW-01",
+    status: "PENDING",
+  });
+  let payments = [basePayment];
+  const attemptCalls: Array<RequestInit | undefined> = [];
+  mockRequest.mockImplementation(async (path, init) => {
+    const route = String(path);
+    if (route === `/orders/${order.id}`) return { ...order, payments };
+    if (route === `/payments?orderId=${order.id}`) return payments;
+    if (route === "/payments/mock-attempts") {
+      attemptCalls.push(init);
+      if (attemptCalls.length === 1) throw new TypeError("offline");
+      payments = [attempt];
+      return attempt;
+    }
+    throw new Error(`Unexpected request: ${route}`);
+  });
+
+  renderCommerce(<OrderDetailRoute />);
+  fireEvent.press(await screen.findByText("Tạo lần thử thanh toán"));
+  expect(await screen.findByText("Không thể bắt đầu thanh toán. Vui lòng thử lại.")).toBeTruthy();
+  fireEvent.press(screen.getByText("Thử tạo lần thanh toán lại"));
+
+  await waitFor(() => expect(attemptCalls).toHaveLength(2));
+  expect(attemptCalls[1]?.headers).toEqual(attemptCalls[0]?.headers);
+  expect(attemptCalls[1]?.body).toBe(attemptCalls[0]?.body);
+  expect(JSON.parse(String(attemptCalls[0]?.body))).toEqual({ orderId: order.id });
+  expect(screen.queryByText("Thu COD")).toBeNull();
+});
+
+test("B10 retries mock-result with the same event, key and body", async () => {
+  const order = makeBuyerOrder({ paymentMethod: "MOCK", version: 5 });
+  const attempt = makePayment({
+    id: "ffffffff-ffff-4fff-8fff-fffffffffff1",
+    orderId: order.id,
+    transactionCode: "TXN-RETRY-01",
+    status: "PENDING",
+  });
+  let payments = [attempt];
+  const resultCalls: Array<RequestInit | undefined> = [];
+  mockRequest.mockImplementation(async (path, init) => {
+    const route = String(path);
+    if (route === `/orders/${order.id}`) return order;
+    if (route === `/payments?orderId=${order.id}`) return payments;
+    if (route === `/payments/${attempt.id}/mock-result`) {
+      resultCalls.push(init);
+      if (resultCalls.length === 1) throw new TypeError("timeout");
+      payments = [{ ...attempt, status: "FAILED" }];
+      return payments[0];
+    }
+    throw new Error(`Unexpected request: ${route}`);
+  });
+
+  renderCommerce(<OrderDetailRoute />);
+  fireEvent.press(await screen.findByText("Mô phỏng thất bại"));
+  expect(await screen.findByText("Không thể cập nhật thanh toán. Vui lòng thử lại.")).toBeTruthy();
+  fireEvent.press(screen.getByText("Thử lại kết quả thanh toán"));
+
+  await waitFor(() => expect(resultCalls).toHaveLength(2));
+  expect(resultCalls[1]?.headers).toEqual(resultCalls[0]?.headers);
+  expect(resultCalls[1]?.body).toBe(resultCalls[0]?.body);
+  const body = JSON.parse(String(resultCalls[0]?.body));
+  expect(body).toEqual(expect.objectContaining({ eventId: expect.any(String), outcome: "FAILED", expectedVersion: 5 }));
+});
+
+test.each([
+  ["FAILED", "Mô phỏng thất bại"],
+  ["CANCELLED", "Hủy lần thử thanh toán"],
+] as const)("B10 starts a new payment attempt after a terminal %s attempt", async (terminalOutcome, resultLabel) => {
+  let order = makeBuyerOrder({ paymentMethod: "MOCK", version: 7 });
+  const basePayment = makePayment({
+    id: "11111111-2222-4333-8444-555555555550",
+    orderId: order.id,
+    transactionCode: order.orderNumber,
+    status: "PENDING",
+  });
+  const firstAttempt = makePayment({
+    id: "11111111-2222-4333-8444-555555555553",
+    orderId: order.id,
+    transactionCode: "TXN-FIRST-01",
+    status: "PENDING",
+  });
+  const terminalAttempt = makePayment({
+    id: "11111111-2222-4333-8444-555555555551",
+    orderId: order.id,
+    transactionCode: `TXN-${terminalOutcome}-01`,
+    status: terminalOutcome,
+  });
+  const newAttempt = makePayment({
+    id: "11111111-2222-4333-8444-555555555552",
+    orderId: order.id,
+    transactionCode: "TXN-NEW-02",
+    status: "PENDING",
+  });
+  let payments = [basePayment];
+  const attemptCalls: Array<RequestInit | undefined> = [];
+  mockRequest.mockImplementation(async (path, init) => {
+    const route = String(path);
+    if (route === `/orders/${order.id}`) return { ...order, payments };
+    if (route === `/payments?orderId=${order.id}`) return payments;
+    if (route === "/payments/mock-attempts") {
+      attemptCalls.push(init);
+      if (attemptCalls.length === 1) {
+        payments = [firstAttempt];
+        return firstAttempt;
+      }
+      payments = [terminalAttempt, newAttempt];
+      return newAttempt;
+    }
+    if (route === `/payments/${firstAttempt.id}/mock-result`) {
+      payments = [terminalAttempt];
+      order = { ...order, version: order.version + 1, payments };
+      return terminalAttempt;
+    }
+    throw new Error(`Unexpected request: ${route}`);
+  });
+
+  renderCommerce(<OrderDetailRoute />);
+  expect(await screen.findByText("Tạo lần thử thanh toán")).toBeTruthy();
+  fireEvent.press(screen.getByText("Tạo lần thử thanh toán"));
+  await screen.findByText(resultLabel);
+  fireEvent.press(screen.getByText(resultLabel));
+  await screen.findByText("Tạo lần thử thanh toán");
+  fireEvent.press(screen.getByText("Tạo lần thử thanh toán"));
+
+  await waitFor(() => expect(attemptCalls).toHaveLength(2));
+  const firstKey = new Headers(attemptCalls[0]?.headers).get("Idempotency-Key");
+  const secondKey = new Headers(attemptCalls[1]?.headers).get("Idempotency-Key");
+  expect(firstKey).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(secondKey).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(secondKey).not.toBe(firstKey);
+  await screen.findByText(/TXN-NEW-02/);
+  expect(screen.getByText("Mô phỏng thất bại")).toBeTruthy();
+});
+
+test.each([
+  ["UNPAID", "0", "COD chưa thu"],
+  ["PAID", "135000", "COD đã thu"],
+] as const)("B10 labels COD %s without a Buyer collection request", async (paymentStatus, capturedAmount, label) => {
+  const order = makeBuyerOrder({
+    paymentMethod: "COD",
+    paymentStatus,
+    capturedAmount,
+    outstandingAmount: paymentStatus === "PAID" ? "0" : "135000",
+  });
+  mockOrderReads(order, order.payments);
+
+  renderCommerce(<OrderDetailRoute />);
+
+  expect(await screen.findByText(label)).toBeTruthy();
+  expect(screen.queryByText("Mô phỏng thanh toán thành công")).toBeNull();
+  expect(
+    mockRequest.mock.calls.some(([path]) => String(path).includes("collection")),
+  ).toBe(false);
+});
+
+test("B10 sends whole-order cancellation with the MarketplaceOrder version", async () => {
+  let order = makeBuyerOrder({ version: 23, status: "PENDING" });
+  const parts = [
+    makeSellerOrder({ orderId: order.id, version: 4 }),
+    makeSellerOrder({
+      id: "22222222-3333-4444-8555-666666666661",
+      orderId: order.id,
+      shopNameSnapshot: "Hạt Mây",
+      version: 9,
+    }),
+  ];
+  order.sellerOrders = parts;
+  const cancelCalls: Array<[string, RequestInit?]> = [];
+  mockRequest.mockImplementation(async (path, init) => {
+    const route = String(path);
+    if (route === `/orders/${order.id}`) return order;
+    if (route === `/payments?orderId=${order.id}`) return [];
+    if (route === `/orders/${order.id}/cancel`) {
+      cancelCalls.push([route, init]);
+      order = {
+        ...order,
+        status: "CANCELLED",
+        version: order.version + 1,
+        sellerOrders: order.sellerOrders.map((part) => ({ ...part, status: "CANCELLED" })),
+      };
+      return { orderId: order.id, status: "CANCELLED", cancelledSellerOrderIds: parts.map((part) => part.id) };
+    }
+    throw new Error(`Unexpected request: ${route}`);
+  });
+
+  renderCommerce(<OrderDetailRoute />);
+  fireEvent.press(await screen.findByText("Hủy toàn đơn"));
+  fireEvent.changeText(screen.getByLabelText("Lý do hủy"), "Đổi ý");
+  fireEvent.press(screen.getByText("Xác nhận hủy"));
+
+  await waitFor(() => expect(cancelCalls).toHaveLength(1));
+  expect(cancelCalls[0]?.[1]?.body).toBe(JSON.stringify({ reason: "Đổi ý", expectedVersion: 23 }));
+  expect(cancelCalls[0]?.[1]?.headers).toEqual({
+    "Idempotency-Key": expect.stringMatching(/^[0-9a-f-]{36}$/i),
+  });
+  await waitFor(() => expect(order.status).toBe("CANCELLED"));
+});
+
+test("B10 sends part cancellation with the SellerOrder version", async () => {
+  const order = makeBuyerOrder({ status: "PENDING", version: 40 });
+  const part = makeSellerOrder({ version: 13 });
+  order.sellerOrders = [
+    part,
+    makeSellerOrder({
+      id: "33333333-4444-4555-8666-777777777771",
+      orderId: order.id,
+      status: "CONFIRMED",
+      shopNameSnapshot: "Hạt Mây",
+    }),
+  ];
+  const cancelCalls: Array<[string, RequestInit?]> = [];
+  mockRequest.mockImplementation(async (path, init) => {
+    const route = String(path);
+    if (route === `/orders/${order.id}`) return order;
+    if (route === `/payments?orderId=${order.id}`) return [];
+    if (route === `/orders/${order.id}/seller-orders/${part.id}/cancel`) {
+      cancelCalls.push([route, init]);
+      return { orderId: order.id, sellerOrderId: part.id, status: "CANCELLED" };
+    }
+    throw new Error(`Unexpected request: ${route}`);
+  });
+
+  renderCommerce(<OrderDetailRoute />);
+  fireEvent.press(await screen.findByText("Hủy riêng Nhà Bếp Mộc"));
+  fireEvent.changeText(screen.getByLabelText("Lý do hủy"), "Không còn nhu cầu");
+  fireEvent.press(screen.getByText("Xác nhận hủy"));
+
+  await waitFor(() => expect(cancelCalls).toHaveLength(1));
+  expect(cancelCalls[0]?.[0]).toBe(`/orders/${order.id}/seller-orders/${part.id}/cancel`);
+  expect(cancelCalls[0]?.[1]?.body).toBe(JSON.stringify({ reason: "Không còn nhu cầu", expectedVersion: 13 }));
+});
+
+test("B10 cancellation retry reuses its idempotency key and body", async () => {
+  const order = makeBuyerOrder({ status: "PENDING", version: 6 });
+  order.sellerOrders = [makeSellerOrder({ orderId: order.id })];
+  const cancelCalls: Array<RequestInit | undefined> = [];
+  mockRequest.mockImplementation(async (path, init) => {
+    const route = String(path);
+    if (route === `/orders/${order.id}`) return order;
+    if (route === `/payments?orderId=${order.id}`) return [];
+    if (route === `/orders/${order.id}/cancel`) {
+      cancelCalls.push(init);
+      if (cancelCalls.length === 1) throw new TypeError("timeout");
+      return { orderId: order.id, status: "CANCELLED", cancelledSellerOrderIds: [] };
+    }
+    throw new Error(`Unexpected request: ${route}`);
+  });
+
+  renderCommerce(<OrderDetailRoute />);
+  fireEvent.press(await screen.findByText("Hủy toàn đơn"));
+  fireEvent.changeText(screen.getByLabelText("Lý do hủy"), "Đổi ý");
+  fireEvent.press(screen.getByText("Xác nhận hủy"));
+  expect(await screen.findByText("Không thể hủy đơn. Vui lòng thử lại.")).toBeTruthy();
+  fireEvent.press(screen.getByText("Thử hủy lại"));
+
+  await waitFor(() => expect(cancelCalls).toHaveLength(2));
+  expect(cancelCalls[1]?.headers).toEqual(cancelCalls[0]?.headers);
+  expect(cancelCalls[1]?.body).toBe(cancelCalls[0]?.body);
+});
+
+test("B10 whole-cancel 409 names blocking seller shops and refetches", async () => {
+  const order = makeBuyerOrder({ status: "PENDING", version: 12 });
+  const pending = makeSellerOrder({ orderId: order.id });
+  const blocked = makeSellerOrder({
+    id: "44444444-5555-4666-8777-888888888881",
+    orderId: order.id,
+    shopNameSnapshot: "Hạt Mây",
+  });
+  order.sellerOrders = [pending, blocked];
+  let orderReads = 0;
+  mockRequest.mockImplementation(async (path) => {
+    const route = String(path);
+    if (route === `/orders/${order.id}`) {
+      orderReads += 1;
+      return order;
+    }
+    if (route === `/payments?orderId=${order.id}`) return [];
+    if (route === `/orders/${order.id}/cancel`)
+      throw new ApiClientError("ORDER_NOT_CANCELLABLE", 409, {
+        error: {
+          code: "ORDER_NOT_CANCELLABLE",
+          message: "Some seller orders have entered fulfillment.",
+          details: [
+            { field: "blockingSellerOrderIds", code: "ORDER_IN_PROGRESS", message: blocked.id },
+          ],
+        },
+      });
+    throw new Error(`Unexpected request: ${route}`);
+  });
+
+  renderCommerce(<OrderDetailRoute />);
+  fireEvent.press(await screen.findByText("Hủy toàn đơn"));
+  fireEvent.changeText(screen.getByLabelText("Lý do hủy"), "Đổi ý");
+  fireEvent.press(screen.getByText("Xác nhận hủy"));
+
+  expect(await screen.findByText(/Cửa hàng đang xử lý: Hạt Mây/)).toBeTruthy();
+  await waitFor(() => expect(orderReads).toBeGreaterThan(1));
+});
+
+test.each([
+  ["DELIVERED", "0", true],
+  ["DELIVERED", "1000", false],
+  ["PACKING", "0", false],
+] as const)("B10 receive action requires delivered and settled state (%s, %s)", async (status, outstandingAmount, visible) => {
+  const order = makeBuyerOrder();
+  order.sellerOrders = [makeSellerOrder({ orderId: order.id, status, outstandingAmount })];
+  mockOrderReads(order);
+
+  renderCommerce(<OrderDetailRoute />);
+
+  if (visible) {
+    expect(await screen.findByText("Tôi đã nhận đủ hàng")).toBeTruthy();
+  } else {
+    await screen.findByText(order.orderNumber);
+    expect(screen.queryByText("Tôi đã nhận đủ hàng")).toBeNull();
+  }
+});
+
+test("B10 receive retry reuses key/body and sends SellerOrder.version", async () => {
+  let order = makeBuyerOrder({ status: "DELIVERED", version: 30 });
+  const part = makeSellerOrder({
+    orderId: order.id,
+    status: "DELIVERED",
+    outstandingAmount: "0",
+    version: 17,
+  });
+  order.sellerOrders = [part];
+  const receiveCalls: Array<RequestInit | undefined> = [];
+  mockRequest.mockImplementation(async (path, init) => {
+    const route = String(path);
+    if (route === `/orders/${order.id}`) return order;
+    if (route === `/payments?orderId=${order.id}`) return [];
+    if (route === `/orders/${order.id}/seller-orders/${part.id}/receive`) {
+      receiveCalls.push(init);
+      if (receiveCalls.length === 1) throw new TypeError("timeout");
+      order = {
+        ...order,
+        status: "COMPLETED",
+        sellerOrders: [{ ...part, status: "COMPLETED", version: part.version + 1 }],
+      };
+      return order.sellerOrders[0];
+    }
+    throw new Error(`Unexpected request: ${route}`);
+  });
+
+  renderCommerce(<OrderDetailRoute />);
+  fireEvent.press(await screen.findByText("Tôi đã nhận đủ hàng"));
+  expect(await screen.findByText("Không thể xác nhận đã nhận hàng. Vui lòng thử lại.")).toBeTruthy();
+  fireEvent.press(screen.getByText("Thử xác nhận đã nhận lại"));
+
+  await waitFor(() => expect(receiveCalls).toHaveLength(2));
+  expect(receiveCalls[1]?.headers).toEqual(receiveCalls[0]?.headers);
+  expect(receiveCalls[1]?.body).toBe(receiveCalls[0]?.body);
+  expect(JSON.parse(String(receiveCalls[0]?.body))).toEqual({ expectedVersion: 17 });
 });

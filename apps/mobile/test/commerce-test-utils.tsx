@@ -11,6 +11,9 @@ type Address = components["schemas"]["Address"];
 type CheckoutQuote = components["schemas"]["CheckoutQuote"];
 type Order = components["schemas"]["Order"];
 type OrderSummary = components["schemas"]["OrderSummary"];
+type Payment = components["schemas"]["Payment"];
+type SellerOrder = components["schemas"]["SellerOrder"];
+type Shipment = components["schemas"]["Shipment"];
 
 export const CART_ITEM_ID = "11111111-1111-4111-8111-111111111111";
 export const SECOND_CART_ITEM_ID = "22222222-2222-4222-8222-222222222222";
@@ -18,6 +21,7 @@ export const CART_SHOP_ID = "33333333-3333-4333-8333-333333333333";
 export const SECOND_CART_SHOP_ID = "44444444-4444-4444-8444-444444444444";
 let quoteSequence = 1;
 let orderSequence = 1;
+let mockOrderId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 export const mockRouter = { push: jest.fn(), replace: jest.fn() };
 export const mockRequest = jest.fn<Promise<unknown>, [ApiPath, RequestInit?]>();
@@ -36,6 +40,7 @@ const queryClients: QueryClient[] = [];
 
 jest.mock("expo-router", () => ({
   useRouter: () => mockRouter,
+  useLocalSearchParams: () => ({ orderId: mockOrderId }),
 }));
 jest.mock("../src/features/auth/session-provider", () => ({
   useSession: () => mockSession,
@@ -43,6 +48,10 @@ jest.mock("../src/features/auth/session-provider", () => ({
 
 export function setCommerceUser(user: User) {
   mockUser = user;
+}
+
+export function setCommerceOrderId(orderId: string) {
+  mockOrderId = orderId;
 }
 
 export function makeCartItem(
@@ -195,6 +204,107 @@ export function makeOrderSummary(
   };
 }
 
+export function makeShipment(overrides: Partial<Shipment> = {}): Shipment {
+  return {
+    id: "99999999-9999-4999-8999-999999999991",
+    sellerOrderId: "88888888-8888-4888-8888-888888888881",
+    status: "IN_TRANSIT",
+    trackingCode: "SHIP-TEST-001",
+    attemptNumber: 1,
+    version: 2,
+    history: [
+      {
+        id: "77777777-7777-4777-8777-777777777771",
+        fromStatus: null,
+        toStatus: "WAITING_PICKUP",
+        attemptNumber: 1,
+        reason: null,
+        createdAt: "2026-10-31T10:00:00.000Z",
+      },
+      {
+        id: "77777777-7777-4777-8777-777777777772",
+        fromStatus: "PICKED_UP",
+        toStatus: "IN_TRANSIT",
+        attemptNumber: 1,
+        reason: null,
+        createdAt: "2026-11-01T10:00:00.000Z",
+      },
+    ],
+    createdAt: "2026-10-31T10:00:00.000Z",
+    updatedAt: "2026-11-01T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function makeSellerOrder(
+  overrides: Partial<SellerOrder> = {},
+): SellerOrder {
+  return {
+    id: "88888888-8888-4888-8888-888888888881",
+    orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    shopId: CART_SHOP_ID,
+    shopNameSnapshot: "Nhà Bếp Mộc",
+    status: "PENDING",
+    items: [
+      {
+        id: "66666666-6666-4666-8666-666666666661",
+        productId: "66666666-6666-4666-8666-666666666666",
+        variantId: "55555555-5555-4555-8555-555555555555",
+        productName: "Bình giữ nhiệt",
+        sku: "BINH-DEN",
+        attributes: { màu: "Đen" },
+        unitPrice: "125000",
+        quantity: 1,
+        lineTotal: "125000",
+        reviewId: null,
+        review: null,
+      },
+    ],
+    originalTotal: "135000",
+    cancelledAmount: "0",
+    capturedAmount: "0",
+    refundedAmount: "0",
+    outstandingAmount: "135000",
+    currency: "VND",
+    addressSnapshot: {
+      recipientName: "Nguyễn An",
+      phone: "0912345678",
+      line1: "1 Đường A",
+      ward: "Phường 1",
+      district: "Quận 1",
+      province: "TP Hồ Chí Minh",
+      country: "VN",
+    },
+    shipment: null,
+    version: 3,
+    completedAt: null,
+    cancelledAt: null,
+    cancelReason: null,
+    createdAt: "2026-11-01T00:00:00.000Z",
+    updatedAt: "2026-11-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function makePayment(overrides: Partial<Payment> = {}): Payment {
+  return {
+    id: "99999999-9999-4999-8999-999999999999",
+    orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    transactionCode: "TXN-TEST-001",
+    method: "MOCK",
+    status: "PENDING",
+    settlementKind: "NORMAL",
+    originalAttemptId: null,
+    amount: "135000",
+    currency: "VND",
+    allocations: [],
+    refunds: [],
+    createdAt: "2026-11-01T00:00:00.000Z",
+    resolvedAt: null,
+    ...overrides,
+  };
+}
+
 export function createCommerceQueryClient() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -235,6 +345,7 @@ export function resetCommerceMocks() {
   mockUser = null;
   quoteSequence = 1;
   orderSequence = 1;
+  mockOrderId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
   mockRouter.push.mockReset();
   mockRouter.replace.mockReset();
   mockRequest.mockReset();
