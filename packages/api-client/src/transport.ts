@@ -4,7 +4,7 @@ import type { TokenSet, TokenStore } from "./auth/types.ts";
 export type ApiPath = keyof paths;
 export type ApiErrorEnvelope = components["schemas"]["ErrorEnvelope"];
 export type ClientPlatform = "WEB" | "ANDROID" | "IOS" | "WINDOWS" | "MACOS";
-type ApiEnvelope<T> = { data: T; meta?: unknown };
+type ApiEnvelope<T> = { data: T; meta?: components["schemas"]["PageMeta"] };
 type RefreshResponse = components["schemas"]["Tokens"];
 
 export interface ApiTransportOptions {
@@ -42,17 +42,24 @@ export class ApiTransport {
   }
 
   async request<T>(path: ApiPath, init: RequestInit = {}): Promise<T> {
+    return (await this.requestEnvelope<T>(path, init)).data;
+  }
+
+  async requestEnvelope<T>(
+    path: ApiPath,
+    init: RequestInit = {},
+  ): Promise<ApiEnvelope<T>> {
     const method = (init.method ?? "GET").toUpperCase();
     const generation = this.options.tokens.getGeneration?.();
     const first = await this.send(path, init);
-    if (first.status !== 401 || path === "/auth/refresh") return this.readResponse<T>(first);
+    if (first.status !== 401 || path === "/auth/refresh") return this.readEnvelope<T>(first);
 
     await this.refreshAccessToken(generation);
     if (!new Set(["GET", "HEAD", "OPTIONS"]).has(method)) {
-      return this.readResponse<T>(first);
+      return this.readEnvelope<T>(first);
     }
 
-    return this.readResponse<T>(await this.send(path, init));
+    return this.readEnvelope<T>(await this.send(path, init));
   }
 
   async setTokens(tokens: TokenSet): Promise<void> {
@@ -142,11 +149,10 @@ export class ApiTransport {
     return this.csrfToken;
   }
 
-  private async readResponse<T>(response: Response): Promise<T> {
+  private async readEnvelope<T>(response: Response): Promise<ApiEnvelope<T>> {
     if (!response.ok) throw await this.toError(response);
-    if (response.status === 204) return undefined as T;
-    const envelope = (await response.json()) as ApiEnvelope<T>;
-    return envelope.data;
+    if (response.status === 204) return { data: undefined as T };
+    return (await response.json()) as ApiEnvelope<T>;
   }
 
   private buildUrl(path: string): URL {
