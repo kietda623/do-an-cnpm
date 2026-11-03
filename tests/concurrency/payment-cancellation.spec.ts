@@ -51,7 +51,20 @@ describe("payment and cancellation concurrency on PostgreSQL", () => {
     expect(response.status).toBe(201);
     return response as Auth;
   }
-  async function fixture() {
+  type CheckoutFixture = {
+    buyerToken: string;
+    buyerId: string;
+    ownerToken: string;
+    shopId: string;
+    variantId: string;
+    quoteId: string;
+  };
+  type OrderFixture = CheckoutFixture & { orderId: string };
+  async function fixture(): Promise<OrderFixture>;
+  async function fixture(options: {
+    finalize: false;
+  }): Promise<CheckoutFixture>;
+  async function fixture(options: { finalize?: boolean } = {}) {
     const owner = await register("Payment Seller");
     const buyer = await register("Payment Buyer");
     const logo = await db.prisma.asset.create({
@@ -162,21 +175,78 @@ describe("payment and cancellation concurrency on PostgreSQL", () => {
         paymentMethod: "MOCK",
       });
     expect(quote.status).toBe(201);
-    const checkout = await request(app.getHttpServer())
-      .post("/api/v1/checkout")
-      .set("Authorization", `Bearer ${buyer.body.data.accessToken}`)
-      .set("Idempotency-Key", randomUUID())
-      .send({ quoteId: quote.body.data.quoteId });
-    expect(checkout.status).toBe(201);
-    return {
+    const prepared = {
       buyerToken: buyer.body.data.accessToken as string,
       buyerId: buyer.body.data.user.id,
       ownerToken: owner.body.data.accessToken as string,
       shopId: shopResponse.body.data.id as string,
-      orderId: checkout.body.data.id as string,
       variantId: product.body.data.variants[0].id as string,
+      quoteId: quote.body.data.quoteId as string,
     };
+    if (options.finalize === false) return prepared;
+    const checkout = await request(app.getHttpServer())
+      .post("/api/v1/checkout")
+      .set("Authorization", `Bearer ${prepared.buyerToken}`)
+      .set("Idempotency-Key", randomUUID())
+      .send({ quoteId: prepared.quoteId });
+    expect(checkout.status).toBe(201);
+    return { ...prepared, orderId: checkout.body.data.id as string };
   }
+
+  it("replays a concurrent checkout ten times with one order and one stock effect", async () => {
+    const test = await fixture({ finalize: false });
+    const buyer = `Bearer ${test.buyerToken}`;
+    const key = randomUUID();
+    const body = { quoteId: test.quoteId };
+    const checkouts = await Promise.all(
+      Array.from({ length: 10 }, () =>
+        request(app.getHttpServer())
+          .post("/api/v1/checkout")
+          .set("Authorization", buyer)
+          .set("Idempotency-Key", key)
+          .send(body),
+      ),
+    );
+    expect(checkouts.map((item) => item.status)).toEqual(Array(10).fill(201));
+    expect(new Set(checkouts.map((item) => item.body.data.id)).size).toBe(1);
+    const orderId = checkouts[0]!.body.data.id as string;
+    expect(
+      await db.prisma.marketplaceOrder.count({ where: { id: orderId } }),
+    ).toBe(1);
+    const part = await db.prisma.sellerOrder.findFirstOrThrow({
+      where: { orderId },
+    });
+    expect(
+      await db.prisma.inventoryMovement.count({
+        where: { sellerOrderId: part.id, kind: "SALE" },
+      }),
+    ).toBe(1);
+    expect(
+      (
+        await request(app.getHttpServer())
+          .post("/api/v1/checkout")
+          .set("Authorization", buyer)
+          .set("Idempotency-Key", key)
+          .send({ quoteId: randomUUID() })
+      ).status,
+    ).toBe(409);
+    expect(
+      (
+        await db.prisma.inventory.findUniqueOrThrow({
+          where: { variantId: test.variantId },
+        })
+      ).availableQuantity,
+    ).toBe(4);
+    const cart = await request(app.getHttpServer())
+      .get("/api/v1/cart")
+      .set("Authorization", buyer);
+    expect(cart.status).toBe(200);
+    expect(
+      cart.body.data.groups.flatMap(
+        (group: { items: unknown[] }) => group.items,
+      ),
+    ).toHaveLength(0);
+  }, 60_000);
 
   it("replays concurrent start, result and cancel ten times with one effect", async () => {
     const test = await fixture();

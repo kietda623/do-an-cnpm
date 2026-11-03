@@ -7,7 +7,7 @@
 **Status**: Draft — ready for planning; assumptions require review
 
 **Input**: Functional Requirements Prompt do chủ dự án cung cấp: nền tảng thương mại
-điện tử đa người bán trên Web, Mobile và Desktop, 50 yêu cầu chức năng.
+điện tử đa người bán trên Web và Desktop, 50 yêu cầu chức năng.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -192,18 +192,18 @@ Admin kiểm soát tài khoản, shop, hàng hóa và tra cứu giao dịch.
 
 ### User Story 10 - Trải nghiệm xuyên nền tảng (Priority: P2)
 
-Buyer mua trên Web/Android/iOS; Seller quản lý shop trên Web/Windows/macOS.
+Buyer mua trên Web hoặc desktop app (Tauri wrapper của storefront); Seller và Admin quản lý trên Web. Không có app mobile.
 
-**Why this priority**: Đáp ứng đầy đủ phạm vi đề tài và cho phép tiếp tục công việc giữa thiết bị.
+**Why this priority**: Đáp ứng phạm vi nền tảng web + desktop và cho phép tiếp tục công việc giữa các cửa sổ/thiết bị.
 
-**Independent Test**: Cùng tài khoản và dữ liệu mẫu trên từng nền tảng đích.
+**Independent Test**: Cùng tài khoản và dữ liệu mẫu trên web và desktop buyer (khi wrapper được triển khai).
 
 **Acceptance Scenarios**:
 
-1. **Given** Buyer dùng Web rồi Mobile, **When** xem giỏ/đơn và hoàn tất hành trình mua,
+1. **Given** Buyer dùng Web rồi desktop app, **When** xem giỏ/đơn và hoàn tất hành trình mua,
    **Then** dữ liệu đã lưu nhất quán, không phải tạo tài khoản riêng.
-2. **Given** Seller dùng Web rồi Desktop, **When** sửa hàng/tồn và xử lý đơn,
-   **Then** thay đổi xuất hiện trên nền tảng còn lại sau tải lại.
+2. **Given** Seller dùng Web ở hai cửa sổ/thiết bị, **When** sửa hàng/tồn và xử lý đơn,
+   **Then** thay đổi xuất hiện trên cửa sổ còn lại sau tải lại; hành vi giống nhau vì cùng API và UI.
 3. **Given** mỗi màn hình bắt buộc, **When** chờ tải, không có dữ liệu, thao tác thành công,
    lỗi hoặc thiếu quyền, **Then** hiển thị trạng thái và hướng dẫn phù hợp, giữ dữ liệu nhập khi an toàn;
    không báo thành công khi thao tác chưa được lưu.
@@ -769,13 +769,14 @@ Admin có thể truy vấn đơn hàng để phục vụ quản trị và xử l
 
 | Phạm vi | Màn hình/chức năng bắt buộc | Nghiệm thu |
 | --- | --- | --- |
-| Buyer Web, Android, iOS | Trang chủ, đăng ký/đăng nhập, danh sách hàng, tìm kiếm/bộ lọc, chi tiết hàng, shop, giỏ, checkout, danh sách/chi tiết đơn, hồ sơ, địa chỉ; đánh giá từ đơn hoàn tất | Chạy US1, US4–8 trên từng nền tảng; dữ liệu thống nhất sau tải lại |
-| Seller Web, Windows, macOS | Đăng ký shop, trạng thái duyệt, dashboard, danh sách/tạo/sửa sản phẩm, biến thể/tồn, danh sách/chi tiết/xử lý đơn, doanh thu, cài đặt shop; xem đánh giá | Chạy US2–3, US7–8 trên từng nền tảng với shop mẫu |
+| Buyer Web + Desktop (wrapper, kế hoạch) | Trang chủ, đăng ký/đăng nhập, danh sách hàng, tìm kiếm/bộ lọc, chi tiết hàng, shop, giỏ, checkout, danh sách/chi tiết đơn, hồ sơ, địa chỉ; đánh giá từ đơn hoàn tất | Chạy US1, US4–8 trên web; desktop dùng lại cùng UI khi wrapper được build; dữ liệu thống nhất sau tải lại |
+| Seller Web | Đăng ký shop, trạng thái duyệt, dashboard, danh sách/tạo/sửa sản phẩm, biến thể/tồn, danh sách/chi tiết/xử lý đơn, doanh thu, cài đặt shop; xem đánh giá | Chạy US2–3, US7–8 trên web với shop mẫu |
 | Admin Web | Dashboard, người dùng, duyệt/quản lý shop, danh mục, kiểm duyệt sản phẩm, tra cứu đơn | Chạy US2, US3, US9 bằng Admin và kiểm tra từ chối vai trò khác |
 
 Tất cả màn hình có loading, empty, error, success và thiếu quyền khi áp dụng;
 biểu mẫu báo lỗi tại trường, thao tác hủy nêu phạm vi shop/tiền trước xác nhận.
-Web thích ứng màn hình nhỏ và lớn; Mobile/Desktop có điều hướng theo nền tảng.
+Web thích ứng màn hình nhỏ và lớn; desktop buyer dùng cùng giao diện responsive.
+Không có client mobile.
 Không sao chép nguyên bản giao diện hoặc tài sản thương hiệu Shopee/Lazada.
 
 ### Acceptance Traceability
@@ -861,8 +862,7 @@ quy trình sửa giao dịch hoàn tất. Không đưa kiến trúc phân tán v
   bằng tài khoản không có quyền đều bị từ chối, không lộ dữ liệu hoặc đổi dữ liệu.
 - **SC-008:** Toàn bộ số liệu ngày/tháng Seller và tổng sàn khớp bộ dữ liệu mẫu có cả đơn hoàn tất,
   hủy, chưa trả, hoàn mô phỏng; không sai lệch tiền hoặc đếm trùng Order tổng/SellerOrder.
-- **SC-009:** Chạy thành công hành trình Buyer trên Web/Android/iOS và quản lý shop trên
-  Web/Windows/macOS; mỗi thay đổi đã lưu xuất hiện trên ứng dụng còn lại sau tải lại.
+- **SC-009:** Chạy thành công hành trình Buyer trên Web (desktop wrapper là kế hoạch, nghiệm thu sau khi build) và quản lý shop trên Web; mỗi thay đổi đã lưu xuất hiện ở cửa sổ/thiết bị còn lại sau tải lại.
 - **SC-010:** Một thành viên chưa thiết lập dự án chạy được demo theo hướng dẫn trong 30 phút
   sau khi đã có các công cụ tiền đề; không cần bước bí mật hoặc chỉnh giao dịch thủ công.
 

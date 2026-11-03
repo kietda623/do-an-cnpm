@@ -1,14 +1,25 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useSession } from "@marketplace/ui-web";
+import { useCallback, useEffect, useState } from "react";
 import {
-  ApiClientError,
-  normalizeFormError,
-  WebSession,
-  type ApiPath,
-} from "@marketplace/api-client";
+  Avatar,
+  Button,
+  DataTable,
+  Dialog,
+  EmptyState,
+  PageHeader,
+  Panel,
+  Pagination,
+  StatusBadge,
+  Store,
+  Tabs,
+  TextareaField,
+  shopStatuses,
+  useApi,
+  formatDateTime,
+  type DataTableColumn,
+} from "@marketplace/ui-web";
+import { ApiClientError, normalizeFormError, type ApiPath } from "@marketplace/api-client";
 
 type Shop = {
   id: string;
@@ -18,124 +29,301 @@ type Shop = {
   description: string;
   rejectionReason: string | null;
   version: number;
-  logo: { url: string };
+  logo: { url: string } | null;
   createdAt: string;
 };
-type Page = { data: Shop[]; meta: { total: number; page: number; pageSize: number } };
-const api = new WebSession(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1").api;
-const request = <T,>(path: string, init?: RequestInit) => api.request<T>(path as ApiPath, init);
+
+type ShopPage = {
+  data: Shop[];
+  meta: { total: number; page: number; pageSize: number };
+};
+
+type ShopAction = "approve" | "reject" | "suspend" | "resume";
+
+const pageSize = 20;
+
+const actionLabels: Record<ShopAction, string> = {
+  approve: "Duyệt cửa hàng",
+  reject: "Từ chối cửa hàng",
+  suspend: "Tạm ngưng cửa hàng",
+  resume: "Khôi phục cửa hàng",
+};
+
+const confirmLabels: Record<ShopAction, string> = {
+  approve: "Xác nhận duyệt",
+  reject: "Xác nhận từ chối",
+  suspend: "Xác nhận tạm ngưng",
+  resume: "Xác nhận khôi phục",
+};
 
 export default function ShopQueuePage() {
-  const { user } = useSession();
+  const { api } = useApi();
   const [shops, setShops] = useState<Shop[]>([]);
+  const [status, setStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [busyId, setBusyId] = useState("");
-  const [reason, setReason] = useState<Record<string, string>>({});
-  async function refresh() {
-    const result = await request<Page>("/admin/shops?page=1&pageSize=50");
-    setShops(result.data);
-  }
+  const [busy, setBusy] = useState(false);
+  const [reason, setReason] = useState("");
+  const [pending, setPending] = useState<{ shop: Shop; action: ShopAction } | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (status) params.set("status", status);
+    try {
+      const result = await api.request<ShopPage>(`/admin/shops?${params}` as ApiPath);
+      setShops(result.data);
+      setTotal(result.meta.total);
+    } catch (cause) {
+      setShops([]);
+      setTotal(null);
+      setError(normalizeFormError(cause));
+    } finally {
+      setLoading(false);
+    }
+  }, [api, page, status]);
+
   useEffect(() => {
-    if (user?.roles.includes("ADMIN"))
-      void refresh().catch((cause: unknown) => setError(normalizeFormError(cause)));
-  }, [user]);
-  async function act(shop: Shop, action: "approve" | "reject" | "suspend" | "resume") {
-    setBusyId(shop.id);
+    void refresh();
+  }, [refresh]);
+
+  async function run(shop: Shop, action: ShopAction) {
+    setBusy(true);
     setError("");
     try {
-      const path = `/admin/shops/${shop.id}/${action}`;
       const body =
         action === "approve"
           ? { expectedVersion: shop.version }
-          : { expectedVersion: shop.version, reason: reason[shop.id]?.trim() ?? "" };
-      await request<Shop>(path, { method: "POST", body: JSON.stringify(body) });
+          : { expectedVersion: shop.version, reason: reason.trim() };
+      await api.request(`/admin/shops/${shop.id}/${action}` as ApiPath, {
+        method: "POST",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify(body),
+      });
+      setPending(null);
+      setReason("");
       await refresh();
     } catch (cause) {
       if (cause instanceof ApiClientError && cause.status === 409) {
         setError(
           "Hồ sơ vừa được xử lý ở nơi khác. Danh sách đã tải lại; hãy kiểm tra trạng thái mới.",
         );
+        setPending(null);
         await refresh();
       } else setError(normalizeFormError(cause));
     } finally {
-      setBusyId("");
+      setBusy(false);
     }
   }
-  if (!user)
-    return (
-      <main className="p-8">
-        <p>Đăng nhập quản trị để duyệt cửa hàng.</p>
-        <Link className="underline" href="/login">
-          Đăng nhập
-        </Link>
-      </main>
-    );
-  if (!user.roles.includes("ADMIN"))
-    return (
-      <main className="p-8">
-        <p role="alert">Bạn không có quyền quản trị cửa hàng.</p>
-      </main>
-    );
+
+  const columns: DataTableColumn<Shop>[] = [
+    {
+      key: "shop",
+      header: "Cửa hàng",
+      render: (row) => (
+        <div className="mp-table__identity">
+          <Avatar name={row.name} src={row.logo?.url} size="sm" />
+          <span className="mp-table__stack">
+            <strong>{row.name}</strong>
+            <span className="mp-muted mp-table__secondary">/{row.slug}</span>
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Trạng thái",
+      render: (row) => <StatusBadge status={row.status} map={shopStatuses} />,
+    },
+    {
+      key: "description",
+      header: "Giới thiệu",
+      render: (row) => (
+        <span className="mp-muted">{row.description || "Chưa có mô tả"}</span>
+      ),
+    },
+    {
+      key: "created",
+      header: "Gửi lúc",
+      render: (row) => formatDateTime(row.createdAt),
+    },
+    {
+      key: "action",
+      header: "",
+      align: "right",
+      render: (row) => (
+        <span className="mp-table__actions">
+          {row.status === "PENDING" ? (
+            <>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setReason("");
+                  setPending({ shop: row, action: "approve" });
+                }}
+              >
+                Duyệt
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => {
+                  setReason("");
+                  setPending({ shop: row, action: "reject" });
+                }}
+              >
+                Từ chối
+              </Button>
+            </>
+          ) : null}
+          {row.status === "ACTIVE" ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setReason("");
+                setPending({ shop: row, action: "suspend" });
+              }}
+            >
+              Tạm ngưng
+            </Button>
+          ) : null}
+          {row.status === "SUSPENDED" ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setReason("");
+                setPending({ shop: row, action: "resume" });
+              }}
+            >
+              Khôi phục
+            </Button>
+          ) : null}
+        </span>
+      ),
+    },
+  ];
+
+  const pageCount = total === null ? page : Math.max(1, Math.ceil(total / pageSize));
+  const needsReason = pending ? pending.action !== "approve" : false;
+
   return (
-    <main className="mx-auto grid max-w-5xl gap-5 p-8">
-      <div>
-        <h1 className="text-3xl font-semibold">Duyệt cửa hàng</h1>
-        <p>{shops.length} hồ sơ</p>
-      </div>
-      {shops.map((shop) => (
-        <article key={shop.id} className="grid gap-3 rounded border p-4 md:grid-cols-[1fr_auto]">
-          <div className="grid gap-2">
-            <h2 className="text-xl font-semibold">{shop.name}</h2>
-            <p>
-              {shop.slug} · {shop.status} · phiên bản {shop.version}
-            </p>
-            <p>{shop.description}</p>
-            {shop.rejectionReason && <p>Lý do trước đó: {shop.rejectionReason}</p>}
-            <label>
-              Lý do xử lý
-              <input
-                value={reason[shop.id] ?? ""}
-                onChange={(event) =>
-                  setReason((current) => ({ ...current, [shop.id]: event.target.value }))
-                }
-                maxLength={500}
+    <div className="mp-page">
+      <PageHeader
+        title="Duyệt cửa hàng"
+        description="Kiểm tra hồ sơ đăng ký, phê duyệt hoặc tạm ngưng cửa hàng kèm lý do được ghi vào nhật ký."
+      />
+
+      <Tabs
+        label="Lọc cửa hàng theo trạng thái"
+        value={status}
+        onChange={(key) => {
+          setPage(1);
+          setStatus(key);
+        }}
+        items={[
+          { key: "", label: "Tất cả" },
+          { key: "PENDING", label: "Chờ duyệt" },
+          { key: "ACTIVE", label: "Đang hoạt động" },
+          { key: "REJECTED", label: "Bị từ chối" },
+          { key: "SUSPENDED", label: "Tạm khóa" },
+        ]}
+      />
+
+      <Panel
+        title="Hồ sơ cửa hàng"
+        description={
+          loading ? undefined : `${total ?? shops.length} hồ sơ trong bộ lọc hiện tại`
+        }
+        flush
+      >
+        <DataTable
+          columns={columns}
+          rows={shops}
+          rowKey={(row) => row.id}
+          caption="Hồ sơ cửa hàng"
+          loading={loading}
+          error={error || null}
+          onRetry={() => void refresh()}
+          empty={
+            <div className="mp-panel__pad">
+              <EmptyState
+                icon={<Store size={22} />}
+                title="Không có hồ sơ phù hợp"
+                description="Thử đổi bộ lọc trạng thái để xem các hồ sơ khác."
               />
-            </label>
-          </div>
-          <div className="flex flex-wrap items-start gap-2">
-            {shop.status === "PENDING" && (
-              <>
-                <button disabled={busyId === shop.id} onClick={() => void act(shop, "approve")}>
-                  Duyệt
-                </button>
-                <button
-                  disabled={busyId === shop.id || !reason[shop.id]?.trim()}
-                  onClick={() => void act(shop, "reject")}
-                >
-                  Từ chối
-                </button>
-              </>
-            )}
-            {shop.status === "ACTIVE" && (
-              <button
-                disabled={busyId === shop.id || !reason[shop.id]?.trim()}
-                onClick={() => void act(shop, "suspend")}
-              >
-                Tạm ngưng
-              </button>
-            )}
-            {shop.status === "SUSPENDED" && (
-              <button
-                disabled={busyId === shop.id || !reason[shop.id]?.trim()}
-                onClick={() => void act(shop, "resume")}
-              >
-                Khôi phục
-              </button>
-            )}
-          </div>
-        </article>
-      ))}
-      {error && <p role="alert">{error}</p>}
-    </main>
+            </div>
+          }
+          footer={
+            <div className="mp-panel__pad">
+              <Pagination
+                page={page}
+                pageCount={pageCount}
+                pageSize={pageSize}
+                onPageChange={setPage}
+              />
+            </div>
+          }
+        />
+      </Panel>
+
+      <Dialog
+        open={Boolean(pending)}
+        onClose={() => {
+          setPending(null);
+          setReason("");
+        }}
+        title={pending ? actionLabels[pending.action] : ""}
+        description={
+          pending ? `${pending.shop.name} · /${pending.shop.slug} · version ${pending.shop.version}` : undefined
+        }
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setPending(null);
+                setReason("");
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant={pending?.action === "reject" || pending?.action === "suspend" ? "danger" : "primary"}
+              disabled={needsReason && !reason.trim()}
+              loading={busy}
+              onClick={() => pending && void run(pending.shop, pending.action)}
+            >
+              {pending ? confirmLabels[pending.action] : "Xác nhận"}
+            </Button>
+          </>
+        }
+      >
+        {pending ? (
+          needsReason ? (
+            <TextareaField
+              label={`Lý do ${pending.shop.name}`}
+              name="reason"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              required
+              maxLength={500}
+              rows={3}
+              hint="Lý do được ghi vào nhật ký quản trị."
+            />
+          ) : (
+            <p>
+              Hồ sơ sẽ chuyển sang trạng thái hoạt động và người bán có thể bắt đầu niêm yết sản
+              phẩm.
+            </p>
+          )
+        ) : null}
+      </Dialog>
+    </div>
   );
 }

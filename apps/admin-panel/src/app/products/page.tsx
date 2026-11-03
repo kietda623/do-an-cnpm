@@ -1,14 +1,24 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { useSession } from "@marketplace/ui-web";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
-  ApiClientError,
-  normalizeFormError,
-  type ApiPath,
-  WebSession,
-} from "@marketplace/api-client";
+  Badge,
+  Button,
+  DataTable,
+  Dialog,
+  EmptyState,
+  PageHeader,
+  Panel,
+  Pagination,
+  SelectField,
+  StatusBadge,
+  TextField,
+  TextareaField,
+  productStatuses,
+  useApi,
+  type DataTableColumn,
+} from "@marketplace/ui-web";
+import { ApiClientError, normalizeFormError, type ApiPath } from "@marketplace/api-client";
 
 type Product = {
   id: string;
@@ -20,195 +30,266 @@ type Product = {
   hiddenReason: string | null;
   version: number;
   minimumPrice: string | null;
+  createdAt?: string;
 };
-const api = new WebSession(
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1",
-).api;
-const request = <T,>(path: string, init?: RequestInit) =>
-  api.request<T>(path as ApiPath, init);
+
+const pageSize = 20;
 
 export default function AdminProductsPage() {
-  const { user } = useSession();
+  const { api } = useApi();
   const [products, setProducts] = useState<Product[]>([]);
   const [q, setQ] = useState("");
-  const [hidden, setHidden] = useState("");
   const [shopId, setShopId] = useState("");
-  const [reason, setReason] = useState<Record<string, string>>({});
+  const [hidden, setHidden] = useState("");
+  const [applied, setApplied] = useState({ q: "", shopId: "", hidden: "" });
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [reason, setReason] = useState("");
   const [pending, setPending] = useState<Product | null>(null);
+
   const refresh = useCallback(async () => {
-    const params = new URLSearchParams({ page: "1", pageSize: "50" });
-    if (q.trim()) params.set("q", q.trim());
-    if (shopId.trim()) params.set("shopId", shopId.trim());
-    if (hidden) params.set("adminHidden", hidden);
-    setProducts(await request<Product[]>(`/admin/products?${params}`));
-  }, [q, hidden, shopId]);
+    setLoading(true);
+    setError("");
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (applied.q.trim()) params.set("q", applied.q.trim());
+    if (applied.shopId.trim()) params.set("shopId", applied.shopId.trim());
+    if (applied.hidden) params.set("adminHidden", applied.hidden);
+    try {
+      setProducts(await api.request<Product[]>(`/admin/products?${params}` as ApiPath));
+    } catch (cause) {
+      setProducts([]);
+      setError(normalizeFormError(cause));
+    } finally {
+      setLoading(false);
+    }
+  }, [api, applied, page]);
+
   useEffect(() => {
-    if (user?.roles.includes("ADMIN"))
-      void refresh().catch((cause: unknown) =>
-        setError(normalizeFormError(cause)),
-      );
-  }, [user, refresh]);
+    void refresh();
+  }, [refresh]);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPage(1);
+    setApplied({ q, shopId, hidden });
+  }
+
   async function hide(product: Product) {
-    setBusy(product.id);
+    setBusy(true);
     setError("");
     try {
-      await request(`/admin/products/${product.id}/hide`, {
+      await api.request(`/admin/products/${product.id}/hide` as ApiPath, {
         method: "POST",
         headers: { "Idempotency-Key": crypto.randomUUID() },
-        body: JSON.stringify({
-          reason: reason[product.id]?.trim(),
-          expectedVersion: product.version,
-        }),
+        body: JSON.stringify({ reason: reason.trim(), expectedVersion: product.version }),
       });
       setPending(null);
+      setReason("");
       await refresh();
     } catch (cause) {
       if (cause instanceof ApiClientError && cause.status === 409) {
-        setError(
-          "Sản phẩm vừa thay đổi. Danh sách đã tải lại; hãy kiểm tra phiên bản mới.",
-        );
+        setError("Sản phẩm vừa thay đổi. Danh sách đã tải lại; hãy kiểm tra phiên bản mới.");
+        setPending(null);
         await refresh();
       } else setError(normalizeFormError(cause));
     } finally {
-      setBusy("");
+      setBusy(false);
     }
   }
-  if (!user)
-    return (
-      <main className="p-8">
-        <p>Đăng nhập quản trị để kiểm duyệt sản phẩm.</p>
-        <Link href="/login">Đăng nhập</Link>
-      </main>
-    );
-  if (!user.roles.includes("ADMIN"))
-    return (
-      <main className="p-8">
-        <p role="alert">Bạn không có quyền kiểm duyệt sản phẩm.</p>
-      </main>
-    );
-  return (
-    <main className="mx-auto grid max-w-6xl gap-5 p-8">
-      <header>
-        <h1 className="text-3xl font-semibold">Kiểm duyệt sản phẩm</h1>
-        <p>{products.length} kết quả</p>
-      </header>
-      <form
-        className="flex flex-wrap gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void refresh();
-        }}
-      >
-        <label className="grid gap-1">
-          Tìm kiếm
-          <input
-            aria-label="Tìm kiếm sản phẩm"
-            value={q}
-            onChange={(event) => setQ(event.target.value)}
-            className="rounded border p-2"
-          />
-        </label>
-        <label className="grid gap-1">
-          Shop ID
-          <input
-            aria-label="Shop ID sản phẩm"
-            value={shopId}
-            onChange={(event) => setShopId(event.target.value)}
-            className="rounded border p-2"
-          />
-        </label>
-        <label className="grid gap-1">
-          Trạng thái ẩn
-          <select
-            aria-label="Lọc sản phẩm ẩn"
-            value={hidden}
-            onChange={(event) => setHidden(event.target.value)}
-            className="rounded border p-2"
+
+  const columns: DataTableColumn<Product>[] = [
+    {
+      key: "product",
+      header: "Sản phẩm",
+      render: (row) => (
+        <span className="mp-table__stack">
+          <span className="mp-table__primary">{row.name}</span>
+          <span className="mp-muted mp-table__secondary">
+            shop {row.shopId} · version {row.version}
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: "selling",
+      header: "Niêm yết",
+      render: (row) => (
+        <StatusBadge status={row.selling ? "ACTIVE" : "DISCONTINUED"} map={productStatuses} />
+      ),
+    },
+    {
+      key: "moderation",
+      header: "Kiểm duyệt",
+      render: (row) => (
+        <div className="mp-table__stack">
+          <Badge tone={row.adminHidden ? "danger" : "success"}>
+            {row.adminHidden ? "Đã ẩn" : "Công khai"}
+          </Badge>
+          {row.hiddenReason ? (
+            <span className="mp-muted mp-table__secondary">Lý do ẩn: {row.hiddenReason}</span>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "price",
+      header: "Giá thấp nhất",
+      align: "right",
+      render: (row) => (
+        <span data-numeric>{row.minimumPrice ? `${row.minimumPrice} VND` : "Chưa có"}</span>
+      ),
+    },
+    {
+      key: "action",
+      header: "",
+      align: "right",
+      render: (row) =>
+        row.adminHidden ? (
+          <span className="mp-muted">Đã ẩn</span>
+        ) : (
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={() => {
+              setReason("");
+              setPending(row);
+            }}
           >
-            <option value="">Tất cả</option>
-            <option value="false">Đang hiển thị</option>
-            <option value="true">Đã ẩn</option>
-          </select>
-        </label>
-        <button className="self-end rounded border px-4 py-2">Tìm</button>
-      </form>
-      {products.map((product) => (
-        <article
-          key={product.id}
-          className="grid gap-3 rounded border p-4 md:grid-cols-[1fr_auto]"
-        >
-          <div>
-            <h2 className="text-xl font-semibold">{product.name}</h2>
-            <p>
-              shop {product.shopId} ·{" "}
-              {product.selling ? "Đang bán" : "Ngừng bán"} ·{" "}
-              {product.adminHidden ? "Đã ẩn" : "Công khai"} · version{" "}
-              {product.version}
-            </p>
-            <p>{product.description}</p>
-            <p>Giá thấp nhất: {product.minimumPrice ?? "Chưa có"} VND</p>
-            {product.hiddenReason && <p>Lý do ẩn: {product.hiddenReason}</p>}
-          </div>
-          {!product.adminHidden && (
-            <button
-              disabled={busy === product.id}
-              onClick={() => setPending(product)}
-              className="h-fit rounded bg-red-700 px-4 py-2 text-white disabled:opacity-50"
-            >
-              Ẩn sản phẩm
-            </button>
-          )}
-        </article>
-      ))}
-      {pending && (
-        <dialog
-          open
-          aria-labelledby="product-hide-dialog-title"
-          className="fixed inset-0 m-auto w-[min(92vw,34rem)] rounded-xl border bg-white p-6 shadow-xl backdrop:bg-black/40"
-        >
-          <h2 id="product-hide-dialog-title" className="text-xl font-semibold">
             Ẩn sản phẩm
-          </h2>
-          <p>
-            {pending.name} · version {pending.version}
-          </p>
-          <label className="my-4 grid gap-1">
-            Lý do ẩn
-            <textarea
-              aria-label={`Lý do ${pending.name}`}
-              required
-              minLength={1}
-              maxLength={500}
-              value={reason[pending.id] ?? ""}
-              onChange={(event) =>
-                setReason((current) => ({
-                  ...current,
-                  [pending.id]: event.target.value,
-                }))
-              }
-              className="rounded border p-2"
+          </Button>
+        ),
+    },
+  ];
+
+  const hasNext = products.length === pageSize;
+  const pageCount = page + (hasNext ? 1 : 0);
+
+  return (
+    <div className="mp-page">
+      <PageHeader
+        title="Kiểm duyệt sản phẩm"
+        description="Rà soát sản phẩm trên toàn sàn và ẩn những niêm yết vi phạm chính sách."
+      />
+
+      <Panel title="Bộ lọc" description="Tìm theo tên, cửa hàng hoặc trạng thái kiểm duyệt.">
+        <form className="mp-form" onSubmit={submit}>
+          <div className="mp-form-grid">
+            <TextField
+              label="Tìm kiếm sản phẩm"
+              name="q"
+              value={q}
+              onChange={(event) => setQ(event.target.value)}
+              placeholder="Tên sản phẩm"
             />
-          </label>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setPending(null)}
-              className="rounded border px-4 py-2"
+            <TextField
+              label="Shop ID sản phẩm"
+              name="shopId"
+              value={shopId}
+              onChange={(event) => setShopId(event.target.value)}
+              placeholder="UUID cửa hàng"
+            />
+            <SelectField
+              label="Lọc sản phẩm ẩn"
+              name="adminHidden"
+              value={hidden}
+              onChange={(event) => setHidden(event.target.value)}
+            >
+              <option value="">Tất cả</option>
+              <option value="false">Đang hiển thị</option>
+              <option value="true">Đã ẩn</option>
+            </SelectField>
+          </div>
+          <div className="mp-form-actions">
+            <Button type="submit" loading={loading}>
+              Tìm
+            </Button>
+          </div>
+        </form>
+      </Panel>
+
+      <Panel
+        title="Danh sách sản phẩm"
+        description={loading ? undefined : `${products.length} kết quả trên trang này`}
+        flush
+      >
+        <DataTable
+          columns={columns}
+          rows={products}
+          rowKey={(row) => row.id}
+          caption="Danh sách sản phẩm cần kiểm duyệt"
+          loading={loading}
+          error={error || null}
+          onRetry={() => void refresh()}
+          empty={
+            <div className="mp-panel__pad">
+              <EmptyState
+                title="Không có sản phẩm phù hợp"
+                description="Thử đổi từ khóa hoặc bộ lọc kiểm duyệt."
+              />
+            </div>
+          }
+          footer={
+            <div className="mp-panel__pad">
+              <Pagination
+                page={page}
+                pageCount={pageCount}
+                pageSize={pageSize}
+                onPageChange={setPage}
+              />
+            </div>
+          }
+        />
+      </Panel>
+
+      <Dialog
+        open={Boolean(pending)}
+        onClose={() => {
+          setPending(null);
+          setReason("");
+        }}
+        title="Ẩn sản phẩm"
+        description={pending ? `${pending.name} · version ${pending.version}` : undefined}
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setPending(null);
+                setReason("");
+              }}
             >
               Hủy
-            </button>
-            <button
-              disabled={busy === pending.id || !reason[pending.id]?.trim()}
-              onClick={() => void hide(pending)}
-              className="rounded bg-red-700 px-4 py-2 text-white disabled:opacity-50"
+            </Button>
+            <Button
+              variant="danger"
+              disabled={!reason.trim()}
+              loading={busy}
+              onClick={() => pending && void hide(pending)}
             >
               Xác nhận ẩn
-            </button>
-          </div>
-        </dialog>
-      )}
-      {error && <p role="alert">{error}</p>}
-    </main>
+            </Button>
+          </>
+        }
+      >
+        {pending ? (
+          <>
+            <p className="mp-muted">{pending.description || "Sản phẩm không có mô tả."}</p>
+            <TextareaField
+              label={`Lý do ${pending.name}`}
+              name="reason"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              required
+              maxLength={500}
+              rows={3}
+              hint="Lý do được ghi vào nhật ký quản trị và hiển thị cho người bán."
+            />
+          </>
+        ) : null}
+      </Dialog>
+    </div>
   );
 }

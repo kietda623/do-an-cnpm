@@ -1,27 +1,36 @@
 "use client";
-import Link from "next/link";
-import { useSession } from "@marketplace/ui-web";
+
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Skeleton, useApi } from "@marketplace/ui-web";
+import type { Membership } from "../lib/types";
+
 export default function HomePage() {
-  const { user } = useSession();
+  const router = useRouter();
+  const { api, status } = useApi();
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    let live = true;
+    void api
+      .request<Membership[]>("/users/me/shops")
+      .then((rows) => {
+        if (!live) return;
+        router.replace(rows[0] ? `/shops/${rows[0].shopId}/dashboard` : "/shops");
+      })
+      .catch(() => {
+        if (live) router.replace("/shops");
+      });
+    return () => {
+      live = false;
+    };
+  }, [api, router, status]);
+
   return (
-    <main className="mx-auto max-w-5xl px-[var(--space-page-gutter)] py-8">
-      {user ? (
-        <>
-          <h1 className="text-3xl font-semibold">Seller Center</h1>
-          <p>Quản lý cửa hàng hoặc gửi hồ sơ đăng ký người bán.</p>
-          <Link className="underline" href="/shops">
-            Đến cửa hàng của tôi
-          </Link>
-        </>
-      ) : (
-        <>
-          <h1 className="text-3xl font-semibold">Seller Center</h1>
-          <p>Đăng nhập để tiếp tục quản lý cửa hàng.</p>
-          <Link className="underline" href="/login">
-            Đăng nhập người bán
-          </Link>
-        </>
-      )}
-    </main>
+    <div className="mp-page" role="status">
+      <span className="mp-visually-hidden">Đang mở Seller Center…</span>
+      <Skeleton className="mp-skeleton--line" />
+      <Skeleton className="mp-skeleton--block" />
+    </div>
   );
 }

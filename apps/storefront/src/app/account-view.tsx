@@ -1,12 +1,28 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, TextField, useSession, type SessionUser } from "@marketplace/ui-web";
+import {
+  Button,
+  CheckboxField,
+  EmptyState,
+  KeyRound,
+  LockKeyhole,
+  LogOut,
+  MapPin,
+  PageHeader,
+  Panel,
+  Plus,
+  Skeleton,
+  Tabs,
+  TextField,
+  Upload,
+  useApi,
+  useSession,
+  type SessionUser,
+} from "@marketplace/ui-web";
 import { ApiClientError, normalizeFormError } from "@marketplace/api-client";
-import { webSession } from "./auth-form";
 
 type Address = {
   id: string;
@@ -19,50 +35,56 @@ type Address = {
   country: "VN";
   isDefault: boolean;
 };
-const api = webSession.api;
 
 export function AccountView({ view }: { view: "profile" | "addresses" }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, setUser } = useSession();
-  const [loading, setLoading] = useState(true);
+  const { user, status, api, clear } = useApi();
+  const { setUser } = useSession();
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [addressesLoading, setAddressesLoading] = useState(view === "addresses");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const [status, setStatus] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [logoutError, setLogoutError] = useState("");
-  const [addresses, setAddresses] = useState<Address[]>([]);
   const [showAddress, setShowAddress] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const fileInputId = useId();
 
   useEffect(() => {
+    if (status === "anonymous") router.replace("/login");
+  }, [router, status]);
+
+  useEffect(() => {
+    if (view !== "addresses" || status !== "authenticated") return;
     let active = true;
-    void (async () => {
-      try {
-        if (!user) {
-          const current = await webSession.restore<SessionUser>();
-          if (active) setUser(current);
+    setAddressesLoading(true);
+    void api
+      .request<Address[]>("/users/me/addresses")
+      .then((list) => {
+        if (active) setAddresses(list);
+      })
+      .catch(async (cause) => {
+        if (cause instanceof ApiClientError && cause.status === 401) {
+          await clear();
+          if (active) router.replace("/login");
+          return;
         }
-        if (view === "addresses") {
-          const list = await api.request<Address[]>("/users/me/addresses");
-          if (active) setAddresses(list);
-        }
-      } catch {
-        await webSession.clear();
-        if (active) router.replace("/login");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
+        if (active) setError(normalizeFormError(cause));
+      })
+      .finally(() => {
+        if (active) setAddressesLoading(false);
+      });
     return () => {
       active = false;
     };
-  }, [router, setUser, user, view]);
+  }, [api, clear, router, status, view]);
 
   async function submitProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError("");
-    setStatus("");
+    setStatusMessage("");
     const data = new FormData(event.currentTarget);
     try {
       const updated = await api.request<SessionUser>("/users/me", {
@@ -73,7 +95,7 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
         }),
       });
       setUser(updated);
-      setStatus("Đã lưu thay đổi.");
+      setStatusMessage("Đã lưu thay đổi.");
     } catch (cause) {
       setError(normalizeFormError(cause));
     } finally {
@@ -85,7 +107,7 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
     event.preventDefault();
     setPending(true);
     setError("");
-    setStatus("");
+    setStatusMessage("");
     const data = new FormData(event.currentTarget);
     const payload = {
       recipientName: String(data.get("recipientName")),
@@ -110,7 +132,7 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
         })),
       ]);
       setShowAddress(false);
-      setStatus("Đã lưu địa chỉ.");
+      setStatusMessage("Đã lưu địa chỉ.");
     } catch (cause) {
       setError(normalizeFormError(cause));
     } finally {
@@ -122,7 +144,7 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
     event.preventDefault();
     setPending(true);
     setError("");
-    setStatus("");
+    setStatusMessage("");
     const data = new FormData(event.currentTarget);
     try {
       await api.request<void>("/users/me/password", {
@@ -132,7 +154,7 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
           newPassword: data.get("newPassword"),
         }),
       });
-      setStatus("Đổi mật khẩu thành công.");
+      setStatusMessage("Đổi mật khẩu thành công.");
       setShowPassword(false);
     } catch (cause) {
       setError(normalizeFormError(cause));
@@ -146,6 +168,8 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
     const data = new FormData();
     data.set("file", file);
     data.set("purpose", "AVATAR");
+    setPending(true);
+    setError("");
     try {
       const asset = await api.request<{ id: string; url: string }>("/users/me/assets", {
         method: "POST",
@@ -158,6 +182,8 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
       setUser({ ...updated, avatar: { url: asset.url } });
     } catch (cause) {
       setError(normalizeFormError(cause));
+    } finally {
+      setPending(false);
     }
   }
 
@@ -166,178 +192,297 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
     setError("");
     setLogoutError("");
     try {
-      await webSession.logout();
+      await api.request<void>("/auth/logout", {
+        method: "POST",
+        body: JSON.stringify({ clientPlatform: "WEB" }),
+      });
     } catch (cause) {
       if (!(cause instanceof ApiClientError) || cause.status !== 401) {
         setLogoutError("Không thể đăng xuất. Kiểm tra kết nối rồi thử lại.");
+        setPending(false);
         return;
       }
-    } finally {
-      setPending(false);
     }
-    setUser(null);
+    setPending(false);
+    await clear();
     queryClient.clear();
     router.replace("/login");
   }
 
-  if (loading)
+  if (status === "loading") {
     return (
-      <main className="mx-auto max-w-3xl px-5 py-12">
-        <p role="status">Đang tải tài khoản...</p>
+      <main className="mp-account-page">
+        <div className="mp-account-page__loading" role="status">
+          <Skeleton className="mp-skeleton--avatar" />
+          <Skeleton className="mp-skeleton--line" />
+          <Skeleton className="mp-skeleton--cell" />
+        </div>
+        <span className="mp-visually-hidden">Đang tải tài khoản...</span>
       </main>
     );
+  }
+
   if (!user) return null;
+
   return (
-    <main className="mx-auto grid max-w-3xl gap-8 px-5 py-10">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-sm text-marketplace-muted-foreground">Tài khoản</p>
-          <h1 className="mt-1 text-3xl font-bold">Xin chào, {user.fullName}</h1>
-          <p>{user.email}</p>
-        </div>
-        <Button variant="secondary" disabled={pending} onClick={logout}>
-          Đăng xuất
-        </Button>
-      </header>
-      <nav className="flex gap-4 border-b pb-3">
-        <Link className="underline" href="/account">
-          Hồ sơ
-        </Link>
-        <Link className="underline" href="/account/addresses">
-          Địa chỉ
-        </Link>
-      </nav>
-      {error && (
-        <p role="alert" className="text-marketplace-danger">
-          {error}
-        </p>
-      )}
-      {logoutError && (
-        <div>
-          <p role="alert" className="text-marketplace-danger">
-            {logoutError}
-          </p>
-          <Button disabled={pending} onClick={logout}>
-            Thử lại đăng xuất
+    <main className="mp-account-page">
+      <PageHeader
+        title={`Xin chào, ${user.fullName}`}
+        description={user.email}
+        actions={
+          <Button
+            variant="secondary"
+            disabled={pending}
+            loading={pending}
+            loadingLabel="Đang đăng xuất…"
+            leadingIcon={<LogOut size={16} />}
+            onClick={() => void logout()}
+          >
+            Đăng xuất
           </Button>
-        </div>
-      )}
-      {status && <p role="status">{status}</p>}
-      {view === "profile" ? (
-        <>
-          <form onSubmit={submitProfile} className="grid gap-4">
-            <h2 className="text-xl font-semibold">Thông tin cá nhân</h2>
-            <TextField
-              label="Họ và tên"
-              name="fullName"
-              maxLength={120}
-              defaultValue={user.fullName}
-              required
-            />
-            <TextField
-              label="Số điện thoại"
-              name="phone"
-              defaultValue={user.phone ?? ""}
-              maxLength={20}
-            />
-            <Button disabled={pending}>Lưu</Button>
-          </form>
-          <section className="grid gap-3">
-            <h2 className="text-xl font-semibold">Ảnh đại diện</h2>
-            {user.avatar && (
-              <img
-                src={user.avatar.url}
-                alt="Avatar / Ảnh đại diện"
-                className="h-20 w-20 rounded-full object-cover"
-              />
-            )}
-            <label className="grid max-w-sm gap-2 text-sm font-semibold">
-              Tải ảnh lên
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(event) => void uploadAvatar(event.currentTarget.files?.[0])}
-              />
-            </label>
-          </section>
-          <section className="grid gap-3">
-            <h2 className="text-xl font-semibold">Bảo mật</h2>
-            {!showPassword && (
-              <Button variant="secondary" onClick={() => setShowPassword(true)}>
-                Đổi mật khẩu
+        }
+      />
+
+      <div className="mp-account-page__layout">
+        <aside className="mp-account-page__side">
+          <Tabs
+            label="Tài khoản"
+            value={view}
+            items={[
+              { key: "profile", label: "Hồ sơ", href: "/account" },
+              { key: "addresses", label: "Địa chỉ", href: "/account/addresses" },
+            ]}
+          />
+        </aside>
+
+        <div className="mp-account-page__content">
+          {error ? (
+            <p role="alert" className="mp-alert-inline">
+              {error}
+            </p>
+          ) : null}
+          {logoutError ? (
+            <div className="mp-alert-inline stack">
+              <p role="alert">{logoutError}</p>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={pending}
+                onClick={() => void logout()}
+              >
+                Thử lại đăng xuất
               </Button>
-            )}
-            {showPassword && (
-              <form className="grid gap-4" onSubmit={submitPassword}>
-                <TextField
-                  label="Mật khẩu hiện tại / Current password"
-                  name="currentPassword"
-                  type="password"
-                  required
-                />
-                <TextField
-                  label="Mật khẩu mới / New password"
-                  name="newPassword"
-                  type="password"
-                  minLength={12}
-                  required
-                />
-                <div className="flex gap-3">
-                  <Button disabled={pending}>Cập nhật mật khẩu</Button>
-                  <Button type="button" variant="secondary" onClick={() => setShowPassword(false)}>
-                    Hủy
-                  </Button>
+            </div>
+          ) : null}
+          {statusMessage ? (
+            <p role="status" className="mp-notice-inline">
+              {statusMessage}
+            </p>
+          ) : null}
+
+          {view === "profile" ? (
+            <div className="mp-account-page__grid">
+              <Panel
+                title="Thông tin cá nhân"
+                description="Tên hiển thị và số điện thoại dùng khi liên hệ giao hàng."
+                className="mp-account-page__panel"
+              >
+                <form onSubmit={submitProfile} className="mp-form">
+                  <TextField
+                    label="Họ và tên"
+                    name="fullName"
+                    maxLength={120}
+                    defaultValue={user.fullName}
+                    required
+                  />
+                  <TextField
+                    label="Số điện thoại"
+                    name="phone"
+                    defaultValue={user.phone ?? ""}
+                    maxLength={20}
+                    optional
+                  />
+                  <div className="mp-form__actions">
+                    <Button disabled={pending} loading={pending}>
+                      Lưu
+                    </Button>
+                  </div>
+                </form>
+              </Panel>
+
+              <Panel
+                title="Ảnh đại diện"
+                description="Ảnh vuông, tối đa 5 MB. Hỗ trợ JPEG, PNG hoặc WebP."
+                className="mp-account-page__panel"
+              >
+                <div className="mp-avatar-editor">
+                  <span className="mp-avatar-editor__preview">
+                    {user.avatar ? (
+                      <img
+                        src={user.avatar.url}
+                        alt="Avatar / Ảnh đại diện"
+                        className="mp-avatar-editor__image"
+                      />
+                    ) : (
+                      <UserGlyph />
+                    )}
+                  </span>
+                  <div className="mp-avatar-editor__actions">
+                    <label className="mp-file-button" htmlFor={fileInputId}>
+                      <Upload size={16} aria-hidden="true" />
+                      Tải ảnh lên
+                    </label>
+                    <input
+                      id={fileInputId}
+                      className="mp-visually-hidden"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      disabled={pending}
+                      onChange={(event) => void uploadAvatar(event.currentTarget.files?.[0])}
+                    />
+                    <p className="mp-muted">
+                      {user.avatar ? "Ảnh mới sẽ thay thế ảnh hiện tại." : "Chưa có ảnh đại diện."}
+                    </p>
+                  </div>
                 </div>
-              </form>
-            )}
-          </section>
-        </>
-      ) : (
-        <section className="grid gap-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Sổ địa chỉ</h2>
-            <Button onClick={() => setShowAddress(true)}>Thêm địa chỉ</Button>
-          </div>
-          {addresses.length === 0 && !showAddress && (
-            <p>Chưa có địa chỉ nào. Thêm địa chỉ để dùng khi đặt hàng.</p>
-          )}
-          {addresses.map((address) => (
-            <article key={address.id} className="rounded-lg border border-marketplace-border p-4">
-              <p className="font-semibold">
-                {address.recipientName} · {address.phone}
-              </p>
-              <p>
-                {address.line1}, {address.ward}, {address.district}, {address.province}
-              </p>
-              {address.isDefault && <span className="text-sm">Địa chỉ mặc định</span>}
-            </article>
-          ))}
-          {showAddress && (
-            <form
-              className="grid gap-4 rounded-lg border border-marketplace-border p-5"
-              onSubmit={submitAddress}
-            >
-              <h3 className="text-lg font-semibold">Thêm địa chỉ</h3>
-              <TextField label="Người nhận" name="recipientName" required />
-              <TextField label="Điện thoại" name="phone" minLength={8} maxLength={20} required />
-              <TextField label="Địa chỉ" name="line1" required />
-              <TextField label="Phường" name="ward" required />
-              <TextField label="Quận" name="district" required />
-              <TextField label="Tỉnh / thành phố" name="province" required />
-              <label className="flex items-center gap-2">
-                <input type="checkbox" name="isDefault" />
-                Mặc định
-              </label>
-              <div className="flex gap-3">
-                <Button disabled={pending}>Lưu</Button>
-                <Button type="button" variant="secondary" onClick={() => setShowAddress(false)}>
-                  Hủy
+              </Panel>
+
+              <Panel
+                title="Bảo mật"
+                description="Đổi mật khẩu định kỳ để bảo vệ tài khoản."
+                className="mp-account-page__panel mp-account-page__panel--wide"
+              >
+                {!showPassword ? (
+                  <Button
+                    variant="secondary"
+                    leadingIcon={<KeyRound size={16} />}
+                    onClick={() => setShowPassword(true)}
+                  >
+                    Đổi mật khẩu
+                  </Button>
+                ) : (
+                  <form className="mp-form" onSubmit={submitPassword}>
+                    <div className="mp-form__grid">
+                      <TextField
+                        label="Mật khẩu hiện tại / Current password"
+                        name="currentPassword"
+                        type="password"
+                        autoComplete="current-password"
+                        required
+                      />
+                      <TextField
+                        label="Mật khẩu mới / New password"
+                        name="newPassword"
+                        type="password"
+                        autoComplete="new-password"
+                        minLength={12}
+                        hint="Tối thiểu 12 ký tự."
+                        required
+                      />
+                    </div>
+                    <div className="mp-form__actions">
+                      <Button disabled={pending} loading={pending}>
+                        Cập nhật mật khẩu
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setShowPassword(false)}
+                      >
+                        Hủy
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </Panel>
+            </div>
+          ) : (
+            <Panel
+              title="Sổ địa chỉ"
+              description="Địa chỉ mặc định được chọn sẵn ở bước thanh toán."
+              actions={
+                <Button
+                  leadingIcon={<Plus size={16} />}
+                  onClick={() => setShowAddress(true)}
+                  disabled={showAddress}
+                >
+                  Thêm địa chỉ
                 </Button>
-              </div>
-            </form>
+              }
+            >
+              {addressesLoading ? (
+                <div className="mp-address-list" aria-hidden="true">
+                  <Skeleton className="mp-skeleton--block" />
+                  <Skeleton className="mp-skeleton--block" />
+                </div>
+              ) : addresses.length === 0 && !showAddress ? (
+                <EmptyState
+                  icon={<MapPin size={22} />}
+                  title="Chưa có địa chỉ nào. Thêm địa chỉ để dùng khi đặt hàng."
+                  description="Bạn cần ít nhất một địa chỉ nhận hàng trước khi thanh toán."
+                />
+              ) : (
+                <div className="mp-address-list">
+                  {addresses.map((address) => (
+                    <article key={address.id} className="mp-address-card">
+                      <div className="mp-address-card__head">
+                        <p className="mp-address-card__name">
+                          {address.recipientName} · {address.phone}
+                        </p>
+                        {address.isDefault ? (
+                          <span className="mp-chip mp-chip--soft">Mặc định</span>
+                        ) : null}
+                      </div>
+                      <p className="mp-address-card__line">
+                        {address.line1}, {address.ward}, {address.district}, {address.province}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+              {showAddress ? (
+                <form className="mp-form mp-address-form" onSubmit={submitAddress}>
+                  <h3 className="mp-form__title">Thêm địa chỉ</h3>
+                  <div className="mp-form__grid">
+                    <TextField label="Người nhận" name="recipientName" required />
+                    <TextField
+                      label="Điện thoại"
+                      name="phone"
+                      minLength={8}
+                      maxLength={20}
+                      required
+                    />
+                  </div>
+                  <TextField label="Địa chỉ" name="line1" required />
+                  <div className="mp-form__grid mp-form__grid--three">
+                    <TextField label="Phường" name="ward" required />
+                    <TextField label="Quận" name="district" required />
+                    <TextField label="Tỉnh / thành phố" name="province" required />
+                  </div>
+                  <CheckboxField label="Mặc định" name="isDefault" />
+                  <div className="mp-form__actions">
+                    <Button disabled={pending} loading={pending}>
+                      Lưu
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={() => setShowAddress(false)}>
+                      Hủy
+                    </Button>
+                  </div>
+                </form>
+              ) : null}
+            </Panel>
           )}
-        </section>
-      )}
+        </div>
+      </div>
     </main>
+  );
+}
+
+function UserGlyph() {
+  return (
+    <span className="mp-avatar-editor__placeholder" aria-hidden="true">
+      <LockKeyhole size={24} />
+    </span>
   );
 }

@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import type { ReactNode } from "react";
 import "@marketplace/design-tokens/styles.css";
 import "@marketplace/ui-web/styles.css";
 import "./globals.css";
 import { Providers } from "./providers";
-import { AdminNavigation } from "./admin-navigation";
+import { AdminShell } from "./admin-shell";
+
+const inter = Inter({
+  subsets: ["latin", "vietnamese"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   title: { default: "Marketplace Admin", template: "%s | Marketplace Admin" },
@@ -15,11 +22,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="vi">
+    <html lang="vi" className={inter.variable}>
       <body>
         <Providers>
-          <AdminNavigation />
-          {children}
+          <AdminShell>{children}</AdminShell>
         </Providers>
       </body>
     </html>

@@ -6,6 +6,12 @@ Workspace cho đồ án nền tảng thương mại điện tử đa người b�
 
 Repo đã có monorepo, NestJS API, PostgreSQL/Prisma migrations đến `0007_shipments`, Docker Compose, ba ứng dụng web và mã cho identity, shop, catalog, inventory, cart, checkout, thanh toán mô phỏng và hủy đơn. Giao hàng hiện có schema và policy; các route xử lý SellerOrder, shipment, review và phần lớn admin vẫn chưa hoàn tất. Tình trạng task và giới hạn kiểm thử được ghi trong [task list](specs/001-marketplace-mvp/tasks.md) và `docs/testing/`. Chưa có bằng chứng nghiệm thu toàn bộ marketplace trên môi trường local hiện tại.
 
+## Nền tảng
+
+- **Buyer:** web storefront (`apps/storefront`); desktop app là Tauri wrapper quanh storefront — **kế hoạch, chưa triển khai** ([ADR-0004](docs/adr/0004-buyer-desktop-webview-wrapper.md)).
+- **Seller:** web (`apps/seller-center`). **Admin:** web (`apps/admin-panel`).
+- Không có app mobile (Android/iOS); `apps/mobile` đã bị gỡ. Desktop chưa có trong repo, chỉ là kế hoạch Tauri wrapper theo [ADR-0004](docs/adr/0004-buyer-desktop-webview-wrapper.md).
+
 ## Bắt đầu
 
 - [Hướng dẫn phát triển local](docs/development/local.md): toolchain, ports, env, scripts và bảo vệ database.

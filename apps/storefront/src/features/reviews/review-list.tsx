@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  EmptyState,
+  Pagination,
+  Skeleton,
+  Star,
+  StatusMessage,
+  useApi,
+} from "@marketplace/ui-web";
 import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
-import { webSession } from "../../app/auth-form";
 
 type Review = {
   id: string;
@@ -11,6 +18,7 @@ type Review = {
   comment: string;
   createdAt: string;
 };
+
 export function ReviewList({
   productId,
   ratingAverage,
@@ -20,17 +28,20 @@ export function ReviewList({
   ratingAverage?: string | null;
   ratingCount: number;
 }) {
+  const { api } = useApi();
   const [rows, setRows] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
+  const pageSize = 20;
+
   useEffect(() => {
     let live = true;
     setLoading(true);
     setError("");
-    void webSession.api
+    void api
       .request<Review[]>(
-        `/products/${productId}/reviews?page=${page}&pageSize=20` as ApiPath,
+        `/products/${productId}/reviews?page=${page}&pageSize=${pageSize}` as ApiPath,
       )
       .then((value) => {
         if (live) setRows(value);
@@ -44,33 +55,61 @@ export function ReviewList({
     return () => {
       live = false;
     };
-  }, [productId, page]);
+  }, [api, page, productId]);
+
   return (
-    <section
-      className="space-y-3 rounded-xl border p-5 md:col-span-2"
-      aria-label="Đánh giá sản phẩm"
-    >
-      <h2 className="text-xl font-semibold">Đánh giá sản phẩm</h2>
-      <p>
-        {ratingAverage != null
-          ? `${Number(ratingAverage).toLocaleString("vi-VN", {
-              maximumFractionDigits: 1,
-            })}/5`
-          : "Chưa có điểm"}{" "}
-        · {ratingCount} đánh giá
-      </p>
+    <section className="mp-reviews" aria-labelledby="product-reviews">
+      <header className="mp-reviews__head">
+        <div>
+          <h2 id="product-reviews">Đánh giá sản phẩm</h2>
+          <p className="mp-reviews__summary">
+            {ratingAverage != null
+              ? `${Number(ratingAverage).toLocaleString("vi-VN", {
+                  maximumFractionDigits: 1,
+                })}/5`
+              : "Chưa có điểm"}{" "}
+            · {ratingCount} đánh giá
+          </p>
+        </div>
+        <span className="mp-reviews__badge">
+          <Star size={15} aria-hidden="true" />
+          {ratingCount > 0 ? "Đánh giá thật từ người mua" : "Chưa có đánh giá"}
+        </span>
+      </header>
+
       {loading ? (
-        <p role="status">Đang tải đánh giá…</p>
+        <div className="mp-reviews__list" aria-busy="true">
+          {[0, 1].map((index) => (
+            <div key={index} className="mp-review">
+              <Skeleton className="mp-skeleton--line" />
+              <Skeleton className="mp-skeleton--line" />
+            </div>
+          ))}
+          <p className="mp-visually-hidden" role="status">
+            Đang tải đánh giá…
+          </p>
+        </div>
       ) : error ? (
-        <p role="alert">{error}</p>
+        <StatusMessage tone="error" title="Không tải được đánh giá">
+          {error}
+        </StatusMessage>
       ) : rows.length === 0 ? (
-        <p>Chưa có đánh giá.</p>
+        <EmptyState
+          title="Chưa có đánh giá."
+          description="Người mua có thể đánh giá sau khi đơn hoàn tất."
+        />
       ) : (
-        <ul className="divide-y">
+        <ul className="mp-reviews__list">
           {rows.map((row) => (
-            <li key={row.id} className="py-3">
-              <strong>{row.buyerDisplayName}</strong> · {row.rating}/5
-              <p className="whitespace-pre-wrap">{row.comment}</p>
+            <li key={row.id} className="mp-review">
+              <div className="mp-review__head">
+                <strong>{row.buyerDisplayName}</strong>
+                <span className="mp-review__rating" aria-label={`${row.rating} trên 5 sao`}>
+                  <Star size={14} aria-hidden="true" />
+                  {row.rating}/5
+                </span>
+              </div>
+              <p className="mp-review__comment">{row.comment}</p>
               <time dateTime={row.createdAt}>
                 {new Date(row.createdAt).toLocaleDateString("vi-VN")}
               </time>
@@ -78,21 +117,14 @@ export function ReviewList({
           ))}
         </ul>
       )}
-      <div className="flex gap-3">
-        <button
-          disabled={loading || page === 1}
-          onClick={() => setPage(page - 1)}
-        >
-          Trang trước
-        </button>
-        <span>Trang {page}</span>
-        <button
-          disabled={loading || rows.length < 20}
-          onClick={() => setPage(page + 1)}
-        >
-          Trang sau
-        </button>
-      </div>
+
+      {!loading && !error && rows.length > 0 && (
+        <Pagination
+          page={page}
+          pageCount={Math.max(1, Math.ceil(ratingCount / pageSize))}
+          onPageChange={setPage}
+        />
+      )}
     </section>
   );
 }

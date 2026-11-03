@@ -187,7 +187,7 @@ test("S: register, update profile/address/password, upload avatar, and log out",
   await page.getByRole("button", { name: /thêm địa chỉ|add address/i }).click();
   await page.getByLabel(/recipient|người nhận/i).fill("E2E Buyer");
   await page.getByLabel(/phone|điện thoại/i).fill("0901234567");
-  await page.getByLabel(/address line|địa chỉ/i).fill("1 Test Street");
+  await page.locator('input[name="line1"]').fill("1 Test Street");
   await page.getByLabel(/ward|phường/i).fill("Ward 1");
   await page.getByLabel(/district|quận/i).fill("District 1");
   await page.getByLabel(/province|tỉnh/i).fill("Ho Chi Minh City");
@@ -252,10 +252,10 @@ test("failed logout keeps the account visible and allows retry", async ({
     },
   });
   await page.goto("/account");
-  await expect(page.getByText(buyer.email)).toBeVisible();
+  await expect(page.locator("#main-content").getByText(buyer.email)).toBeVisible();
   await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
   await expect(page).toHaveURL(/\/account$/);
-  await expect(page.getByText(buyer.email)).toBeVisible();
+  await expect(page.locator("#main-content").getByText(buyer.email)).toBeVisible();
   await expect(page.locator("p[role=alert]")).toContainText(
     "Không thể đăng xuất",
   );
@@ -282,7 +282,7 @@ test("logout401 clears local account state and redirects to login", async ({ pag
     },
   });
   await page.goto("/account");
-  await expect(page.getByText(buyer.email)).toBeVisible();
+  await expect(page.locator("#main-content").getByText(buyer.email)).toBeVisible();
   await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByText(buyer.email)).toHaveCount(0);

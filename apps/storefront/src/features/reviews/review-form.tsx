@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Button, SelectField, StatusMessage, TextareaField } from "@marketplace/ui-web";
 import { normalizeFormError } from "@marketplace/api-client";
-import { webSession } from "../../app/auth-form";
+import { webSession } from "../../lib/session";
 
 export function ReviewForm({
   orderItemId,
@@ -19,14 +20,15 @@ export function ReviewForm({
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
   if (reviewId)
     return (
-      <section className="mt-2 text-sm" aria-label="Đánh giá đã gửi">
+      <section className="mp-review-submitted" aria-label="Đánh giá đã gửi">
         <p role="status">Đã đánh giá</p>
         {review && (
           <>
-            <p>{review.rating}/5 sao</p>
-            <p className="whitespace-pre-wrap">{review.comment}</p>
+            <p className="mp-review-submitted__rating">{review.rating}/5 sao</p>
+            <p className="mp-review-submitted__comment">{review.comment}</p>
             <time dateTime={review.createdAt}>
               {new Date(review.createdAt).toLocaleDateString("vi-VN")}
             </time>
@@ -34,6 +36,7 @@ export function ReviewForm({
         )}
       </section>
     );
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -54,12 +57,13 @@ export function ReviewForm({
       setBusy(false);
     }
   }
+
   return (
-    <form onSubmit={submit} className="mt-3 grid gap-2 rounded border p-3">
-      <label>
-        Số sao{" "}
-        <select
-          aria-label="Số sao"
+    <form className="mp-review-form" onSubmit={submit} aria-label="Gửi đánh giá">
+      <p className="mp-review-form__title">Chia sẻ cảm nhận về sản phẩm</p>
+      <div className="mp-review-form__fields">
+        <SelectField
+          label="Số sao"
           value={rating}
           onChange={(event) => setRating(event.target.value)}
         >
@@ -68,23 +72,25 @@ export function ReviewForm({
               {value}
             </option>
           ))}
-        </select>
-      </label>
-      <label>
-        Nhận xét{" "}
-        <textarea
-          aria-label="Nhận xét"
+        </SelectField>
+        <TextareaField
+          label="Nhận xét"
           required
           minLength={1}
           maxLength={2000}
+          rows={3}
           value={comment}
           onChange={(event) => setComment(event.target.value)}
         />
-      </label>
-      {error && <p role="alert">{error}</p>}
-      <button disabled={busy || !comment.trim()} type="submit">
-        {busy ? "Đang gửi…" : "Gửi đánh giá"}
-      </button>
+      </div>
+      {error && (
+        <StatusMessage tone="error" onDismiss={() => setError("")}>
+          {error}
+        </StatusMessage>
+      )}
+      <Button type="submit" loading={busy} disabled={!comment.trim()}>
+        Gửi đánh giá
+      </Button>
     </form>
   );
 }

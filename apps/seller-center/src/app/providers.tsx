@@ -2,7 +2,8 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { SessionProvider } from "@marketplace/ui-web";
+import { ApiProvider, SessionProvider } from "@marketplace/ui-web";
+import { webSession } from "../lib/api";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -17,7 +18,9 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider>{children}</SessionProvider>
+      <SessionProvider>
+        <ApiProvider session={webSession}>{children}</ApiProvider>
+      </SessionProvider>
     </QueryClientProvider>
   );
 }

@@ -1,15 +1,50 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import { useSession } from "@marketplace/ui-web";
 import {
-  ApiClientError,
-  normalizeFormError,
-  type ApiPath,
-  WebSession,
-} from "@marketplace/api-client";
+  Button,
+  DataTable,
+  Dialog,
+  PageHeader,
+  Panel,
+  StatusBadge,
+  TextareaField,
+  paymentMethods,
+  paymentStatuses,
+  sellerOrderStatuses,
+  shipmentStatuses,
+  useApi,
+  formatDateTime,
+  formatVnd,
+  type DataTableColumn,
+} from "@marketplace/ui-web";
+import { ApiClientError, normalizeFormError, type ApiPath } from "@marketplace/api-client";
+
+type SellerOrderItem = {
+  id: string;
+  productName: string;
+  sku: string;
+  quantity: number;
+  unitPrice: string;
+  lineTotal: string;
+};
+
+type SellerOrderPart = {
+  id: string;
+  shopId: string;
+  shopNameSnapshot: string;
+  status: string;
+  version: number;
+  originalTotal: string;
+  items: SellerOrderItem[];
+  shipment: {
+    status: string;
+    trackingCode: string;
+    history: Array<{ toStatus: string; reason: string | null }>;
+  } | null;
+};
 
 type Order = {
   id: string;
@@ -23,27 +58,8 @@ type Order = {
   outstandingAmount: string;
   paymentMethod: string;
   paymentStatus: string;
-  sellerOrders: Array<{
-    id: string;
-    shopId: string;
-    shopNameSnapshot: string;
-    status: string;
-    version: number;
-    originalTotal: string;
-    items: Array<{
-      id: string;
-      productName: string;
-      sku: string;
-      quantity: number;
-      unitPrice: string;
-      lineTotal: string;
-    }>;
-    shipment: {
-      status: string;
-      trackingCode: string;
-      history: Array<{ toStatus: string; reason: string | null }>;
-    } | null;
-  }>;
+  createdAt?: string;
+  sellerOrders: SellerOrderPart[];
   payments: Array<{
     id: string;
     status: string;
@@ -52,50 +68,55 @@ type Order = {
     refunds: Array<{ amount: string; reason: string }>;
   }>;
 };
+
 type Detail = { order: Order; auditReferenceIds: string[] };
-const api = new WebSession(
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1",
-).api;
-const request = <T,>(path: string) => api.request<T>(path as ApiPath);
+
+type RecoveryAction = "confirm" | "pack" | "reject";
+
+const actionLabels: Record<RecoveryAction, string> = {
+  confirm: "Admin xác nhận",
+  pack: "Admin đóng gói",
+  reject: "Admin từ chối",
+};
+
+const actionVerb: Record<RecoveryAction, string> = {
+  confirm: "xác nhận",
+  pack: "đóng gói",
+  reject: "từ chối",
+};
 
 export default function AdminOrderDetailPage() {
-  const { user } = useSession();
+  const { api } = useApi();
   const { orderId } = useParams<{ orderId: string }>();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState("");
   const [pendingRecovery, setPendingRecovery] = useState<{
-    part: Order["sellerOrders"][number];
-    action: "confirm" | "pack" | "reject";
+    part: SellerOrderPart;
+    action: RecoveryAction;
   } | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  const refresh = useCallback(
-    async () => setDetail(await request<Detail>(`/admin/orders/${orderId}`)),
-    [orderId],
-  );
+
+  const refresh = useCallback(async () => {
+    setDetail(await api.request<Detail>(`/admin/orders/${orderId}` as ApiPath));
+  }, [api, orderId]);
+
   useEffect(() => {
-    if (user?.roles.includes("ADMIN") && orderId)
-      void refresh().catch((cause: unknown) =>
-        setError(normalizeFormError(cause)),
-      );
-  }, [user, orderId, refresh]);
+    if (!orderId) return;
+    void refresh().catch((cause: unknown) => setError(normalizeFormError(cause)));
+  }, [orderId, refresh]);
+
   async function recover() {
     if (!pendingRecovery) return;
     setBusy(true);
     setError("");
     try {
       const { part, action } = pendingRecovery;
-      await api.request(
-        `/admin/seller-orders/${part.id}/${action}` as ApiPath,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": crypto.randomUUID() },
-          body: JSON.stringify({
-            expectedVersion: part.version,
-            reason: reason.trim(),
-          }),
-        },
-      );
+      await api.request(`/admin/seller-orders/${part.id}/${action}` as ApiPath, {
+        method: "POST",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({ expectedVersion: part.version, reason: reason.trim() }),
+      });
       setPendingRecovery(null);
       setReason("");
       await refresh();
@@ -104,204 +125,265 @@ export default function AdminOrderDetailPage() {
         setError(
           "SellerOrder vừa thay đổi hoặc tài khoản Seller chưa khóa. Đã tải lại dữ liệu; hãy kiểm tra phiên bản và điều kiện recovery.",
         );
+        setPendingRecovery(null);
         await refresh();
       } else setError(normalizeFormError(cause));
     } finally {
       setBusy(false);
     }
   }
-  if (!user)
-    return (
-      <main className="p-8">
-        <p>Đăng nhập quản trị để xem đơn.</p>
-        <Link href="/login">Đăng nhập</Link>
-      </main>
-    );
-  if (!user.roles.includes("ADMIN"))
-    return (
-      <main className="p-8">
-        <p role="alert">Bạn không có quyền xem đơn hàng.</p>
-      </main>
-    );
-  if (error)
-    return (
-      <main className="p-8">
-        <p role="alert">{error}</p>
-        <Link href="/orders">Quay lại danh sách</Link>
-      </main>
-    );
-  if (!detail)
-    return (
-      <main className="p-8" aria-busy="true">
-        Đang tải đơn hàng…
-      </main>
-    );
-  const { order } = detail;
+
+  const itemColumns: DataTableColumn<SellerOrderItem>[] = [
+    {
+      key: "item",
+      header: "Mặt hàng",
+      render: (row) => (
+        <span className="mp-table__stack">
+          <span className="mp-table__primary">{row.productName}</span>
+          <span className="mp-muted mp-table__secondary">SKU {row.sku}</span>
+        </span>
+      ),
+    },
+    {
+      key: "qty",
+      header: "SL",
+      align: "right",
+      render: (row) => <span data-numeric>{row.quantity}</span>,
+    },
+    {
+      key: "unit",
+      header: "Đơn giá",
+      align: "right",
+      render: (row) => <span data-numeric>{formatVnd(row.unitPrice)}</span>,
+    },
+    {
+      key: "line",
+      header: "Thành tiền",
+      align: "right",
+      render: (row) => <strong data-numeric>{formatVnd(row.lineTotal)}</strong>,
+    },
+  ];
+
   return (
-    <main className="mx-auto grid max-w-6xl gap-5 p-8">
-      <Link href="/orders" className="underline">
-        ← Danh sách đơn
-      </Link>
-      <header>
-        <h1 className="text-3xl font-semibold">{order.orderNumber}</h1>
-        <p>
-          {order.status} · {order.paymentMethod} · {order.paymentStatus}
+    <div className="mp-page">
+      <PageHeader
+        title={detail ? detail.order.orderNumber : "Chi tiết đơn hàng"}
+        description="Đơn chỉ đọc, bao gồm dữ liệu giao dịch đã hoàn tất."
+        meta={
+          <Link className="mp-link" href="/orders">
+            ← Danh sách đơn
+          </Link>
+        }
+        actions={
+          detail ? (
+            <span className="mp-inline">
+              <StatusBadge status={detail.order.status} map={sellerOrderStatuses} />
+              <StatusBadge status={detail.order.paymentStatus} map={paymentStatuses} />
+            </span>
+          ) : undefined
+        }
+      />
+
+      {error ? (
+        <p role="alert" className="mp-alert-inline">
+          {error}
         </p>
-        <p>Đơn chỉ đọc, bao gồm dữ liệu giao dịch đã hoàn tất.</p>
-      </header>
-      <section className="rounded border p-4">
-        <h2 className="text-xl font-semibold">Tổng kết</h2>
-        <p>Tổng ban đầu: {order.originalTotal} VND</p>
-        <p>Đã hủy: {order.cancelledAmount} VND</p>
-        <p>Đã thu: {order.capturedAmount} VND</p>
-        <p>Đã hoàn: {order.refundedAmount} VND</p>
-        <p>Còn phải thu: {order.outstandingAmount} VND</p>
-        <p>Buyer: {order.buyerId}</p>
-      </section>
-      <section className="grid gap-3">
-        <h2 className="text-xl font-semibold">Các shop và mặt hàng</h2>
-        {order.sellerOrders.map((part) => (
-          <article key={part.id} className="rounded border p-4">
-            <h3 className="font-semibold">
-              {part.shopNameSnapshot} · {part.status}
-            </h3>
-            <p>
-              Shop {part.shopId} · SellerOrder {part.id} · version{" "}
-              {part.version} · {part.originalTotal} VND
-            </p>
-            {part.items.map((item) => (
-              <p key={item.id}>
-                {item.productName} ({item.sku}) × {item.quantity} ·{" "}
-                {item.unitPrice} VND · {item.lineTotal} VND
-              </p>
-            ))}
-            {part.shipment && (
-              <p>
-                Vận chuyển: {part.shipment.status} ·{" "}
-                {part.shipment.trackingCode}
-              </p>
-            )}
-            {(part.status === "PENDING" || part.status === "CONFIRMED") && (
-              <div
-                className="mt-3 flex flex-wrap gap-2"
-                aria-label={`Recovery SellerOrder ${part.id}`}
-              >
-                {part.status === "PENDING" && (
-                  <button
-                    onClick={() => {
-                      setPendingRecovery({ part, action: "confirm" });
-                      setReason("");
-                    }}
-                    className="rounded border px-3 py-2"
-                  >
-                    Admin xác nhận
-                  </button>
-                )}
-                {part.status === "CONFIRMED" && (
-                  <button
-                    onClick={() => {
-                      setPendingRecovery({ part, action: "pack" });
-                      setReason("");
-                    }}
-                    className="rounded border px-3 py-2"
-                  >
-                    Admin đóng gói
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setPendingRecovery({ part, action: "reject" });
-                    setReason("");
-                  }}
-                  className="rounded border px-3 py-2"
-                >
-                  Admin từ chối
-                </button>
-                <span className="self-center text-sm">
-                  Recovery chỉ hợp lệ khi tài khoản Seller bị khóa.
-                </span>
-              </div>
-            )}
-          </article>
-        ))}
-      </section>
-      <section className="rounded border p-4">
-        <h2 className="text-xl font-semibold">Thanh toán</h2>
-        {order.payments.map((payment) => (
-          <article key={payment.id}>
-            <p>
-              {payment.status} · {payment.amount} VND ·{" "}
-              {payment.transactionCode}
-            </p>
-            {payment.refunds.map((refund, index) => (
-              <p key={`${payment.id}-${index}`}>
-                Hoàn {refund.amount} VND · {refund.reason}
-              </p>
-            ))}
-          </article>
-        ))}
-      </section>
-      <section className="rounded border p-4">
-        <h2 className="text-xl font-semibold">Audit references</h2>
-        {detail.auditReferenceIds.length ? (
-          <ul>
-            {detail.auditReferenceIds.map((id) => (
-              <li key={id} className="font-mono">
-                {id}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>Chưa có audit reference.</p>
-        )}
-      </section>
-      {error && <p role="alert">{error}</p>}
-      {pendingRecovery && (
-        <dialog
-          open
-          aria-labelledby="recovery-dialog-title"
-          className="fixed inset-0 m-auto w-[min(92vw,34rem)] rounded-xl border bg-white p-6 shadow-xl backdrop:bg-black/40"
-        >
-          <h2 id="recovery-dialog-title" className="text-xl font-semibold">
-            Admin{" "}
-            {pendingRecovery.action === "confirm"
-              ? "xác nhận"
-              : pendingRecovery.action === "pack"
-                ? "đóng gói"
-                : "từ chối"}{" "}
-            SellerOrder
-          </h2>
-          <p>
-            {pendingRecovery.part.id} · version {pendingRecovery.part.version}
+      ) : null}
+
+      {!detail ? (
+        <Panel>
+          <p aria-busy="true" className="mp-muted">
+            Đang tải đơn hàng…
           </p>
-          <label className="my-4 grid gap-1">
-            Lý do
-            <textarea
-              aria-label="Lý do recovery"
-              minLength={1}
-              maxLength={500}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              className="rounded border p-2"
-            />
-          </label>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setPendingRecovery(null)}
-              className="rounded border px-4 py-2"
-            >
+        </Panel>
+      ) : (
+        <>
+          <Panel
+            title="Tổng kết"
+            description={
+              detail.order.createdAt ? formatDateTime(detail.order.createdAt) : undefined
+            }
+          >
+            <dl className="mp-summary-grid">
+              <div>
+                <dt>Tổng ban đầu</dt>
+                <dd data-numeric>{formatVnd(detail.order.originalTotal)}</dd>
+              </div>
+              <div>
+                <dt>Đã hủy</dt>
+                <dd data-numeric>{formatVnd(detail.order.cancelledAmount)}</dd>
+              </div>
+              <div>
+                <dt>Đã thu</dt>
+                <dd data-numeric>{formatVnd(detail.order.capturedAmount)}</dd>
+              </div>
+              <div>
+                <dt>Đã hoàn</dt>
+                <dd data-numeric>{formatVnd(detail.order.refundedAmount)}</dd>
+              </div>
+              <div>
+                <dt>Còn phải thu</dt>
+                <dd data-numeric>{formatVnd(detail.order.outstandingAmount)}</dd>
+              </div>
+              <div>
+                <dt>Phương thức</dt>
+                <dd>{paymentMethods[detail.order.paymentMethod]?.label ?? detail.order.paymentMethod}</dd>
+              </div>
+            </dl>
+            <p className="mp-muted">Buyer {detail.order.buyerId}</p>
+          </Panel>
+
+          <Panel title="Các shop và mặt hàng" flush>
+            <div className="mp-stack">
+              {detail.order.sellerOrders.map((part) => (
+                <section key={part.id} className="mp-panel__pad mp-stack">
+                  <header className="mp-inline">
+                    <h3 className="mp-panel__title">{part.shopNameSnapshot}</h3>
+                    <StatusBadge status={part.status} map={sellerOrderStatuses} />
+                  </header>
+                  <p className="mp-muted">
+                    Shop {part.shopId} · SellerOrder {part.id} · version {part.version} ·{" "}
+                    {formatVnd(part.originalTotal)}
+                  </p>
+                  <DataTable
+                    columns={itemColumns}
+                    rows={part.items}
+                    rowKey={(row) => row.id}
+                    caption={`Mặt hàng của ${part.shopNameSnapshot}`}
+                  />
+                  {part.shipment ? (
+                    <p className="mp-inline">
+                      <StatusBadge status={part.shipment.status} map={shipmentStatuses} />
+                      <span className="mp-muted">{part.shipment.trackingCode}</span>
+                    </p>
+                  ) : null}
+                  {part.status === "PENDING" || part.status === "CONFIRMED" ? (
+                    <div className="mp-form-actions" aria-label={`Recovery SellerOrder ${part.id}`}>
+                      {part.status === "PENDING" ? (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setReason("");
+                            setPendingRecovery({ part, action: "confirm" });
+                          }}
+                        >
+                          Admin xác nhận
+                        </Button>
+                      ) : null}
+                      {part.status === "CONFIRMED" ? (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setReason("");
+                            setPendingRecovery({ part, action: "pack" });
+                          }}
+                        >
+                          Admin đóng gói
+                        </Button>
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => {
+                          setReason("");
+                          setPendingRecovery({ part, action: "reject" });
+                        }}
+                      >
+                        Admin từ chối
+                      </Button>
+                      <span className="mp-muted mp-note">
+                        Recovery chỉ hợp lệ khi tài khoản Seller bị khóa.
+                      </span>
+                    </div>
+                  ) : null}
+                </section>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="Thanh toán">
+            {detail.order.payments.length === 0 ? (
+              <p className="mp-muted">Chưa có giao dịch thanh toán.</p>
+            ) : (
+              <ul className="mp-stack">
+                {detail.order.payments.map((payment) => (
+                  <li key={payment.id} className="mp-stack">
+                    <p className="mp-inline">
+                      <StatusBadge status={payment.status} map={paymentStatuses} />
+                      <span>
+                        {`${payment.status} · ${payment.amount} VND`}
+                      </span>
+                      <span className="mp-muted">{payment.transactionCode}</span>
+                    </p>
+                    {payment.refunds.map((refund, index) => (
+                      <p key={`${payment.id}-${index}`} className="mp-muted">
+                        Hoàn {formatVnd(refund.amount)} · {refund.reason}
+                      </p>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+
+          <Panel title="Audit references">
+            {detail.auditReferenceIds.length ? (
+              <ul className="mp-stack">
+                {detail.auditReferenceIds.map((id) => (
+                  <li key={id} className="mp-code">
+                    {id}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mp-muted">Chưa có audit reference.</p>
+            )}
+          </Panel>
+        </>
+      )}
+
+      <Dialog
+        open={Boolean(pendingRecovery)}
+        onClose={() => setPendingRecovery(null)}
+        title={`Admin ${actionVerb[pendingRecovery?.action ?? "confirm"]} SellerOrder`}
+        description={
+          pendingRecovery
+            ? `${pendingRecovery.part.id} · version ${pendingRecovery.part.version}`
+            : undefined
+        }
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setPendingRecovery(null)}>
               Hủy
-            </button>
-            <button
-              disabled={busy || !reason.trim()}
+            </Button>
+            <Button
+              variant={pendingRecovery?.action === "reject" ? "danger" : "primary"}
+              disabled={!reason.trim()}
+              loading={busy}
               onClick={() => void recover()}
-              className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50"
             >
               Xác nhận hành động
-            </button>
-          </div>
-        </dialog>
-      )}
-    </main>
+            </Button>
+          </>
+        }
+      >
+        {pendingRecovery ? (
+          <TextareaField
+            label="Lý do recovery"
+            name="reason"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            required
+            minLength={1}
+            maxLength={500}
+            rows={3}
+            hint={`Hành động: ${actionLabels[pendingRecovery.action]}.`}
+          />
+        ) : null}
+      </Dialog>
+    </div>
   );
 }

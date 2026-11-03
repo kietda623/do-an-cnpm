@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import { formatVnd } from "../money";
+import { CheckboxField, Minus, Plus, Store, Trash2, formatVnd } from "@marketplace/ui-web";
 
 export type CartItemViewModel = {
   id: string;
@@ -34,39 +36,56 @@ export function CartGroupView({
   onRemove: (item: CartItemViewModel) => void;
 }) {
   return (
-    <section className="rounded-xl border bg-white p-4">
-      <h2 className="mb-3 font-semibold">{group.shopName}</h2>
-      <div className="divide-y">
+    <section className="mp-cart-group" aria-labelledby={`cart-shop-${group.shopId}`}>
+      <header className="mp-cart-group__head">
+        <h2 id={`cart-shop-${group.shopId}`}>
+          <Store size={16} aria-hidden="true" />
+          {group.shopName}
+        </h2>
+        <Link href={`/shops/${group.shopId}`}>Xem cửa hàng</Link>
+      </header>
+      <ul className="mp-cart-group__items">
         {group.items.map((item) => (
-          <article key={item.id} className="flex flex-wrap items-center gap-3 py-4">
-            <input
+          <li key={item.id} className="mp-cart-item">
+            <CheckboxField
               aria-label={`Chọn ${item.productName}`}
-              type="checkbox"
               checked={item.selected}
               disabled={disabled}
               onChange={(event) => onUpdate(item, { selected: event.target.checked })}
+              label={<span className="mp-visually-hidden">Chọn {item.productName}</span>}
             />
-            <div className="min-w-40 flex-1">
-              <Link className="font-medium underline" href={`/products/${item.productId}`}>
+            <div className="mp-cart-item__media" aria-hidden="true">
+              <span>{item.productName.slice(0, 1)}</span>
+            </div>
+            <div className="mp-cart-item__info">
+              <Link className="mp-cart-item__name" href={`/products/${item.productId}`}>
                 {item.productName}
               </Link>
-              <p className="text-sm text-neutral-600">
+              <p className="mp-cart-item__variant">
                 {Object.values(item.attributes).join(" / ") || item.sku}
               </p>
-              <p className="font-semibold">{formatVnd(item.currentUnitPrice)}</p>
+              <p className="mp-cart-item__unit" data-numeric>
+                {formatVnd(item.currentUnitPrice)}
+              </p>
               {!item.purchasable && (
-                <p className="text-sm text-red-700">
+                <p className="mp-cart-item__warning" role="status">
                   {item.unavailableReason === "INSUFFICIENT_STOCK"
                     ? "Số lượng vượt tồn kho"
                     : "Sản phẩm hiện không khả dụng"}
                 </p>
               )}
             </div>
-            <label className="text-sm">
-              Số lượng
+            <div className="mp-qty">
+              <button
+                type="button"
+                aria-label={`Giảm số lượng ${item.productName}`}
+                disabled={disabled || item.quantity <= 1}
+                onClick={() => onUpdate(item, { quantity: item.quantity - 1 })}
+              >
+                <Minus size={15} aria-hidden="true" />
+              </button>
               <input
                 aria-label={`Số lượng ${item.productName}`}
-                className="ml-2 h-10 w-20 rounded border px-2"
                 type="number"
                 min={1}
                 max={999}
@@ -77,17 +96,31 @@ export function CartGroupView({
                   if (quantity >= 1 && quantity <= 999) onUpdate(item, { quantity });
                 }}
               />
-            </label>
+              <button
+                type="button"
+                aria-label={`Tăng số lượng ${item.productName}`}
+                disabled={disabled || item.quantity >= 999}
+                onClick={() => onUpdate(item, { quantity: item.quantity + 1 })}
+              >
+                <Plus size={15} aria-hidden="true" />
+              </button>
+            </div>
+            <p className="mp-cart-item__total" data-numeric>
+              {formatVnd((BigInt(item.currentUnitPrice) * BigInt(item.quantity)).toString())}
+            </p>
             <button
-              className="text-sm underline"
+              type="button"
+              className="mp-cart-item__remove"
               disabled={disabled}
               onClick={() => onRemove(item)}
+              aria-label={`Xóa ${item.productName}`}
             >
-              Xóa
+              <Trash2 size={16} aria-hidden="true" />
+              <span>Xóa</span>
             </button>
-          </article>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

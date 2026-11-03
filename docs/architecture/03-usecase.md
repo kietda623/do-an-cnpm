@@ -262,7 +262,7 @@ flowchart LR
 | API | `GET /auth/csrf` (Web) → `POST /auth/register` |
 | Tiền điều kiện | Chưa đăng nhập. Web: có CSRF token và Origin nằm trong allowlist. |
 | Kích hoạt | Guest chọn "Đăng ký". |
-| Luồng chính | 1. Guest nhập email, mật khẩu (12–128 ký tự, được chứa khoảng trắng), họ tên (1–120), `clientPlatform`.<br>2. Hệ thống chuẩn hóa email (trim, lowercase).<br>3. Kiểm tra định dạng và email chưa tồn tại.<br>4. Tạo `User` (role BUYER, status ACTIVE), lưu hash mật khẩu.<br>5. Tạo `Session`, cấp access JWT 10 phút; refresh token đặt trong cookie HttpOnly (Web) hoặc trả trong body (native).<br>6. Trả 201 `Tokens`. |
+| Luồng chính | 1. Guest nhập email, mật khẩu (12–128 ký tự, được chứa khoảng trắng), họ tên (1–120), `clientPlatform`.<br>2. Hệ thống chuẩn hóa email (trim, lowercase).<br>3. Kiểm tra định dạng và email chưa tồn tại.<br>4. Tạo `User` (role BUYER, status ACTIVE), lưu hash mật khẩu.<br>5. Tạo `Session`, cấp access JWT 10 phút; refresh token đặt trong cookie HttpOnly. Client native không nằm trong baseline; body refresh chỉ là khả năng của API nếu có client native trong tương lai.<br>6. Trả 201 `Tokens`. |
 | Luồng thay thế | 3a. Email đã tồn tại (không phân biệt hoa/thường) → 409 `EMAIL_TAKEN`.<br>3b. Dữ liệu sai định dạng/độ dài → lỗi theo từng trường.<br>3c. Body chứa trường lạ (ví dụ cố gán role) → bị từ chối. |
 | Hậu điều kiện | Có một User và một Session. Không có role ADMIN nào được cấp qua API này. |
 | Ghi chú | Admin chỉ được tạo bằng quy trình seed/thiết lập có kiểm soát. |
@@ -278,7 +278,7 @@ flowchart LR
 | Luồng chính | 1. Guest gửi email, mật khẩu, `clientPlatform`.<br>2. Hệ thống tìm user theo email chuẩn hóa, so khớp hash.<br>3. Tạo Session mới, cấp access token (10 phút) và refresh token (7 ngày).<br>4. Khi access token hết hạn, client gọi `/auth/refresh`; hệ thống **rotate** refresh token (token cũ gắn `replaced_by_session_id`). |
 | Luồng thay thế | 2a. Sai email hoặc mật khẩu → 401 `INVALID_CREDENTIALS` (thông báo chung, không lộ email có tồn tại).<br>2b. Tài khoản LOCKED → 403.<br>2c. Vượt giới hạn tần suất → 429.<br>4a. Refresh token cũ bị dùng lại → thu hồi cả `family_id`, trả 401 `REFRESH_REUSE`. |
 | Hậu điều kiện | Có Session hợp lệ; refresh cũ không dùng lại được. |
-| Ghi chú | Native lưu refresh token trong SecureStore (Mobile) hoặc Stronghold (Desktop); Web giữ access token trong bộ nhớ, không dùng localStorage. |
+| Ghi chú | Web giữ access token trong bộ nhớ, không dùng localStorage; refresh token nằm trong cookie HttpOnly. Desktop buyer (Tauri wrapper, kế hoạch) dùng lại webview/cookie của storefront. Không có client mobile. |
 
 #### UC-01.3 Đăng xuất
 
@@ -741,8 +741,8 @@ UC-11 trong SRS không phải một luồng nghiệp vụ riêng mà là ràng b
 | Nền tảng | Vai trò | Lưu phiên | Phạm vi use case |
 | --- | --- | --- | --- |
 | Web (responsive) | Buyer, Seller, Admin | Access token trong bộ nhớ, refresh cookie HttpOnly + CSRF | Tất cả |
-| Android, iOS | Buyer | Refresh token trong Expo SecureStore | UC-01, 04, 05, 06.1, 06.4, 06.5, 07.1, 08.3, 09.1 |
-| Windows, macOS | Seller | Refresh token trong Tauri Stronghold, mở khóa bằng mật khẩu | UC-02.3, 03.x, 06.2, 06.3, 07.2, 08.x, 09.2–09.3 |
+| Desktop (Tauri wrapper — kế hoạch) | Buyer | Dùng lại cookie HttpOnly của storefront trong webview | UC-01, 04, 05, 06.1, 06.4, 06.5, 07.1, 08.3, 09.1 |
+| Mobile | — | Không còn client mobile | — |
 
 Mỗi màn hình cần đủ trạng thái loading / empty / error / success / thiếu quyền (NFR-02, US10).
 

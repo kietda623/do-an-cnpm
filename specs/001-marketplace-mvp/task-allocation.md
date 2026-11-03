@@ -2,13 +2,28 @@
 
 Ngày chỉnh: 2026-10-20. 158 task chưa thực hiện; 64 WBS giữ nguyên tổng 157 person-day.
 
+**Cập nhật 2026-11-03:** app mobile đã bị gỡ; buyer dùng web và desktop wrapper Tauri (kế hoạch, chưa triển khai). T130–T139 (nhánh Buyer Mobile) chuyển trạng thái de-scoped/removed; T140–T145 (Seller Desktop cũ) đổi thành packaging/verify desktop buyer nhưng **chưa thực hiện**. Các dòng dưới đây giữ nguyên số liệu phân bổ gốc để đối chiếu lịch sử ngân sách, không phải effort còn lại của baseline hiện tại. Tổng PD kế hoạch không đổi.
+
+## Trạng thái sai lệch so với baseline
+
+| Task | Trạng thái 2026-11-03 | Ghi chú |
+| --- | --- | --- |
+| T130 | Removed | Buyer Mobile spike (W032); `apps/mobile` đã xóa |
+| T131 | Done, web-only | Test phiên web cookie/CSRF trong `packages/api-client/test/web-session.test.ts`; 27 test pass |
+| T132–T137 | Removed | Buyer Mobile integration (W048); không còn client mobile |
+| T138–T139 | Removed | Mobile review/usability/security (W054/W049); thay bằng kiểm chứng web |
+| T140–T145 | De-scoped → kế hoạch | Trước là Seller Desktop; nay là packaging/verify desktop buyer Tauri, chưa triển khai |
+| T148 | Điều chỉnh | Usability 360/1280 vẫn là web; bỏ nhãn native, desktop chỉ khi có build |
+| T155 | Điều chỉnh | W061 demo vẫn còn; phần W062 nay là verify desktop buyer (kế hoạch) |
+| T160 | Điều chỉnh | Seller desktop journeys → buyer desktop journeys (kế hoạch) |
+
 ## Quy tắc
 
 - Mỗi task có một Owner chính, một Reviewer độc lập và Sprint(s) của phần việc có effort. Nếu có nhiều Sprint, mỗi allocation ghi riêng phần cần làm ở từng Sprint; kiểm chứng phần đó theo milestone, không đợi task đóng toàn bộ.
 - Budget của WBS được chia cho các task có WBS đó làm nguồn chính. Bảy work package đóng góp vào task phối hợp được gán rõ ở bảng dưới. Các liên kết WBS còn lại là reference=0.00PD, không phải effort phát sinh hoặc contributor thứ hai ngầm định.
 - Phân bổ đến 0.01 PD, phần lẻ theo thứ tự ID; đây là chia ngân sách kế toán, không là ước lượng độ chính xác đến phút. Task thực tế cần thêm thời gian phải reforecast, không tự tăng budget.
 - Tổng allocation từng WBS, từng contributor/Sprint và toàn nhóm bằng baseline gốc. Không cộng task allocation vào 157 PD WBS lần nữa.
-- W032 chỉ được cấp cho T130: M5/Sprint4, reviewer M3, 2.00PD. Các task Mobile S6 dùng W048, không chi W032 lần nữa.
+- W032 từng được cấp cho T130 (Buyer Mobile spike, M5/Sprint4, 2.00PD). Từ 2026-11-03 nhánh này retired cùng `apps/mobile`; nếu desktop wrapper được duyệt, effort W032 được tái dùng cho Tauri spike chứ không cộng thêm. Các task Mobile S6 cũ (T132–T139) không còn hiệu lực.
 
 ## Phân công và đóng góp
 

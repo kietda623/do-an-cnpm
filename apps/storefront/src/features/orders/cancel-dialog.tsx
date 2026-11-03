@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { Button, Dialog, StatusMessage, TextareaField } from "@marketplace/ui-web";
 import { normalizeFormError } from "@marketplace/api-client";
 import type { ApiPath } from "@marketplace/api-client";
-import { webSession } from "../../app/auth-form";
+import { webSession } from "../../lib/session";
 
 type Part = { id: string; shopNameSnapshot: string; status: string; version: number };
+
 export function CancelDialog({
   orderId,
   orderVersion,
@@ -24,6 +26,7 @@ export function CancelDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const eligible = parts.filter((part) => part.status === "PENDING");
+
   async function submit() {
     if (!target || !reason.trim()) return;
     setBusy(true);
@@ -82,67 +85,79 @@ export function CancelDialog({
       setBusy(false);
     }
   }
+
   if (status === "CANCELLED" || !eligible.length) return null;
+
   return (
-    <section className="space-y-3 rounded-xl border p-5">
-      <h2 className="font-semibold">Hủy đơn</h2>
-      <div className="flex flex-wrap gap-2">
+    <section className="mp-cancel">
+      <header>
+        <h2>Hủy đơn</h2>
+        <p>Chỉ các phần đang chờ cửa hàng xác nhận mới có thể hủy.</p>
+      </header>
+      <div className="mp-cancel__actions">
         {eligible.length === parts.filter((part) => part.status !== "CANCELLED").length && (
-          <button className="rounded-lg border px-4 py-2" onClick={() => setTarget("ALL")}>
+          <Button variant="secondary" onClick={() => setTarget("ALL")}>
             Hủy toàn đơn
-          </button>
+          </Button>
         )}
         {eligible.map((part) => (
-          <button
+          <Button
             key={part.id}
-            className="rounded-lg border px-4 py-2"
-            onClick={() => setTarget(part)}
+            variant="secondary"
+            onClick={() => {
+              setError("");
+              setTarget(part);
+            }}
           >
             Hủy riêng {part.shopNameSnapshot}
-          </button>
+          </Button>
         ))}
       </div>
-      {target && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Xác nhận hủy đơn"
-          className="space-y-3 rounded-lg bg-neutral-50 p-4"
-        >
-          <h3 className="font-semibold">
-            Xác nhận hủy {target === "ALL" ? "toàn bộ đơn" : target.shopNameSnapshot}
-          </h3>
-          <p>
-            Hệ thống sẽ kiểm tra trạng thái mới nhất, hoàn kho và ghi nhận hoàn tiền nếu đã thu.
-          </p>
-          <label className="grid gap-1">
-            Lý do
-            <textarea
-              className="min-h-20 rounded border p-2"
-              maxLength={500}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-            />
-          </label>
-          {error && <p role="alert">{error}</p>}
-          <div className="flex gap-2">
-            <button
-              disabled={busy || !reason.trim()}
-              className="rounded-lg bg-neutral-900 px-4 py-2 text-white disabled:opacity-50"
-              onClick={() => void submit()}
-            >
-              {busy ? "Đang xử lý…" : "Xác nhận hủy"}
-            </button>
-            <button
+
+      <Dialog
+        open={target !== null}
+        onClose={() => {
+          if (busy) return;
+          setTarget(null);
+          setError("");
+        }}
+        title={`Xác nhận hủy ${target === "ALL" ? "toàn bộ đơn" : (target?.shopNameSnapshot ?? "")}`}
+        description="Hệ thống sẽ kiểm tra trạng thái mới nhất, hoàn kho và ghi nhận hoàn tiền nếu đã thu."
+        footer={
+          <>
+            <Button
+              variant="secondary"
               disabled={busy}
-              className="rounded-lg border px-4 py-2"
-              onClick={() => setTarget(null)}
+              onClick={() => {
+                setTarget(null);
+                setError("");
+              }}
             >
               Đóng
-            </button>
-          </div>
-        </div>
-      )}
+            </Button>
+            <Button
+              variant="danger"
+              loading={busy}
+              disabled={!reason.trim()}
+              onClick={() => void submit()}
+            >
+              Xác nhận hủy
+            </Button>
+          </>
+        }
+      >
+        <TextareaField
+          label="Lý do"
+          maxLength={500}
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+        />
+        {error && (
+          <StatusMessage tone="error" onDismiss={() => setError("")}>
+            {error}
+          </StatusMessage>
+        )}
+      </Dialog>
     </section>
   );
 }

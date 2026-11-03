@@ -26,9 +26,8 @@ Kiểm tra phiên bản bằng `node --version` và `pnpm --version`. `pnpm inst
 | Admin panel web | 3002 | Local development |
 | API | 4000 | Local development; prefix `/api/v1`, Swagger `/api/docs`, liveness `/health/live`, readiness `/health/ready` |
 | PostgreSQL | 5432 | Chỉ bind loopback/local trong development; không public ra Internet |
-| Expo development server | 8081 | Cho thiết bị/emulator khi chạy mobile |
 
-Không chạy đồng thời hai app trên cùng port. Trình duyệt trên host dùng `localhost`; API container gọi PostgreSQL bằng service name `postgres`. Thiết bị Android/iOS phải dùng địa chỉ LAN có thể truy cập hoặc HTTPS, không dùng `localhost` của máy phát triển.
+Không chạy đồng thời hai app trên cùng port. Trình duyệt trên host dùng `localhost`; API container gọi PostgreSQL bằng service name `postgres`. Buyer desktop (khi được triển khai) mở storefront URL này trong webview Tauri.
 
 ## Environment
 
@@ -40,7 +39,7 @@ Copy-Item .env.example .env
 
 Điền `DATABASE_URL`, JWT signing secret và các thông tin dịch vụ chỉ trong `.env`. Kết nối từ host dùng hostname `localhost`; API trong Compose dùng hostname `postgres`. Giá trị mẫu trong `.env.example` không phải credentials đã provision. JWT previous secret chỉ dùng verify trong thời gian rotation. Để trống S3/bootstrap admin nếu chưa được cấp quyền và chưa chủ đích cấu hình seed.
 
-`PUBLIC_API_URL`, `NEXT_PUBLIC_API_URL` và `EXPO_PUBLIC_API_URL` chỉ chứa URL công khai. URL cho thiết bị thật cần thay `localhost` bằng IP LAN hoặc HTTPS. Không đặt JWT, database password, S3 access key hay bootstrap password vào biến có prefix `NEXT_PUBLIC_` hoặc `EXPO_PUBLIC_`.
+`PUBLIC_API_URL` và `NEXT_PUBLIC_API_URL` chỉ chứa URL công khai. Buyer desktop dùng cùng API URL với web. Không đặt JWT, database password, S3 access key hay bootstrap password vào biến có prefix `NEXT_PUBLIC_`.
 
 ## Script contract
 
@@ -53,7 +52,7 @@ Copy-Item .env.example .env
 | `pnpm --filter @marketplace/api build` / `start` | NestJS bootstrap đã cấu hình; `start` cần build trước |
 | `pnpm dev`, `pnpm build`, `pnpm test`, `pnpm clean` | Root orchestration đã có; package tasks tương ứng chưa được triển khai |
 | `pnpm test:unit`, `test:integration`, `test:contract`, `test:e2e`, `test:concurrency`, `test:security`, `test:performance` | Contract mục tiêu trong quickstart; chưa có script thực thi |
-| API `db:migrate:deploy`, `db:seed:demo`, `test:expiry`; Mobile `start`; Desktop `tauri`, `build:desktop` | Contract mục tiêu; chưa có script/service tương ứng |
+| API `db:migrate:deploy`, `db:seed:demo`, `test:expiry`; Desktop `tauri`, `build:desktop` | Contract mục tiêu; desktop buyer chưa có workspace và chưa triển khai, các lệnh còn lại chưa có script/service tương ứng |
 
 Cập nhật quickstart cùng task implementation nếu tên script hoặc service đổi. Không báo test pass khi lệnh chưa tồn tại hoặc chưa chạy được.
 
@@ -69,12 +68,12 @@ Quickstart mô tả luồng dự kiến: copy `.env.example`, cài frozen lockfi
 - Seed chỉ chạy có chủ đích trên môi trường local disposable; không in password, token hoặc URL có credentials vào log.
 - Backup/restore rehearsal phải dùng database cô lập, không restore đè dữ liệu demo.
 
-### Native và giới hạn hệ điều hành
+### Desktop (kế hoạch) và giới hạn hệ điều hành
 
-- Android cần Android SDK/emulator hoặc thiết bị; xác nhận API URL có thể truy cập từ thiết bị.
-- iOS build/test cần macOS, Xcode và simulator/device; lệnh chạy trên Windows không chứng minh iOS pass.
-- Tauri desktop cần toolchain native của OS đích. Windows cần MSVC C++ Build Tools/WebView2; macOS cần Xcode/Rust targets phù hợp.
-- Ghi lại OS, thiết bị, phiên bản toolchain, API endpoint và evidence cho từng native run. Build thành công không thay cho kiểm thử flow trên thiết bị.
-- Không yêu cầu phát hành app lên store trong MVP.
+- Buyer desktop là Tauri wrapper quanh web storefront, không nhân đôi UI hay design system.
+- Tauri desktop cần toolchain native của OS đích. Windows cần MSVC C++ Build Tools/WebView2, Rust stable và cargo; macOS cần Xcode/Rust targets phù hợp.
+- Desktop buyer **chưa được triển khai**: không có script build trong CI và không cần Rust/MSVC để chạy repo hiện tại.
+- Ghi lại OS, phiên bản toolchain, storefront/API endpoint và evidence cho từng desktop run. Build thành công không thay cho kiểm thử flow.
+- Không yêu cầu phát hành app lên store trong MVP. Không có app mobile (Android/iOS).
 
 Chi tiết acceptance scenarios và evidence format ở [quickstart](../../specs/001-marketplace-mvp/quickstart.md); baseline toolchain ở [toolchain](toolchain.md).

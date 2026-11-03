@@ -107,10 +107,11 @@ test("buyer sees delivered shipment history and confirms receipt", async ({
     });
   });
   await page.goto(`/orders/${orderId}`);
-  await expect(page.getByText("Vận chuyển · DELIVERED")).toBeVisible();
-  await expect(page.getByText(/WAITING_PICKUP/)).toBeVisible();
+  const tracking = page.getByRole("region", { name: "Vận chuyển" });
+  await expect(tracking).toContainText("Đã giao");
+  await expect(tracking).toContainText("Chờ lấy hàng");
   await page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).click();
-  await expect(page.getByText("COMPLETED", { exact: true })).toBeVisible();
+  await expect(page.getByText("Hoàn tất").first()).toBeVisible();
   expect(receivedPayload?.expectedVersion).toBe(4);
   await expect(page.getByText("Xác nhận đã nhận hàng")).toHaveCount(0);
 });
@@ -294,5 +295,5 @@ test("buyer completes the simulated mock payment before Seller fulfillment", asy
     page.getByText("Thanh toán thử nghiệm thành công."),
   ).toBeVisible();
   expect(expectedVersion).toBe(2);
-  await expect(page.getByText("PAID", { exact: true })).toBeVisible();
+  await expect(page.getByText("Đã thanh toán").first()).toBeVisible();
 });

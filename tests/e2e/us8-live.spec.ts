@@ -137,7 +137,7 @@ test.afterAll(async () => {
 
 async function login(page: Page, port: number, email: string) {
   await page.goto(`http://127.0.0.1:${port}/login`);
-  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel(/^Email/).fill(email);
   await page.getByLabel(/^Mật khẩu/).fill(password);
   await page.getByRole("button", { name: /Đăng nhập/ }).click();
   await expect(page).not.toHaveURL(/\/login/);

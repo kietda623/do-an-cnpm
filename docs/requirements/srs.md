@@ -2,7 +2,7 @@
 
 **Trạng thái:** Baseline yêu cầu đã đối chiếu với feature spec.  
 **Nguồn chuẩn:** [`specs/001-marketplace-mvp/spec.md`](../../specs/001-marketplace-mvp/spec.md), các business rule BR-01–BR-10.  
-**Phạm vi:** MVP marketplace nhiều người bán trên Web, Android, iOS và Desktop. Tài liệu này lập chỉ mục actor, use case và tiêu chí nghiệm thu; mã FR và BR trong feature spec vẫn là nguồn chi tiết để tránh hai bản đặc tả trôi lệch.
+**Phạm vi:** MVP marketplace nhiều người bán trên Web (Buyer, Seller, Admin) và Desktop buyer dạng wrapper Tauri quanh cùng storefront (kế hoạch, chưa triển khai). Không có app mobile. Tài liệu này lập chỉ mục actor, use case và tiêu chí nghiệm thu; mã FR và BR trong feature spec vẫn là nguồn chi tiết để tránh hai bản đặc tả trôi lệch.
 
 ## Mục tiêu và phạm vi
 
@@ -32,7 +32,7 @@ Buyer/Guest khám phá hàng hóa; Buyer mua hàng đa shop và theo dõi giao d
 | UC-08 Giao hàng và hoàn tất | Seller, Buyer, Admin, System | Mỗi SellerOrder có shipment mô phỏng; trạng thái chuyển đúng thứ tự; giao lại và xác nhận hàng hoàn có lịch sử; Buyer hoàn tất theo quyền. | FR-30–32, FR-37–39 |
 | UC-09 Đánh giá và thống kê | Buyer, Seller | Buyer của OrderItem thuộc đơn COMPLETED đánh giá tối đa một lần; Seller xem thống kê giới hạn shop và kỳ; số doanh thu được ghi rõ là mô phỏng. | FR-40–45 |
 | UC-10 Điều hành marketplace | Admin | Quản lý user, shop, sản phẩm, thống kê và tra cứu đơn bằng action được phép, có audit; không chỉnh sửa tùy ý lịch sử giao dịch. | FR-08, FR-10–11, FR-15, FR-46–50 |
-| UC-11 Trải nghiệm đa nền tảng | Buyer, Seller | Hành vi theo platform requirement: Web, Android, iOS, Desktop; phiên được lưu an toàn theo nền tảng và luồng Seller reuse client-only như plan. | SC-009–010 |
+| UC-11 Trải nghiệm đa nền tảng | Buyer, Seller | Web cho cả ba vai trò; desktop buyer là Tauri wrapper quanh storefront (kế hoạch, chưa triển khai); phiên dùng cookie HttpOnly + CSRF, không có client mobile. | SC-009–010 |
 
 ## Functional requirements và actor/acceptance index
 
@@ -95,7 +95,7 @@ Mỗi dòng dưới đây là điều kiện review tối thiểu cùng actor. T
 
 BR-01–BR-10 được định nghĩa đầy đủ trong feature spec và là acceptance baseline cho các dòng trên. Các lựa chọn gồm identity/session, shop eligibility, catalog visibility, checkout atomicity, VND/snapshot, COD/mock settlement, cancellation/stock return, aggregate order state, shipment progression và review/admin boundaries.
 
-NFR-01–NFR-04 và SC-001–SC-010 giữ nguyên nội dung trong feature spec: phân quyền/riêng tư, accessibility, bền vững dữ liệu đa phiên và tài liệu/bàn giao; performance, last-stock concurrency, idempotency, cross-platform security, native workflows và demo/recovery. Các ngưỡng đo được giữ tại nguồn spec.
+NFR-01–NFR-04 và SC-001–SC-010 giữ nguyên nội dung trong feature spec: phân quyền/riêng tư, accessibility, bền vững dữ liệu đa phiên và tài liệu/bàn giao; performance, last-stock concurrency, idempotency, cross-platform security, desktop workflows (kế hoạch) và demo/recovery. Các ngưỡng đo được giữ tại nguồn spec.
 
 ## Quyết định được chốt cho các cụm từ mơ hồ
 

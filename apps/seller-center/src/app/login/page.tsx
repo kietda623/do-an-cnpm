@@ -1,27 +1,27 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
-import { Button, TextField, useSession, type SessionUser } from "@marketplace/ui-web";
-import { normalizeFormError, WebSession } from "@marketplace/api-client";
+import { useEffect, useState, type FormEvent } from "react";
+import { Button, Store, TextField, useApi } from "@marketplace/ui-web";
+import { normalizeFormError } from "@marketplace/api-client";
 
-const session = new WebSession(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1");
 export default function SellerLoginPage() {
   const router = useRouter();
-  const { setUser } = useSession();
+  const { login, status } = useApi();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (status === "authenticated") router.replace("/");
+  }, [router, status]);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError("");
     const form = new FormData(event.currentTarget);
     try {
-      const user = await session.login<SessionUser>(
-        String(form.get("email")),
-        String(form.get("password")),
-      );
-      setUser(user);
+      await login(String(form.get("email")), String(form.get("password")));
       router.replace("/");
     } catch (cause) {
       setError(normalizeFormError(cause));
@@ -29,24 +29,52 @@ export default function SellerLoginPage() {
       setBusy(false);
     }
   }
+
   return (
-    <main className="mx-auto grid max-w-lg gap-6 px-5 py-12">
-      <div>
-        <h1 className="text-3xl font-bold">Đăng nhập người bán</h1>
-        <p>Đăng nhập bằng tài khoản đã được cấp quyền cửa hàng.</p>
-      </div>
-      <form onSubmit={submit} className="grid gap-4">
-        <TextField label="Email" name="email" type="email" autoComplete="email" required />
-        <TextField
-          label="Mật khẩu"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-        />
-        {error && <p role="alert">{error}</p>}
-        <Button disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</Button>
-      </form>
+    <main className="mp-auth mp-auth--console">
+      <section className="mp-auth__intro">
+        <span className="mp-auth__eyebrow">
+          <Store size={16} aria-hidden="true" /> Seller Center
+        </span>
+        <h1 className="mp-auth__title">Quản lý cửa hàng trong một màn hình.</h1>
+        <p className="mp-auth__description">
+          Theo dõi đơn cần xử lý, cập nhật sản phẩm và xem doanh thu hoàn tất bằng dữ liệu thật
+          từ Marketplace.
+        </p>
+      </section>
+      <section className="mp-auth__card" aria-labelledby="seller-login-title">
+        <header className="mp-auth__card-head">
+          <h2 id="seller-login-title">Đăng nhập người bán</h2>
+          <p>Dùng tài khoản đã được cấp quyền cửa hàng.</p>
+        </header>
+        <form onSubmit={submit} className="mp-auth__fields">
+          <TextField
+            label="Email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+          />
+          <TextField
+            label="Mật khẩu"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+          />
+          {error ? (
+            <p role="alert" className="mp-auth__message mp-auth__message--error">
+              {error}
+            </p>
+          ) : null}
+          <Button type="submit" size="lg" fullWidth loading={busy}>
+            Đăng nhập
+          </Button>
+        </form>
+        <p className="mp-auth__switch">
+          Cần quyền cửa hàng? Liên hệ quản trị viên Marketplace.
+        </p>
+      </section>
     </main>
   );
 }

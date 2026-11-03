@@ -36,11 +36,21 @@ test("Admin confirms one failed shipment return with a reason and version", asyn
         json: {
           data: {
             affectedResourceIds: ["00000000-0000-4000-8000-000000000203"],
-            shipment: {
-              id: "00000000-0000-4000-8000-000000000202",
-              status: "FAILED",
-              version: 5,
+            resultingOrder: {
+              id: "00000000-0000-4000-8000-000000000201",
+              status: "CANCELLED",
+              sellerOrders: [
+                {
+                  id: "00000000-0000-4000-8000-000000000203",
+                  status: "CANCELLED",
+                  shipment: {
+                    id: "00000000-0000-4000-8000-000000000202",
+                    status: "FAILED",
+                  },
+                },
+              ],
             },
+            replay: false,
           },
         },
       });
@@ -65,6 +75,7 @@ test("Admin confirms one failed shipment return with a reason and version", asyn
   await expect(page.getByRole("status")).toContainText(
     "Đã xác nhận kiện hàng trả về",
   );
+  await expect(page.getByRole("status")).toContainText("CANCELLED");
   expect(submitted).toEqual({
     reason: "Returned parcel inspected",
     expectedVersion: 4,

@@ -14,7 +14,7 @@
 | Concurrency | Last stock, duplicate checkout/payment/cancel/refund, expiry/callback/order races | Real PostgreSQL; 20 parallel requests/stock 5; replay 10; persist rows/totals. |
 | UI/usability | L/E/X/S/unauthorized, keyboard, 360/1280, five-line/two-shop checkout | Browser/device observations and screen captures when appropriate; 5 participants for SC-005. |
 | Performance | Product list/search demo fixture | 1,000 products / 10 shops / 20 concurrent users / 100 observations; record host/network and each latency. |
-| Native/recovery | Buyer Android/iOS; Seller Windows/macOS; reload, restart, restore | Record per OS/device, app/API SHA, tool versions, exact flow; restore database copy isolated. |
+| Desktop/recovery | Buyer desktop (Tauri wrapper, future); reload, restart, restore | Record per OS, app/API SHA, tool versions, exact flow; restore database copy isolated. Desktop evidence remains BLOCKED until the wrapper is built. |
 
 ## Functional coverage index
 
@@ -34,7 +34,7 @@ Mỗi range là mã FR đầy đủ, không phải sampling. Scenario IDs phân 
 | FR-40–42 | REV-01–05 | Review completed own item, public read | Wrong buyer, incomplete order, rating bounds, duplicate item review |
 | FR-43–46 | STAT-01–08 | Seller/system counts, day/month revenue and marketplace totals | Cross-shop leakage, cancelled/unpaid included, aggregate/parts double count, timezone edge |
 | FR-47 | ADMIN-01–05 | Account search/lock/unlock with audit | Non-admin denial, missing reason, lock session still accepted, sensitive field leakage |
-| FR-01–50 platform presentation | UI-01–06 | All mapped screens handle L/E/X/S and saved data reload | Unauthorized state, stale cache after user/shop switch, keyboard/native accessibility gaps |
+| FR-01–50 platform presentation | UI-01–06 | All mapped screens handle L/E/X/S and saved data reload | Unauthorized state, stale cache after user/shop switch, keyboard accessibility gaps |
 
 Specific test IDs preserve one-to-one traceability for each functional requirement:
 
@@ -103,7 +103,7 @@ Specific test IDs preserve one-to-one traceability for each functional requireme
 | SC-006 | 100 raw search/list latencies, fixture and host/network description | At least 95 results <=2s under 20 concurrent users, 1,000 products/10 shops |
 | SC-007 | Role-based read/write attack matrix and persisted-state diff | All wrong-owner/shop/admin requests denied; zero unauthorized data or mutation |
 | SC-008 | Reproducible known-ledger fixture and day/month/system reports | Exact match for complete/cancel/unpaid/refunded values; no order double count |
-| SC-009 | Per target OS/device record, flows and cross-client reload evidence | Buyer Web/Android/iOS and Seller Web/Windows/macOS flows succeed and data persists across clients |
+| SC-009 | Per target OS/device record, flows and cross-client reload evidence | Buyer Web succeeds and data persists; Buyer Desktop remains BLOCKED until the Tauri wrapper ships. Seller/Admin Web succeed. No mobile clients. |
 | SC-010 | Clean clone setup timed from prerequisites ready | New member completes demo <=30 minutes without undocumented setup or data edits |
 
 ## Required race/failure cases
@@ -115,11 +115,9 @@ Use fixtures in `fixture-design.md`. Run 20 concurrent checkout calls against qu
 | Platform | Minimum flow evidence | Sensitive data check |
 | --- | --- | --- |
 | Buyer Web | Register/login → search/detail → cart → multi-shop checkout → order/pay/delivery/review | Cookie flags, CSRF, no refresh token in JS storage/logs |
-| Android | Login → token refresh → product list; later search/cart/checkout/order/review | Refresh only SecureStore, access in memory, no plaintext on disk/log |
-| iOS | Same Buyer flow on simulator or device, plus reload/session restore | Same secure storage review and OS/tool version record |
+| Buyer Desktop (planned) | Same Buyer flow inside packaged Tauri WebView once the wrapper exists | Webview URL allow-list/CSP, cookie flags, no shell escape |
 | Seller Web | Create/manage shop/product/stock/order/stats/review | Cross-shop requests denied by server |
-| Windows Desktop | Seller flow in packaged Tauri WebView | Stronghold user unlock, CSP/permissions, no unrestricted shell |
-| macOS Desktop | Seller flow in target macOS build | Vault/session/logout and shop scope; record Mac/Xcode version |
+| Admin Web | Shop approval, moderation, order inquiry, returns, audit | Admin-only mutations denied for non-admin and audited |
 
 ## Reporting template
 

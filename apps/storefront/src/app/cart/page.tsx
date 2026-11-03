@@ -4,11 +4,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSession, type SessionUser } from "@marketplace/ui-web";
-import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
-import { webSession } from "../auth-form";
+import {
+  EmptyState,
+  PageHeader,
+  ShoppingCart,
+  StatusMessage,
+  formatVnd,
+  useApi,
+} from "@marketplace/ui-web";
+import { ApiClientError, normalizeFormError, type ApiPath } from "@marketplace/api-client";
+import { webSession } from "../../lib/session";
 import { CartGroupView, type CartItemViewModel } from "../../features/cart/cart-view";
-import { formatVnd } from "../../features/money";
 
 type CartItem = CartItemViewModel;
 type Cart = {
@@ -20,31 +26,43 @@ type Cart = {
 export default function CartPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, setUser } = useSession();
+  const { user, status } = useApi();
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
-  async function load() {
+  useEffect(() => {
+    if (status === "loading") return;
+    if (status === "anonymous") {
+      router.replace("/login?returnTo=%2Fcart");
+      return;
+    }
+    let live = true;
     setLoading(true);
     setError("");
-    try {
-      const currentUser = user ?? (await webSession.restore<SessionUser>());
-      if (!user) setUser(currentUser);
-      const nextCart = await webSession.api.request<Cart>("/cart");
-      setCart(nextCart);
-      queryClient.setQueryData(["cart", currentUser.id], nextCart);
-    } catch {
-      await webSession.clear();
-      router.replace("/login?returnTo=%2Fcart");
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => {
-    void load();
-  }, [queryClient, router, setUser, user]);
+    void webSession.api
+      .request<Cart>("/cart")
+      .then((nextCart) => {
+        if (!live) return;
+        setCart(nextCart);
+        queryClient.setQueryData(["cart", user?.id], nextCart);
+      })
+      .catch((cause) => {
+        if (!live) return;
+        if (cause instanceof ApiClientError && cause.status === 401) {
+          router.replace("/login?returnTo=%2Fcart");
+          return;
+        }
+        setError(normalizeFormError(cause));
+      })
+      .finally(() => {
+        if (live) setLoading(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [queryClient, router, status, user?.id]);
 
   async function update(item: CartItem, changes: { quantity?: number; selected?: boolean }) {
     setPending(true);
@@ -56,6 +74,7 @@ export default function CartPage() {
       });
       setCart(nextCart);
       queryClient.setQueryData(["cart", user?.id], nextCart);
+      window.dispatchEvent(new Event("marketplace:cart-changed"));
     } catch (cause) {
       setError(normalizeFormError(cause));
     } finally {
@@ -67,42 +86,75 @@ export default function CartPage() {
     setError("");
     try {
       await webSession.api.request<void>(`/cart/items/${item.id}` as ApiPath, { method: "DELETE" });
-      await queryClient.invalidateQueries({ queryKey: ["cart", user?.id] });
-      await load();
+      const nextCart = await webSession.api.request<Cart>("/cart");
+      setCart(nextCart);
+      queryClient.setQueryData(["cart", user?.id], nextCart);
+      window.dispatchEvent(new Event("marketplace:cart-changed"));
     } catch (cause) {
       setError(normalizeFormError(cause));
     } finally {
       setPending(false);
     }
   }
+
   if (loading)
     return (
-      <main className="mx-auto max-w-5xl px-5 py-10">
-        <p role="status">Đang tải giỏ hàng…</p>
-      </main>
-    );
-  return (
-    <main className="mx-auto max-w-5xl space-y-6 px-5 py-10">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-sm text-neutral-600">Mua sắm</p>
-          <h1 className="text-3xl font-bold">Giỏ hàng</h1>
-        </div>
-        <Link className="underline" href="/products">
-          Tiếp tục mua sắm
-        </Link>
-      </header>
-      {error && (
-        <p role="alert" className="text-red-700">
-          {error}
+      <div className="mp-container mp-cart" aria-busy="true">
+        <PageHeader title="Giỏ hàng" />
+        <span className="mp-skeleton mp-cart__skeleton" />
+        <p className="mp-visually-hidden" role="status">
+          Đang tải giỏ hàng…
         </p>
+      </div>
+    );
+
+  const itemCount =
+    cart?.groups.reduce((sum, group) => sum + group.items.length, 0) ?? 0;
+
+  return (
+    <div className="mp-container mp-cart">
+      <PageHeader
+        title="Giỏ hàng"
+        description="Kiểm tra số lượng và chọn sản phẩm trước khi tạo báo giá."
+        actions={
+          <Link className="mp-button mp-button--secondary" href="/products">
+            Tiếp tục mua sắm
+          </Link>
+        }
+        meta={
+          itemCount > 0 ? (
+            <span>
+              {itemCount} sản phẩm · {cart?.groups.length ?? 0} cửa hàng
+            </span>
+          ) : undefined
+        }
+      />
+
+      {error && (
+        <StatusMessage
+          tone="error"
+          title="Không cập nhật được giỏ hàng"
+          onDismiss={() => setError("")}
+        >
+          {error}
+        </StatusMessage>
       )}
-      {!cart?.groups.some((group) => group.items.length) ? (
-        <p className="rounded-xl border p-8 text-center">Giỏ hàng đang trống.</p>
+
+      {itemCount === 0 ? (
+        <EmptyState
+          icon={<ShoppingCart size={22} />}
+          title="Giỏ hàng đang trống."
+          description="Thêm sản phẩm từ cửa hàng yêu thích để bắt đầu đơn hàng."
+          action={
+            <Link className="mp-button mp-button--primary" href="/products">
+              Khám phá sản phẩm
+            </Link>
+          }
+        />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-          <div className="space-y-4">
-            {cart.groups.map((group) => (
+        <div className="mp-cart__layout">
+          <div className="mp-cart__groups">
+            {cart?.groups.map((group) => (
               <CartGroupView
                 key={group.shopId}
                 group={group}
@@ -112,25 +164,35 @@ export default function CartPage() {
               />
             ))}
           </div>
-          <aside className="h-fit space-y-4 rounded-xl border p-5">
-            <h2 className="text-lg font-semibold">Tạm tính</h2>
-            <p className="flex justify-between">
-              <span>Tổng đã chọn</span>
-              <strong>{formatVnd(cart.selectedTotal)}</strong>
-            </p>
+          <aside className="mp-cart__summary" aria-label="Tóm tắt đơn hàng">
+            <h2>Tạm tính</h2>
+            <dl>
+              <div>
+                <dt>Tổng đã chọn</dt>
+                <dd data-numeric>{formatVnd(cart?.selectedTotal)}</dd>
+              </div>
+            </dl>
             <Link
-              aria-disabled={cart.selectedTotal === "0"}
-              className={`flex min-h-11 items-center justify-center rounded-lg bg-marketplace-accent px-4 font-semibold text-white ${cart.selectedTotal === "0" ? "pointer-events-none opacity-50" : ""}`}
+              aria-disabled={cart?.selectedTotal === "0"}
+              className={`mp-button mp-button--primary mp-button--lg mp-button--block${
+                cart?.selectedTotal === "0" ? " mp-button--disabled" : ""
+              }`}
               href="/checkout"
             >
               Tiến hành đặt hàng
             </Link>
-            <p className="text-xs text-neutral-600">
-              Giá và tồn kho sẽ được xác nhận lại khi tạo báo giá.
+            <p className="mp-cart__note">
+              Giá và tồn kho sẽ được xác nhận lại khi tạo báo giá. Báo giá có hiệu lực trong
+              thời gian ngắn.
             </p>
+            <ul className="mp-cart__assurances">
+              <li>Hủy riêng từng cửa hàng khi chưa xác nhận</li>
+              <li>Theo dõi vận chuyển theo từng kiện</li>
+              <li>Thanh toán COD hoặc mô phỏng</li>
+            </ul>
           </aside>
         </div>
       )}
-    </main>
+    </div>
   );
 }

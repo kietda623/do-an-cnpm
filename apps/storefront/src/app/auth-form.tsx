@@ -3,14 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Button, FormSection, TextField, useSession, type SessionUser } from "@marketplace/ui-web";
-import { normalizeFormError, WebSession } from "@marketplace/api-client";
-
-const session = new WebSession(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1");
+import { Button, TextField, useApi } from "@marketplace/ui-web";
+import { normalizeFormError } from "@marketplace/api-client";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
-  const { setUser } = useSession();
+  const { login, register } = useApi();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
@@ -22,18 +20,15 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     setStatus("Đang xử lý...");
     const values = new FormData(event.currentTarget);
     try {
-      const user =
-        mode === "register"
-          ? await session.register<SessionUser>(
-              String(values.get("fullName")),
-              String(values.get("email")),
-              String(values.get("password")),
-            )
-          : await session.login<SessionUser>(
-              String(values.get("email")),
-              String(values.get("password")),
-            );
-      setUser(user);
+      if (mode === "register") {
+        await register(
+          String(values.get("fullName")),
+          String(values.get("email")),
+          String(values.get("password")),
+        );
+      } else {
+        await login(String(values.get("email")), String(values.get("password")));
+      }
       const requestedReturn = new URLSearchParams(window.location.search).get("returnTo");
       const destination = requestedReturn ? new URL(requestedReturn, window.location.origin) : null;
       const returnTo =
@@ -50,15 +45,28 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   }
 
   return (
-    <main className="mx-auto grid w-full max-w-xl gap-6 px-5 py-12">
-      <div>
-        <p className="text-sm text-marketplace-muted-foreground">Marketplace</p>
-        <h1 className="mt-2 text-3xl font-bold">
+    <div className="mp-container mp-auth">
+      <div className="mp-auth__intro">
+        <p className="mp-auth__eyebrow">Marketplace</p>
+        <h1 className="mp-auth__title">
           {mode === "register" ? "Tạo tài khoản" : "Đăng nhập"}
         </h1>
+        <p className="mp-auth__description">
+          {mode === "register"
+            ? "Theo dõi đơn theo từng cửa hàng và nhận hàng đúng hẹn."
+            : "Tiếp tục mua sắm, theo dõi vận chuyển và đánh giá sản phẩm."}
+        </p>
       </div>
-      <form className="grid gap-5" onSubmit={submit}>
-        <FormSection title={mode === "register" ? "Thông tin tài khoản" : "Chào mừng trở lại"}>
+      <form className="mp-auth__card" onSubmit={submit}>
+        <div className="mp-auth__card-head">
+          <h2>{mode === "register" ? "Thông tin tài khoản" : "Chào mừng trở lại"}</h2>
+          <p>
+            {mode === "register"
+              ? "Dùng email của anh để tạo tài khoản mua hàng."
+              : "Nhập email và mật khẩu đã đăng ký."}
+          </p>
+        </div>
+        <div className="mp-auth__fields">
           {mode === "register" && (
             <TextField
               label="Họ và tên"
@@ -78,36 +86,29 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             minLength={12}
             maxLength={128}
             required
+            hint={mode === "register" ? "Tối thiểu 12 ký tự." : undefined}
           />
-        </FormSection>
+        </div>
         {error && (
-          <p role="alert" className="text-sm text-marketplace-danger">
+          <p role="alert" className="mp-auth__message mp-auth__message--error">
             {error}
           </p>
         )}
         {status && (
-          <p role="status" className="text-sm text-marketplace-muted-foreground">
+          <p role="status" className="mp-auth__message">
             {status}
           </p>
         )}
-        <Button type="submit" disabled={pending}>
-          {pending
-            ? mode === "register"
-              ? "Registering..."
-              : "Signing in..."
-            : mode === "register"
-              ? "Đăng ký"
-              : "Đăng nhập"}
+        <Button type="submit" loading={pending} fullWidth>
+          {mode === "register" ? "Đăng ký" : "Đăng nhập"}
         </Button>
+        <p className="mp-auth__switch">
+          {mode === "register" ? "Đã có tài khoản? " : "Chưa có tài khoản? "}
+          <Link href={mode === "register" ? "/login" : "/register"}>
+            {mode === "register" ? "Đăng nhập" : "Đăng ký"}
+          </Link>
+        </p>
       </form>
-      <p className="text-sm">
-        {mode === "register" ? "Đã có tài khoản? " : "Chưa có tài khoản? "}
-        <Link className="underline" href={mode === "register" ? "/login" : "/register"}>
-          {mode === "register" ? "Đăng nhập" : "Đăng ký"}
-        </Link>
-      </p>
-    </main>
+    </div>
   );
 }
-
-export { session as webSession };

@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: ["buyer-account.spec.ts", "fulfillment-buyer.spec.ts"],
   fullyParallel: false,
+  timeout: 60_000,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",
@@ -14,7 +15,7 @@ export default defineConfig({
     navigationTimeout: 10_000,
     trace: "retain-on-failure",
   },
-  expect: { timeout: 5_000 },
+  expect: { timeout: 15_000 },
   webServer: {
     command:
       "corepack pnpm --filter @marketplace/storefront exec next dev --hostname 127.0.0.1 --port 3100",

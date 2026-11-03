@@ -40,6 +40,38 @@
 | `corepack pnpm build` | Passed: 4 build tasks. |
 | `corepack pnpm format:check` | Windows run failed with 95 file warnings; most are pre-existing, and some touched files are also flagged. Only new files were formatted individually; no repository-wide formatting was performed. |
 
+## Review remediation 2026-11-03 (M1/M2/M7)
+
+Three client-only defects found in review of `3d1cf1c..f72a831`; no backend, contract or generated client change.
+
+> **Cập nhật 2026-11-03:** app mobile đã bị gỡ. Các dòng M1/M2 nêu lệnh `@marketplace/mobile` là evidence lịch sử tại thời điểm chạy, không thể tái lập trong workspace hiện tại. Hành vi tương ứng trên web/desktop buyer nằm ở `apps/storefront` và được kiểm bằng Playwright; mobile không còn là acceptance target.
+
+| Behavior | Red before fix | Green after fix |
+| --- | --- | --- |
+| M1 Vietnam date filter | Mobile B09 expected `from=2026-10-19T17:00:00.000Z` / `to=2026-10-21T16:59:59.999Z` but received `2026-10-20T00:00:00.000Z` / `2026-10-21T23:59:59.999Z`: the old `dateBound` treated the picked calendar day as UTC, so a UTC+7 buyer lost the first 7 hours of the day and included the previous evening. | `dateBound` validates the calendar date with a `Date.UTC` round-trip (still rejects `2026-02-30`) and subtracts a fixed `+07:00` offset before building inclusive `00:00:00.000`/`23:59:59.999` instants. B09 passed 15/15, including the invalid-range test. |
+| M2 checkout error actions | The two new B08 tests failed with "Tạo báo giá mới" rendered and no "Thử đặt hàng lại" for both 401 and 500 responses, because every `ApiClientError` was treated as a dead quote. `onError` also completed the write intent, so a retry generated a new `Idempotency-Key`. | `requiresNewQuote` is true only for HTTP 409 with `PRICE_CHANGED` or `QUOTE_EXPIRED`. The re-quote action and the intent completion use that predicate, so 401/403/5xx keep the intent and the retry reuses the same key. The 401 test asserts one `/quote` read, one `/checkout` scope across both attempts, and the successful retry landing on `/orders/<id>`; the 500 test offers retry only. Existing `QUOTE_EXPIRED`/`PRICE_CHANGED` tests still show "Tạo báo giá mới". |
+| M7 storefront bootstrap | The 500 test failed because `/checkout` cleared the session and redirected to `/login?returnTo=%2Fcheckout` on the first address-fetch error. The 401 test passed before and after, confirming the old behavior was only correct for auth rejection. | `checkout/page.tsx` clears `webSession` and redirects only when the bootstrap error is `ApiClientError` with status 401. Any other error keeps the session, shows `role="alert"` "Không thể tải thông tin thanh toán. Vui lòng thử lại." with a "Thử lại" button that re-runs bootstrap. New spec passed 2/2; two-shop checkout journey still passed. |
+
+Commands and observed results:
+
+| Command | Result |
+| --- | --- |
+| `corepack pnpm --filter @marketplace/mobile exec jest --runInBand test/commerce-journeys.spec.ts -t "B09"` | Red with the UTC bounds above, then green 15/15 after the fix. |
+| `corepack pnpm --filter @marketplace/mobile exec jest --runInBand test/commerce-journeys.spec.ts -t "B08"` | Red on both new tests, then green for the 5 relevant B08 tests. |
+| `corepack pnpm --filter @marketplace/mobile test` | 143 passed, 1 failed, 1 todo (145). The failure is the pre-existing `"B08 hides an old quote when selected cart lines change"` test at `test/commerce-journeys.spec.ts:675`; it fails alone and existed before M2, outside this batch. |
+| `corepack pnpm exec playwright test --config=playwright.checkout.config.ts tests/e2e/storefront-checkout-bootstrap.spec.ts` | 2 passed. |
+| `corepack pnpm test:e2e:checkout` | 3 passed (new bootstrap spec + `multi-shop-checkout.spec.ts`). |
+| `corepack pnpm --filter @marketplace/mobile typecheck` / `lint` | Passed (exit 0). |
+| `corepack pnpm --filter @marketplace/storefront typecheck` / `lint` | Passed (exit 0). |
+| `corepack pnpm exec eslint tests/e2e/storefront-checkout-bootstrap.spec.ts playwright.checkout.config.ts` | Passed (exit 0). |
+
+Limits:
+
+- M1 assumes Vietnam's fixed UTC+7 offset (no DST). A future multi-timezone locale needs a `timeZone`-aware helper.
+- M2's predicate intentionally treats unknown 409 codes as retryable; the server currently emits only `PRICE_CHANGED` and `QUOTE_EXPIRED` for checkout.
+- M7 only covers `apps/storefront/src/app/checkout/page.tsx`. `cart/page.tsx`, `account-view.tsx`, `orders/page.tsx` and `orders/[orderId]/page.tsx` still clear the session on any error and remain a follow-up.
+- The new Playwright spec stubs `**/api/v1/**`; it is browser/mock evidence, not API or database evidence. The alert assertion waits up to 15 s because the Next dev server compiles the route on first navigation.
+
 ## Limits and task paths
 
 - Mock E2E is not database evidence; the additional live test uses an actual API and database. The live fixture creates a completed order directly and does not prove the checkout-to-completion lifecycle.

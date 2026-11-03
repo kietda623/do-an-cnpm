@@ -9,8 +9,6 @@ build/
 apps/api/src/generated/prisma/
 .next/
 .turbo/
-.expo/
-.metro-cache/
 .cache/
 coverage/
 *.tsbuildinfo
@@ -39,13 +37,6 @@ yarn-debug.log*
 playwright-report/
 test-results/
 artifacts/
-
-# Native and desktop build output
-android/.gradle/
-android/app/build/
-ios/Pods/
-ios/build/
-src-tauri/target/
 
 # Local databases and uploaded files
 *.sqlite

@@ -79,8 +79,6 @@ ecommerce-platform/
 │   ├── storefront/
 │   ├── seller-center/
 │   ├── admin-panel/
-│   ├── mobile/
-│   ├── desktop/
 │   └── api/
 ├── packages/
 │   ├── api-client/
@@ -283,7 +281,7 @@ Bắt buộc:
 - Bảo vệ upload file bằng kiểm tra loại file, kích thước và quyền truy cập.
 - Không ghi log password, token hoặc dữ liệu nhạy cảm.
 
-Token storage phải được thiết kế riêng cho web, mobile và desktop theo đặc thù bảo mật từng nền tảng.
+Token storage phải được thiết kế theo đặc thù bảo mật của từng nền tảng: web và desktop buyer dùng refresh cookie HttpOnly + CSRF, access token chỉ trong bộ nhớ. Không có client mobile.
 
 Mọi chức năng liên quan đến tiền, đơn hàng, tồn kho và quyền seller đều cần có các trường hợp kiểm thử bảo mật.
 
@@ -326,7 +324,7 @@ Biểu mẫu cần hiển thị lỗi validation dễ hiểu.
 
 Không chỉ thiết kế giao diện đẹp mà bỏ qua hành vi chức năng.
 
-Ưu tiên UX riêng cho mobile thay vì sao chép giao diện desktop.
+Ưu tiên UX nhất quán giữa web và desktop buyer với cùng design system; layout thích ứng theo kích thước cửa sổ thay vì nhân đôi giao diện.
 
 ### QUY TẮC CLEAN CODE
 
@@ -404,7 +402,7 @@ Bạn là một Senior Software Architect, Senior Full-stack Engineer và Techni
 
 Nhiệm vụ của bạn là hỗ trợ phân tích, thiết kế, lập trình, kiểm thử, triển khai và bảo trì dự án:
 
-**Tên đề tài:** Phân tích, thiết kế và xây dựng nền tảng thương mại điện tử đa người bán trên Web, Desktop và Mobile.
+**Tên đề tài:** Phân tích, thiết kế và xây dựng nền tảng thương mại điện tử đa người bán trên Web và Desktop.
 
 Hệ thống hoạt động tương tự Shopee hoặc Lazada ở quy mô đồ án, cho phép:
 
@@ -412,7 +410,7 @@ Hệ thống hoạt động tương tự Shopee hoặc Lazada ở quy mô đồ 
 - Seller đăng ký cửa hàng, quản lý sản phẩm, tồn kho và đơn hàng.
 - Admin quản lý người dùng, phê duyệt cửa hàng và giám sát hoạt động sàn.
 - Một người dùng có thể vừa là Buyer vừa là Seller.
-- Hệ thống hoạt động trên Web, Desktop, Android và iOS.
+- Hệ thống hoạt động trên Web cho cả ba vai trò; buyer có thêm desktop app (Tauri wrapper của storefront, kế hoạch). Không có app mobile.
 
 Mục tiêu là xây dựng phần mềm có kiến trúc rõ ràng, hoạt động ổn định, dễ kiểm thử, dễ bảo trì và có khả năng mở rộng trong tương lai.
 
@@ -422,8 +420,7 @@ Không được ưu tiên tốc độ viết code bằng cách hy sinh kiến tr
 
 #### Frontend
 - Web: Next.js + React + TypeScript
-- Mobile: React Native + Expo
-- Desktop: Tauri + React
+- Desktop: Tauri + React (buyer wrapper quanh web storefront — kế hoạch)
 - UI: Tailwind CSS + shadcn/ui
 - Server state: TanStack Query
 - Form: React Hook Form + Zod
@@ -474,8 +471,8 @@ Khi các mục tiêu xung đột, hãy giải thích trade-off và lựa chọn 
 
 Các đường dẫn trong cây source là cấu trúc mục tiêu tại repository hiện tại;
 không yêu cầu đổi tên folder cnpm hoặc tạo toàn bộ cây trong bước constitution.
-Tailwind CSS và shadcn/ui áp dụng cho UI web; React Native dùng thành phần tương thích
-nền tảng, chia sẻ design tokens và hành vi phù hợp thay vì import thư viện web-only.
+Tailwind CSS và shadcn/ui áp dụng cho UI web; desktop buyer dùng lại chính web storefront trong Tauri webview
+thay vì tạo design system hay bộ component thứ hai.
 Quy tắc không trả refresh token/dữ liệu nhạy cảm trong response áp dụng cho response tài nguyên;
 luồng cấp/đổi token chỉ được trả thông tin cần thiết theo contract xác thực an toàn của nền tảng.
 Các trạng thái đơn ở ví dụ là luồng tham chiếu; đặc tả phải xác định đầy đủ nhánh ngoại lệ
@@ -631,10 +628,9 @@ Phát triển lần lượt theo milestone:
 10. Mock Payment.
 11. Seller Center.
 12. Admin Dashboard.
-13. Buyer Mobile.
-14. Seller Desktop.
-15. Testing và Security Review.
-16. Deployment và Documentation.
+13. Buyer Desktop (Tauri wrapper — kế hoạch, chưa triển khai).
+14. Testing và Security Review.
+15. Deployment và Documentation.
 
 Không triển khai mọi module cùng lúc nếu các phụ thuộc cốt lõi chưa hoàn thành.
 

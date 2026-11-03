@@ -8,16 +8,19 @@ import { resolve } from "node:path";
 import { parse } from "yaml";
 import { AppModule } from "../../apps/api/src/app.module.js";
 import { DatabaseService } from "../../apps/api/src/database/prisma.service.js";
+import {
+  resolveSchema,
+  type JsonSchema,
+  type OpenApiDocument,
+} from "./contract-schema.js";
 
-type Schema = {
+type Schema = JsonSchema & {
   required?: string[];
   properties?: Record<string, Schema>;
   items?: Schema;
-  $ref?: string;
   enum?: unknown[];
   format?: string;
   pattern?: string;
-  type?: string;
 };
 type Operation = {
   operationId?: string;
@@ -133,5 +136,60 @@ describe("payment and cancellation OpenAPI/runtime contract", () => {
         expectedVersion: expect.objectContaining({ type: "integer" }),
       }),
     );
+  });
+
+  it.each(operations)(
+    "declares the shared error envelope for %s %s",
+    (method, path) => {
+      const responses = contract.paths[path]?.[method]?.responses ?? {};
+      for (const status of ["400", "401", "403", "404", "409"])
+        expect(responses[status]).toMatchObject({
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+            },
+          },
+        });
+    },
+  );
+
+  it("keeps payment allocations and refunds closed with exact VND fields", () => {
+    const document = contract as unknown as OpenApiDocument;
+    const payment = contract.components.schemas.Payment;
+    const allocation = resolveSchema(
+      document,
+      payment.properties?.allocations?.items ?? {},
+    );
+    expect(allocation.additionalProperties).toBe(false);
+    expect(allocation.required).toEqual(["sellerOrderId", "amount"]);
+    expect(allocation.properties?.sellerOrderId).toMatchObject({
+      type: "string",
+      format: "uuid",
+    });
+    expect(allocation.properties?.amount).toMatchObject({
+      type: "string",
+      pattern: "^[0-9]+$",
+    });
+    const refund = resolveSchema(
+      document,
+      payment.properties?.refunds?.items ?? {},
+    );
+    expect(refund.additionalProperties).toBe(false);
+    expect(refund.required).toEqual([
+      "id",
+      "sellerOrderId",
+      "amount",
+      "reason",
+      "createdAt",
+    ]);
+    expect(refund.properties?.amount).toMatchObject({
+      type: "string",
+      pattern: "^[0-9]+$",
+    });
+    expect(refund.properties?.reason?.enum).toEqual([
+      "CANCELLATION",
+      "LATE_SUCCESS",
+      "CONFIRMED_RETURN",
+    ]);
   });
 });

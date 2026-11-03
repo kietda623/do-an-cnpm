@@ -9,7 +9,7 @@ Không tạo/chuyển branch; toàn bộ công việc trong bước này chỉ l
 
 ## Summary
 
-16 tuần/8 Sprint, 5 thành viên, Modular Monolith, 50 FR trên Web/Mobile/Desktop.
+16 tuần/8 Sprint, 5 thành viên, Modular Monolith, 50 FR trên Web + Desktop buyer (wrapper, kế hoạch).
 64 work packages, tổng 157 person-day (PD) trong ngân sách 180 PD net feature delivery;
 đây là estimate có điều kiện, không cam kết chắc chắn hoàn thành.
 Đọc cùng [research](research.md), [WBS](wbs.md), [task allocation](task-allocation.md), [data model](data-model.md),
@@ -20,16 +20,17 @@ Chưa có source ứng dụng hoặc kết quả kiểm thử implementation.
 
 **Language/Version**: TypeScript strict theo compiler/peer range từng workspace;
 Node24 LTS >=24.15, backend TypeScript6 theo baseline nghiên cứu, Rust stable cho Tauri.
-**Primary Dependencies**: pnpm12/Turbo2; Next16/React19.2; Expo57/RN0.86/React19.2.3;
-Tauri2/React static shell; Nest12/Prisma7; Tailwind/shadcn web, TanStack Query, RHF/Zod.
-Zustand chỉ khi cần. Exact patch/image digest khóa W008/W017 sau compatibility smoke;
-không ép compiler backend lên Expo. Lý do, alternatives và nguồn: research R01–08.
+**Primary Dependencies**: pnpm12/Turbo2; Next16/React19.2; Tauri2/React19.2.3 cho desktop buyer
+(wrapper quanh storefront, kế hoạch); Nest12/Prisma7; Tailwind/shadcn web, TanStack Query, RHF/Zod.
+Zustand chỉ khi cần. Exact patch/image digest khóa W008/W017 sau compatibility smoke.
+Lý do, alternatives và nguồn: research R01–08.
 **Storage**: PostgreSQL17, UUID/FK/NUMERIC(18,0); managed S3-compatible dev/demo buckets.
 Không Redis/BullMQ/search engine trước khi có nhu cầu đo được. Không MinIO archived làm mặc định.
-**Testing**: Jest/Supertest, PostgreSQL integration thật, Playwright Web, native component/device
-acceptance, contract diff, concurrency barriers, test clock, backup/restore drill.
-**Target Platform**: Linux Docker server; Web responsive; Android/iOS Buyer; Windows/macOS Seller.
-W008 ghi exact min OS theo toolchain đã chọn, máy Mac/Xcode/simulator/device và runner khả dụng.
+**Testing**: Jest/Supertest, PostgreSQL integration thật, Playwright Web, desktop wrapper acceptance
+(khi triển khai), contract diff, concurrency barriers, test clock, backup/restore drill.
+**Target Platform**: Linux Docker server; Web responsive cho Buyer/Seller/Admin; desktop buyer
+(Tauri wrapper, kế hoạch). Không có client mobile.
+W008 ghi exact min OS theo toolchain desktop đã chọn và runner khả dụng.
 Không hứa hỗ trợ OS đã hết hỗ trợ hoặc app store publishing.
 **Project Type**: pnpm monorepo 6 apps, một Nest REST API và một PostgreSQL.
 **Performance Goals**: SC006 >=95/100 search/list <=2 giây,20 users,1000 products/10 shops;
@@ -46,7 +47,7 @@ không tiền/giao vận thật hoặc hệ thống phân tán. Planning không 
 | Stack/monorepo | PASS | PASS | Technical Context; source layout và compiler theo workspace |
 | UUID/FK/NUMERIC/migrations/history | PASS | PASS | data-model constraints, migration order, immutable snapshots |
 | Multi-shop/variant/stock/idempotency | PASS | PASS | BR04–09, locks/conditional decrement/ledger/allocation/refund |
-| Auth/ownership/secrets/native tokens | PASS | PASS | research R04, contracts auth/CSRF/resource policies |
+| Auth/ownership/secrets/token storage | PASS | PASS | research R04, contracts auth/CSRF/resource policies |
 | API v1/validation/OpenAPI | PASS | PASS | Markdown contract hiện có; W004 OpenAPI, W011 runtime drift check |
 | Tests/DoD/từng milestone/docs | PASS | PASS | Test matrix/quickstart; chưa có tuyên bố tests đã chạy |
 | Scope/no destructive operations | PASS | PASS | Chỉ tài liệu, giữ50 FR và nền tảng; không reset/deploy |
@@ -75,7 +76,7 @@ specs/001-marketplace-mvp/
   quickstart.md
 ```
 
-`tasks.md` đã được tạo: 158 task chưa thực hiện, nhóm theo 10 user stories. `task-allocation.md` ghi owner/reviewer, Sprint và phân bổ đúng 157 PD từ WBS; không cộng effort hai lần. Phase là nhóm capability; lịch chọn task sẵn sàng theo Sprint và dependency, không chờ hoàn tất Admin để thử Mobile.
+`tasks.md` đã được tạo: 158 task chưa thực hiện, nhóm theo 10 user stories. `task-allocation.md` ghi owner/reviewer, Sprint và phân bổ đúng 157 PD từ WBS; không cộng effort hai lần. Phase là nhóm capability; lịch chọn task sẵn sàng theo Sprint và dependency, không chờ hoàn tất Admin để thử desktop buyer.
 
 ### Source Code (repository root)
 
@@ -86,8 +87,6 @@ apps/
   storefront/                  # Next Buyer
   seller-center/               # Next Seller, share client views
   admin-panel/                 # Next Admin
-  mobile/                      # Expo Buyer native UI
-  desktop/                     # Tauri + React/Vite static Seller shell
   api/src/
     modules/{identity,shop,catalog,inventory,cart,order,payment,shipping,review,admin}/
     common/                    # DTO/error/guards/requestId
@@ -107,8 +106,8 @@ pnpm-workspace.yaml
 turbo.json
 ```
 
-**Structure Decision**: Đủ6 apps/6 packages. Seller feature views chia sẻ cho Desktop;
-Mobile chỉ share contract/validation/tokens, không import DOM/shadcn. Domain sở hữu repository;
+**Structure Decision**: 4 apps (storefront, seller-center, admin-panel, api) và 6 packages = 10 workspace projects. Desktop buyer là kế hoạch: sẽ tạo `apps/desktop` khi triển khai, dùng Tauri webview mở storefront URL và dùng lại `ui-web`/design tokens; không nhân đôi UI.
+Seller/Admin chỉ dùng web. Không có client mobile. Domain sở hữu repository;
 Order coordinator gọi public services với cùng Prisma transaction context, không import repository
 nội bộ. Không nhúng Next server vào Tauri.
 
@@ -121,7 +120,7 @@ scheduler DB-backed expiry, không Redis/queue chuyên dụng trước khi có n
 ## 01. Executive Summary
 
 Repository mới chỉ có README, Spec Kit, constitution/spec; chưa có chức năng ứng dụng.
-Chiến lược contract-first, Web vertical slices trước native integration; test từ S2.
+Chiến lược contract-first, Web vertical slices trước desktop wrapper integration; test từ S2.
 S3 demo shop→duyệt→đăng hàng; S5 demo commerce đa shop gồm trả/giao mô phỏng.
 
 Capacity mỗi người mỗi Sprint:10 PD gross (10 ngày×8h), trừ2.5 học tập/không sẵn sàng,
@@ -165,8 +164,7 @@ flowchart LR
   B[Buyer Web] --> API[Nest Modular Monolith]
   S[Seller Web] --> API
   A[Admin Web] --> API
-  M[Buyer Mobile] --> API
-  D[Seller Desktop] --> API
+  M[Buyer Desktop wrapper] --> API
   API --> PG[(PostgreSQL)]
   API --> S3[S3 compatible storage]
   API --> L[Structured logs and health]
@@ -190,7 +188,7 @@ flowchart TD
   R --> MOCK[Consumer mocks]
   MOCK --> UI[UI preparation]
   SH --> WEB[Web integrated commerce]
-  WEB --> N[Native integration]
+  WEB --> N[Desktop wrapper integration]
   REV --> QA[Full acceptance]
   N --> QA
   QA --> REL[Release]
@@ -204,7 +202,7 @@ Critical path: W001→003/004→017/011/009/010→018/019→020/021→026/027/02
 →035→034/036→037→038/039 integration→040/041→048/054/055→056/057→063/064.
 Không cộng mọi PD thành elapsed time vì nhiều owner song song. W035/036 thuộc M2,
 W034/037 thuộc M1; clients dựng mocks từ contract S1/S4, M5 dựng fixtures trước API hoàn thành.
-Chậm contract/checkout1 Sprint có thể chậm native/release1 Sprint nếu hết slack.
+Chậm contract/checkout1 Sprint có thể chậm desktop wrapper/release1 Sprint nếu hết slack.
 
 ```mermaid
 sequenceDiagram
@@ -239,18 +237,19 @@ ID/effort thống nhất WBS, không estimate hai lần.
 
 | Sprint/tuần | Goal/US | Tasks | PD | Dependency | Deliverable/AC/demo | Tests | Risk → mitigation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| S1 W1–2 | Requirements/architecture; US1–10 design | W001–008 | 19 | Spec/constitution | Use-case/SRS, ERD, contracts, wireframes; walkthrough checkout/quyền actor | Tabletop BR/schema/mock review | Scope/toolchain sai → chốt BR/ADR/Mac access |
+| S1 W1–2 | Requirements/architecture; US1–10 design | W001–008 | 19 | Spec/constitution | Use-case/SRS, ERD, contracts, wireframes; walkthrough checkout/quyền actor | Tabletop BR/schema/mock review | Scope/toolchain sai → chốt BR/ADR/toolchain desktop |
 | S2 W3–4 | Foundation/auth US1 | W009–017 | 20.5 | Contract/ERD S1 | Workspace/Compose/CI, register→login→profile/address→logout thật; Seller/Admin shells | Auth/session/migration/E2E US1 | ESM/peer mismatch → compatibility smoke trước feature |
 | S3 W5–6 | Shop/catalog/stock US2–4 | W018–025 | 20.5 | Identity | Shop→approve→publish variant→Buyer xem; khóa/ẩn đúng | Cross-shop/slug/SKU/MIME/stock adjustment | Upload mismatch → adapter fixture + real bucket test |
-| S4 W7–8 | Discovery/cart US4–5.1 | W026–033 | 20.5 | Catalog/stock | Search/filter/cart, stock UI, checkout policies; thin native spike | Last-stock proof/schema drift/load baseline | Transaction chưa đúng → giữ gate trước order |
+| S4 W7–8 | Discovery/cart US4–5.1 | W026–033 | 20.5 | Catalog/stock | Search/filter/cart, stock UI, checkout policies | Last-stock proof/schema drift/load baseline | Transaction chưa đúng → giữ gate trước order |
 | S5 W9–10 | Commerce US5–7 | W034–041 | 21 | Cart/policies/stock proof | Hai shop split/COD/mock/hủy/fulfill/deliver E2E Web thật | SC003/004, payment/expiry/cancel races | Critical path dày → mock UI sớm, ưu tiên integrity, dùng buffer |
-| S6 W11–12 | Reviews/stats/admin/native US8–10 | W042–049 | 20 | Order/payment/shipping | Stats/reviews/Admin + native core, Desktop secure login shell | Known totals/timezone/review unique/native auth | M4/M5 quá tải → M3 hỗ trợ Mobile, reuse Seller |
-| S7 W13–14 | Full acceptance/stability US1–10 | W050–057 | 20 | S6 feature integrated | Native full screens + OS artifacts, security/perf/recovery evidence | SC001–009,5-user usability, IDOR/CSRF/restore | Native lỗi → freeze optional, buffer/pair review |
-| S8 W15–16 | Release/docs/demo | W058–064 | 15.5 | Accepted RC | HTTPS demo, seed/report/slides/runbook/native handover | SC010/restore/rollback/full rehearsal | Deploy trễ → lab/video fallback có nhãn, không coi là online pass |
+| S6 W11–12 | Reviews/stats/admin US8–10 | W042–049 | 20 | Order/payment/shipping | Stats/reviews/Admin web; desktop wrapper vẫn là kế hoạch | Known totals/timezone/review unique/role denial | M4/M5 quá tải → M3 hỗ trợ storefront, reuse UI |
+| S7 W13–14 | Full acceptance/stability US1–10 | W050–057 | 20 | S6 feature integrated | Web screens + security/perf/recovery evidence; desktop evidence BLOCKED nếu chưa build | SC001–009,5-user usability, IDOR/CSRF/restore | Thiếu evidence desktop → giữ BLOCKED, không claim pass |
+| S8 W15–16 | Release/docs/demo | W058–064 | 15.5 | Accepted RC | HTTPS demo, seed/report/slides/runbook | SC010/restore/rollback/full rehearsal | Deploy trễ → lab/video fallback có nhãn, không coi là online pass |
 
 Điều chỉnh roadmap nguồn: inventory nền tảng S3 để hàng có tồn hợp lệ; shipping S5 để
-commerce E2E sớm; review/stats S6 để S7 tập trung ổn định. Mobile chỉ spike2PD S4 (T130) sau foundation/auth/discovery, không phụ thuộc Admin,
-integration S6. Desktop được thiết kế sharing trước, tích hợp sau Web Seller, không làm cả3 UI đầy đủ cùng lúc.
+commerce E2E sớm; review/stats S6 để S7 tập trung ổn định. Desktop buyer không còn spike hay
+tích hợp trong MVP hiện tại; khi triển khai wrapper, dùng lại toàn bộ storefront và chỉ thêm
+evidence build/launch, không làm UI thứ hai.
 
 S5 sequencing có điều kiện: D1–3 M2 checkout, M1 chuẩn bị policy/tests; D3–5 M2 payment,
 M1 hoàn cancel; D6–7 shipping. M3/M4 dùng3PD mock-first trước D8,1PD tích hợp thật D8;
@@ -263,12 +262,12 @@ reforecast ngay, không dồn test vào cuối ngày10 để đạt lịch giả
 | --- | --- | --- | --- |
 | M1 | Identity/Shop + state/cancel/shipping/reviews | M2 integrity; M4 UI policy | Rules/ports → auth → shop/category → cart/state → cancel/shipping → admin/reviews → security/docs → report |
 | M2 | Data/Catalog/Inventory + checkout/payment/stats | M1 transaction; M5 tests | ERD/contracts → workspace/API/DB → catalog/stock → query/concurrency → checkout/payment → stats → integrity/perf → schema/release |
-| M3 | Buyer Web + Mobile completion support | M4 UX; M5 native | Wireframes → accounts → discovery → cart → checkout → reviews/mobile support → native/usability → demo/slides |
-| M4 | Seller/Admin Web + Desktop | M3 UX; M5 native | Wireframes → shells → publish/approval → stock → fulfillment → dashboards/Tauri → Desktop full → artifacts/manual |
-| M5 | Mobile/Test harness/DevOps | M2 DB/infra; M3 Mobile | Test/infra audit → CI/test → upload/security → native spike/drift → race/staging → native core → acceptance/native CI → deployment/clean setup |
+| M3 | Buyer Web + desktop wrapper follow-up | M4 UX; M5 evidence | Wireframes → accounts → discovery → cart → checkout → reviews → desktop follow-up/usability → demo/slides |
+| M4 | Seller/Admin Web | M3 UX; M5 evidence | Wireframes → shells → publish/approval → stock → fulfillment → dashboards → artifacts/manual |
+| M5 | Test harness/DevOps | M2 DB/infra; M3 storefront | Test/infra audit → CI/test → upload/security → contract drift → race/staging → acceptance/CI → deployment/clean setup |
 
-M2 không gánh mọi bài khó: state/cancel/shipping M1; native integration M4; concurrency/release M5;
-Mobile completion M3 hỗ trợ. M5 không viết mọi test: mỗi owner viết tests của ticket,
+M2 không gánh mọi bài khó: state/cancel/shipping M1; desktop wrapper follow-up M3; concurrency/release M5;
+M5 không viết mọi test: mỗi owner viết tests của ticket,
 M5 điều phối harness/evidence. Reviewer độc lập theo WBS, không self-approve.
 
 | Tổng planned PD | M1 | M2 | M3 | M4 | M5 | Team |
@@ -310,16 +309,16 @@ Generated client từ cùng snapshot, PR thay contract phải có schema diff/cl
 Additive v1 trước; breaking change cần version và kế hoạch consumer được chấp thuận.
 Money string/UUID/UTC/errors requestId/pageSize<=100, idempotency mutation nhạy cảm,
 expectedVersion/CAS cho stock/state. Web JWT memory + refresh cookie/CSRF;
-native SecureStore/Stronghold adapter. Chi tiết token thời hạn research R04/contracts.
+desktop buyer dùng lại cookie webview, không có token store native. Chi tiết token thời hạn research R04/contracts.
 
-## 09. Frontend/Mobile/Desktop Plan
+## 09. Frontend/Desktop Plan
 
 [ui-plan.md](ui-plan.md) có từng màn hình, mục tiêu/components, endpoint, state/validation,
 loading/empty/error/success, acceptance và Sprint. TanStack Query server state;
 React/RHF/Zod UI/forms, không copy server state vào Zustand.
-Seller views client-only share ui-web cho Tauri React/Vite shell; Mobile dùng native UI/tokens,
-không remote website wrapper hoặc nhúng Next server. Tauri capabilities/CSP/HTTPS allowlist tối thiểu,
-Stronghold password-unlock cho refresh, memory access token. Clear user/shop query caches khi logout.
+Storefront dùng `ui-web`; desktop buyer là Tauri webview mở cùng storefront URL, không nhân đôi UI,
+không nhúng Next server. Tauri capabilities/CSP/HTTPS allowlist tối thiểu; dùng cookie HttpOnly của
+webview và memory access token. Clear user/shop query caches khi logout.
 
 ## 10. Testing Strategy
 
@@ -334,7 +333,7 @@ Stronghold password-unlock cho refresh, memory access token. Clear user/shop que
 | Usability P1 | S3–7 | 360/1280/keyboard/form states;5 người mua5 dòng/2shop | SC005:>=4/5 trong3 phút, record từng lần |
 | Performance P1 | S4 baseline/S7 | 1000 products/10 shops/20users/100 observations | SC006:>=95/100 <=2s, record host/network/fixture |
 | Reports P0 | S6–7 | Completed/cancel/refund/partial COD/midnight | SC008 exact totals không double-count |
-| Native P0 | S4 smoke/S6–7 | Android/iOS Buyer, Win/macOS Seller | SC009 bằng chứng từng OS/flow; build alone không là pass |
+| Desktop P1 (future) | Khi triển khai wrapper | Buyer desktop flow trong Tauri WebView | SC009 chỉ pass khi có bằng chứng build/launch từng OS; chưa triển khai thì BLOCKED |
 | Recovery P0 | S7–8 | Restart expiry/fresh clone/seed twice/restore/rollback | SC010<=30phút sau prerequisites; lịch sử/totals giữ nguyên |
 
 Không dùng coverage% thay acceptance. Mock cho isolation UI/unit, không thay DB integrity/E2E.
@@ -358,11 +357,11 @@ Env inventory: NODE_ENV, DATABASE_URL, API_PORT, JWT signing/verification và ro
 ACCESS_TOKEN_TTL=10m, REFRESH_SESSION_TTL=7d, CORS_ORIGINS, PUBLIC_API_URL,
 S3_ENDPOINT/REGION/BUCKET/ACCESS_KEY_ID/SECRET_ACCESS_KEY/PUBLIC_READ_BASE,
 MOCK_PAYMENT_TTL=15m, LOG_LEVEL, bootstrap admin cho seed có chủ đích.
-Chỉ URL public vào NEXT_PUBLIC_/EXPO_PUBLIC_; không secret client bundle.
+Chỉ URL public vào NEXT_PUBLIC_; không secret client bundle.
 HTTPS/Secure cookies ở môi trường chia sẻ; ngoại lệ local HTTP chỉ development.
 
 PR CI: frozen install/allowlist package build scripts → lint → typecheck → unit → build →
-PostgreSQL integration/contract diff/Web smoke. Native matrix Win/Mac theo thay đổi/RC,
+PostgreSQL integration/contract diff/Web smoke. Desktop evidence theo thay đổi/RC khi wrapper được triển khai,
 không cấp secrets cho fork PR. Pin Action commit/container digest khi release.
 Protected main có reviewer/status checks; Conventional Commits, feature/fix/refactor/docs/test branches.
 
@@ -386,19 +385,19 @@ trước thao tác phá hủy. W053/057/063 chạy rehearsal; không tự thực
 | R02 | DB/migration sai | Medium | High | P0 | FK thiếu/snapshot đổi | ERD/constraints/upgrade tests | Corrective migration/restore drill | M2 |
 | R03 | Checkout/payment bất nhất | High | High | P0 | Âm tồn/trùng thu | Proof S4/shared locks/dedupe | Stop release, buffer/review transaction | M2+M1 |
 | R04 | API/client lệch | Medium | High | P0 | Mock pass/integration fail | Contract/gen-client drift CI | Sửa provider/consumer trong cùng PR | M3+M2 |
-| R05 | Mobile chậm | High | High | P0 | S4 smoke/S6 checkout thiếu | Device access S1/spike S4 | M3 hỗ trợ, bỏ polish, reforecast | M5 |
-| R06 | Tauri integration | Medium | High | P0 | Next-only import/Mac fail | Static shared views/secure adapter | M4/M5 pair, tối thiểu IPC | M4 |
+| R05 | Desktop wrapper chưa sẵn sàng | Medium | Medium | P1 | Thiếu Rust/MSVC, chưa có tauri.conf.json | Giữ desktop ngoài CI; theo dõi BLOCKED | Không claim desktop pass; tiếp tục web | M3 |
+| R06 | Tauri integration | Low | Medium | P2 | URL/CORS/cookie lỗi trong webview | Cấu hình allow-list/CSP, dùng cùng web session | Sửa cấu hình, không fork UI | M3 |
 | R07 | Auth/ownership bug | Medium | High | P0 | Cross-shop/reuse succeeds | Negative policy tests | Revoke/fix/full security rerun | M1 |
 | R08 | Merge conflicts | High | Medium | P1 | PR>2ngày, cùng DTO | Owner module/small PR/contract-first | Pair resolve/rerun, không overwrite | M4 |
 | R09 | Deploy/budget failure | Medium | High | P0 | OOM/health/bucket fail | Budget/benchmark/staging | Image rollback/lab-video fallback có nhãn | M5 |
 | R10 | Thiếu thời gian test | High | High | P0 | Test dồn S7/defects tăng | Owner tests từng Sprint/buffer | Freeze features, P0 regression trước release | M5 |
-| R11 | Thiếu Mac/iOS access | Medium | High | P0 | W008 không có runner/device | Confirm lab/account budget S1 | Mượn lab/runner, đổi gate hoặc scope được duyệt | M4+M5 |
+| R11 | Thiếu toolchain desktop | Medium | Medium | P1 | W008 không có Rust/MSVC/WebView2 | Xác nhận máy build trước khi cam kết desktop | Giữ desktop planned hoặc dùng web | M3+M5 |
 | R12 | Runtime compatibility | Medium | High | P0 | ESM/peer/build lỗi S2 | Exact pin/smoke trước feature | ADR chọn supported compatible version | M2 |
 | R13 | Ít người hơn giả định | Medium | High | P0 | Actual<4.5PD/Sprint | Actual/forecast weekly | Rebalance/reduce optional/extend date | M1 |
 | R14 | Mất dữ liệu/demo | Low | High | P0 | Restore fail/seed reset | Off-host backup/guarded seed | Stop writes/preserve logs/recovery decision | M5 |
 
-Buffer gates: S3 publish, S4 concurrency/native access, S5 commerce, S6 native integration,
-S7 RC freeze. Chậm>1tuần critical path hoặc forecast>180PD thì replan ngay.
+Buffer gates: S3 publish, S4 concurrency, S5 commerce, S6 admin/reviews,
+S7 RC freeze. Thêm gate desktop wrapper khi thực sự build. Chậm>1tuần critical path hoặc forecast>180PD thì replan ngay.
 Giảm trước polish/animation/chart presentation và external integration không bắt buộc;
 giữ số liệu/quyền/state/validation/tests/screens core. Nếu vẫn thiếu, đề xuất giảm noncore
 FR/platform hoặc kéo dài lịch bằng sửa spec được chấp thuận, không tự thay baseline.
@@ -407,13 +406,13 @@ FR/platform hoặc kéo dài lịch bằng sửa spec được chấp thuận, k
 
 | Gate | Bàn giao/người review | Exit criteria |
 | --- | --- | --- |
-| G1 S1 | Use cases/ERD/contracts/wireframes; team review | 50FR trace, BR rõ, capacity và native access được ghi |
+| G1 S1 | Use cases/ERD/contracts/wireframes; team review | 50FR trace, BR rõ, capacity và desktop toolchain được ghi |
 | G2 S2 | M1/M2 auth, M3/M4 shells, M5 CI | Real auth/address, CI4checks, persistence |
 | G3 S3 | Shop/catalog/stock/screens/security | Shop→duyệt→variant→public E2E, cross-shop denied |
-| G4 S4 | Cart/query/stock proof/native spike | Last-stock proof, selected cart, order contract frozen |
+| G4 S4 | Cart/query/stock proof | Last-stock proof, selected cart, order contract frozen |
 | G5 S5 | Team commerce/staging | Hai shop split/paid/cancel/fulfill/deliver, races data đúng |
-| G6 S6 | Reviews/stats/Admin/native core | Known totals, native purchase/security evidence |
-| G7 S7 | RC/tests/native artifacts | Zero P0, SC001–009 evidence, backup drill |
+| G6 S6 | Reviews/stats/Admin | Known totals, role denial evidence |
+| G7 S7 | RC/tests/web artifacts | Zero P0, SC001–009 web evidence, backup drill; desktop BLOCKED nếu chưa build |
 | G8 S8 | Source/schema/API/tests/report/slides/runbook | SC010/full demo/limitations/handover |
 
 GitHub Projects đề xuất BACKLOG→READY→IN PROGRESS→IN REVIEW→TESTING→DONE.
@@ -437,8 +436,8 @@ thông báo nhóm trong bước này.
 7. Đơn khác COD→giao→thu mô phỏng→nhận; stats chỉ tính COMPLETED, không double-count.
 8. Trình diễn failure/retry/expiry bằng test-clock fixture/report có nhãn;
    không giả vờ chờ15phút đã chạy nếu dùng test clock.
-9. Buyer Android/iOS và Seller Win/Mac mở cùng dữ liệu; logout/cross-shop denied.
-10. Trình bày SC003/004/007 reports, native evidence, restore và clean-room runbook.
+9. Buyer mở cùng dữ liệu trên web và desktop (khi wrapper có); Seller/Admin trên web; logout/cross-shop denied.
+10. Trình bày SC003/004/007 reports, web evidence, restore và clean-room runbook. Desktop evidence ghi BLOCKED nếu chưa build.
 
 Chi tiết lệnh/expected outcomes ở [quickstart.md](quickstart.md).
 
@@ -450,7 +449,7 @@ Chi tiết lệnh/expected outcomes ở [quickstart.md](quickstart.md).
 | D1–2 | W005/006 draft | M3/M4 | Wireframe dựa input, đợi W001 để nghiệm thu |
 | D2–4 | W002 | M1/M2 | Public ports/auth boundaries/monolith/Desktop ADR |
 | D2–5 | W003 | M2/M1 | ERD/constraints/state/locks, tabletop pay-vs-cancel |
-| D2–5 | W007/008 | M5/M2+M4 | Fixtures/test matrix/runtime/Mac-iOS/bucket budget evidence |
+| D2–5 | W007/008 | M5/M2+M4 | Fixtures/test matrix/runtime/desktop toolchain/bucket budget evidence |
 | D5–7 | W004 | M2/M4 | OpenAPI/examples theo contract, schema validation/mocks |
 | D5–8 | W005/006 finalize | M3/M4 | Walkthrough2shop, UI states và sharing boundaries |
 | D8–9 | G1 review | Team | Trace every FR, ready S2 backlog, review estimates |
@@ -476,7 +475,7 @@ không tạo migration, không deploy và không tạo tasks.md.
 - T001: yêu cầu/use cases, Owner M1/Reviewer M3, W001/S1/2 PD.
 - T002: kiến trúc/public interfaces, Owner M1/Reviewer M2, W002/S1/2 PD.
 - T003: thiết kế dữ liệu/transaction invariants, Owner M2/Reviewer M1, W003/S1/2.5 PD.
-- T130 là nhánh thử Mobile S4, chỉ cần T004 toolchain, T019 client, T022 foundation, T039 identity và T070 discovery. W032 chỉ cấp 2 PD cho nhánh này.
-- S6 mở rộng app/session đã tạo ở S4, không scaffold hoặc chi ngân sách W032 lần nữa. Các task acceptance toàn nền tảng vẫn phải có evidence đúng OS.
+- T130 (nhánh thử Mobile S4) đã de-scoped cùng việc gỡ app mobile ngày 2026-11-03; không cấp lại W032 cho mobile. Desktop buyer chỉ được triển khai như wrapper sau web, không cần scaffold S4.
+- S6 hoàn thiện web evidence và role denial; desktop acceptance chỉ tính khi wrapper được build trên OS mục tiêu.
 - Dùng packages/contracts, DTO selling, trạng thái nội bộ sale_status. Owner/reviewer/Sprint và allocation ở từng task; bảng kiểm toán tại [task-allocation.md](task-allocation.md).
 - 158 task vẫn unchecked, tổng effort giữ 157 PD; lần chỉnh này chỉ sửa tài liệu.

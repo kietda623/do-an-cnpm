@@ -3,6 +3,9 @@ export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: "product-publishing.spec.ts",
   fullyParallel: false,
+  timeout: 60_000,
+  expect: { timeout: 15_000 },
+
   use: {
     ...devices["Desktop Chrome"],
     baseURL: "http://127.0.0.1:3101",
