@@ -6,6 +6,7 @@ import {
 import { createHash, randomUUID } from "node:crypto";
 import { canFulfillExistingOrder } from "../../../common/auth/fulfillment-access.js";
 import { canRecoverLockedSellerOrder } from "../../../common/auth/permissions.js";
+import { scopedOperationKey } from "../../../common/idempotency/operation-key.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
 import { canConfirmOrder, canReceiveOrder } from "./fulfillment-policy.js";
 import { deriveMarketplaceOrderStatus } from "./order-aggregate.js";
@@ -271,7 +272,11 @@ export class FulfillmentService {
                 actorUserId: userId,
                 toStatus: "WAITING_PICKUP",
                 deliveryAttempt: 1,
-                operationKey: `shipment:create:${key}`,
+                operationKey: scopedOperationKey(
+                  "shipment:create",
+                  sellerOrderId,
+                  key,
+                ),
               },
             },
           },
@@ -323,7 +328,11 @@ export class FulfillmentService {
             : `SELLER_ORDER_${action}`,
           fromStatus: part.status,
           toStatus,
-          operationKey: `fulfillment:${action.toLowerCase()}:${key}`,
+          operationKey: scopedOperationKey(
+            `fulfillment:${action.toLowerCase()}`,
+            sellerOrderId,
+            key,
+          ),
         },
       });
       await tx.auditEvent.create({

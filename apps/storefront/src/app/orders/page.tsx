@@ -3,9 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useSession, type SessionUser } from "@marketplace/ui-web";
-import { webSession } from "../auth-form";
-import { formatVnd } from "../../features/money";
+import {
+  EmptyState,
+  Package,
+  PageHeader,
+  StatusBadge,
+  StatusMessage,
+  formatDateTime,
+  formatVnd,
+  marketplaceOrderStatuses,
+  paymentStatuses,
+  useApi,
+} from "@marketplace/ui-web";
+import { normalizeFormError } from "@marketplace/api-client";
+import { webSession } from "../../lib/session";
 
 type Order = {
   id: string;
@@ -17,67 +28,89 @@ type Order = {
 };
 export default function OrdersPage() {
   const router = useRouter();
-  const { user, setUser } = useSession();
+  const { status } = useApi();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState("");
+
   useEffect(() => {
+    if (status === "loading") return;
+    if (status === "anonymous") {
+      router.replace("/login?returnTo=%2Forders");
+      return;
+    }
     let active = true;
-    void (async () => {
-      try {
-        if (!user) setUser(await webSession.restore<SessionUser>());
-        const response = await webSession.api.request<Order[]>("/orders");
+    setLoading(true);
+    setError("");
+    void webSession.api
+      .request<Order[]>("/orders")
+      .then((response) => {
         if (active) setOrders(response);
-      } catch {
-        if (active) {
-          setError(true);
-          router.replace("/login?returnTo=%2Forders");
-        }
-      } finally {
+      })
+      .catch((cause) => {
+        if (active) setError(normalizeFormError(cause));
+      })
+      .finally(() => {
         if (active) setLoading(false);
-      }
-    })();
+      });
     return () => {
       active = false;
     };
-  }, []);
+  }, [router, status]);
+
   return (
-    <main className="mx-auto max-w-4xl space-y-6 px-5 py-10">
-      <header>
-        <p className="text-sm text-neutral-600">Tài khoản</p>
-        <h1 className="text-3xl font-bold">Đơn hàng của tôi</h1>
-      </header>
+    <div className="mp-container mp-orders">
+      <PageHeader
+        title="Đơn hàng của tôi"
+        description="Mỗi đơn có thể gồm nhiều cửa hàng; theo dõi và xử lý từng phần riêng."
+      />
       {loading ? (
-        <p role="status">Đang tải đơn hàng…</p>
-      ) : error ? (
-        <p role="alert">Không tải được đơn hàng.</p>
-      ) : orders.length === 0 ? (
-        <section className="rounded-xl border p-8 text-center">
-          <p>Bạn chưa có đơn hàng nào.</p>
-          <Link className="mt-3 inline-block underline" href="/products">
-            Khám phá sản phẩm
-          </Link>
-        </section>
-      ) : (
-        <div className="space-y-3">
-          {orders.map((order) => (
-            <Link
-              key={order.id}
-              href={`/orders/${order.id}`}
-              className="block rounded-xl border p-5 hover:bg-neutral-50"
-            >
-              <div className="flex flex-wrap justify-between gap-2">
-                <strong>{order.orderNumber}</strong>
-                <span>{order.status}</span>
-              </div>
-              <p className="mt-2 text-sm text-neutral-600">
-                {new Date(order.createdAt).toLocaleString("vi-VN")} · {order.paymentStatus}
-              </p>
-              <p className="mt-2 font-semibold">{formatVnd(order.originalTotal)}</p>
-            </Link>
+        <div className="mp-orders__list" aria-busy="true">
+          {[0, 1].map((index) => (
+            <span key={index} className="mp-skeleton mp-orders__skeleton" />
           ))}
+          <p className="mp-visually-hidden" role="status">
+            Đang tải đơn hàng…
+          </p>
         </div>
+      ) : error ? (
+        <StatusMessage tone="error" title="Không tải được đơn hàng">
+          {error}
+        </StatusMessage>
+      ) : orders.length === 0 ? (
+        <EmptyState
+          icon={<Package size={22} />}
+          title="Bạn chưa có đơn hàng nào."
+          description="Đơn hàng sẽ xuất hiện ở đây sau khi anh đặt hàng thành công."
+          action={
+            <Link className="mp-button mp-button--primary" href="/products">
+              Khám phá sản phẩm
+            </Link>
+          }
+        />
+      ) : (
+        <ul className="mp-orders__list">
+          {orders.map((order) => (
+            <li key={order.id}>
+              <Link className="mp-order-card" href={`/orders/${order.id}`}>
+                <div className="mp-order-card__top">
+                  <div>
+                    <p className="mp-order-card__number">{order.orderNumber}</p>
+                    <p className="mp-order-card__date">{formatDateTime(order.createdAt)}</p>
+                  </div>
+                  <StatusBadge status={order.status} map={marketplaceOrderStatuses} />
+                </div>
+                <div className="mp-order-card__bottom">
+                  <StatusBadge status={order.paymentStatus} map={paymentStatuses} />
+                  <span className="mp-order-card__total" data-numeric>
+                    {formatVnd(order.originalTotal)}
+                  </span>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
-    </main>
+    </div>
   );
 }

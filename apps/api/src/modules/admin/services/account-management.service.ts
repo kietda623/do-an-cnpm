@@ -237,7 +237,11 @@ export class AccountManagementService {
         });
       }
 
-      const now = new Date();
+      const now = (
+        await tx.$queryRaw<
+          Array<{ now: Date }>
+        >`SELECT clock_timestamp() AS now`
+      )[0]!.now;
       const nextVersion = current.authVersion + 1;
       const updated = await tx.user.updateMany({
         where: {

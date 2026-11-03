@@ -1,13 +1,16 @@
-import { RoleGate } from "@marketplace/ui-web";
+import { PageHeader, RoleGate } from "@marketplace/ui-web";
 import { ReturnConfirmation } from "../../../features/orders/return-confirmation";
 
 export default function ReturnsPage() {
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-6 py-8">
+    <div className="mp-page">
       <RoleGate role="ADMIN">
-        <h1 className="text-3xl font-semibold">Hàng giao trả về</h1>
+        <PageHeader
+          title="Xác nhận hàng hoàn về"
+          description="Đối soát kiện giao thất bại đã quay về kho và hủy phần đơn tương ứng."
+        />
         <ReturnConfirmation />
       </RoleGate>
-    </main>
+    </div>
   );
 }

@@ -1,68 +1,34 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+import type { ReactNode } from "react";
+
 export { SessionProvider, useSession } from "./auth/session-provider";
 export { RoleGate } from "./auth/role-gate";
 export type { SessionUser } from "./auth/session-provider";
 
-export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "danger";
-};
+export { ApiProvider, useApi } from "./api/api-provider";
+export type { ApiContextValue, AuthStatus } from "./api/api-provider";
 
-export function Button({ className, variant = "primary", ...props }: ButtonProps) {
-  const classes = [
-    "mp-button inline-flex min-h-11 items-center justify-center gap-control-gap rounded-marketplace-control px-4 py-2.5 font-semibold focus-visible:ring-2 focus-visible:ring-marketplace-ring disabled:cursor-not-allowed disabled:opacity-55",
-    `mp-button--${variant}`,
-    className,
-  ]
-    .filter(Boolean)
-    .join(" ");
-  return <button data-slot="button" className={classes} {...props} />;
-}
+export * from "./lib/cx";
+export * from "./lib/format";
+export * from "./lib/status";
 
-export type TextFieldProps = InputHTMLAttributes<HTMLInputElement> & {
-  label: string;
-  error?: string;
-};
+export * from "./icons";
 
-export function TextField({ id, label, error, className, ...props }: TextFieldProps) {
-  const inputId = id ?? props.name;
-  const errorId = error && inputId ? `${inputId}-error` : undefined;
-  const classes = ["mp-field__input", className].filter(Boolean).join(" ");
+export * from "./primitives/button";
+export * from "./primitives/badge";
+export * from "./primitives/field";
+export * from "./primitives/surface";
+export * from "./primitives/data-table";
+export * from "./primitives/dialog";
+export * from "./primitives/toast";
 
-  return (
-    <div className="mp-field grid gap-1.5">
-      <label
-        className="mp-field__label text-sm font-semibold"
-        htmlFor={inputId}
-        data-slot="field-label"
-      >
-        {label}
-      </label>
-      <input
-        id={inputId}
-        data-slot="input"
-        className={`${classes} min-h-11 w-full rounded-marketplace-control border border-marketplace-border bg-marketplace-background px-3 py-2.5 text-marketplace-foreground aria-invalid:border-marketplace-danger`}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={errorId}
-        {...props}
-      />
-      {error && (
-        <span
-          className="mp-field__error text-sm text-marketplace-danger"
-          id={errorId}
-          role="alert"
-          data-slot="field-error"
-        >
-          {error}
-        </span>
-      )}
-    </div>
-  );
-}
+export * from "./charts/charts";
+export * from "./shell/storefront-shell";
+export * from "./shell/console-shell";
 
 export function FormSection({ children, title }: { children: ReactNode; title?: string }) {
   return (
-    <section className="mp-form-section grid gap-4" aria-label={title} data-slot="form-section">
-      {title && <h2 className="mp-form-section__title text-lg font-semibold">{title}</h2>}
+    <section className="mp-form-section" aria-label={title} data-slot="form-section">
+      {title && <h2 className="mp-form-section__title">{title}</h2>}
       {children}
     </section>
   );

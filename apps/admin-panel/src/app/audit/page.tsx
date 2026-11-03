@@ -1,13 +1,22 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { useSession } from "@marketplace/ui-web";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
-  normalizeFormError,
-  type ApiPath,
-  WebSession,
-} from "@marketplace/api-client";
+  Badge,
+  Button,
+  DataTable,
+  Dialog,
+  EmptyState,
+  PageHeader,
+  Pagination,
+  Panel,
+  TextField,
+  ScrollText,
+  useApi,
+  formatDateTime,
+  type DataTableColumn,
+} from "@marketplace/ui-web";
+import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
 
 type Audit = {
   id: string;
@@ -20,94 +29,238 @@ type Audit = {
   createdAt: string;
   metadata: Record<string, unknown>;
 };
-const api = new WebSession(
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1",
-).api;
-const request = <T,>(path: string) => api.request<T>(path as ApiPath);
+
+const pageSize = 20;
+const emptyFilters = { resourceType: "", resourceId: "", actorId: "", from: "", to: "" };
 
 export default function AdminAuditPage() {
-  const { user } = useSession();
+  const { api } = useApi();
   const [rows, setRows] = useState<Audit[]>([]);
-  const [resourceType, setResourceType] = useState("");
-  const [actorId, setActorId] = useState("");
+  const [filters, setFilters] = useState(emptyFilters);
+  const [applied, setApplied] = useState(emptyFilters);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [inspect, setInspect] = useState<Audit | null>(null);
+
   const refresh = useCallback(async () => {
-    const params = new URLSearchParams({ page: "1", pageSize: "50" });
-    if (resourceType.trim()) params.set("resourceType", resourceType.trim());
-    if (actorId.trim()) params.set("actorId", actorId.trim());
-    setRows(await request<Audit[]>(`/admin/audit?${params}`));
-  }, [resourceType, actorId]);
-  useEffect(() => {
-    if (user?.roles.includes("ADMIN"))
-      void refresh().catch((cause: unknown) =>
-        setError(normalizeFormError(cause)),
+    setLoading(true);
+    setError("");
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    for (const [key, value] of Object.entries(applied)) {
+      if (!value.trim()) continue;
+      params.set(
+        key,
+        key === "from" || key === "to" ? new Date(value).toISOString() : value.trim(),
       );
-  }, [user, refresh]);
-  if (!user)
-    return (
-      <main className="p-8">
-        <p>Đăng nhập quản trị để xem audit.</p>
-        <Link href="/login">Đăng nhập</Link>
-      </main>
-    );
-  if (!user.roles.includes("ADMIN"))
-    return (
-      <main className="p-8">
-        <p role="alert">Bạn không có quyền xem nhật ký quản trị.</p>
-      </main>
-    );
+    }
+    try {
+      setRows(await api.request<Audit[]>(`/admin/audit?${params}` as ApiPath));
+    } catch (cause) {
+      setRows([]);
+      setError(normalizeFormError(cause));
+    } finally {
+      setLoading(false);
+    }
+  }, [api, applied, page]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPage(1);
+    setApplied({ ...filters });
+  }
+
+  const columns: DataTableColumn<Audit>[] = [
+    {
+      key: "action",
+      header: "Hành động",
+      render: (row) => (
+        <span className="mp-table__stack">
+          <span className="mp-table__primary">{row.action}</span>
+          <span className="mp-muted mp-table__secondary">
+            {`${row.reason ?? "Không có lý do"} · ${formatDateTime(row.createdAt)}`}
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: "resource",
+      header: "Tài nguyên",
+      render: (row) => (
+        <span className="mp-table__stack">
+          <Badge tone="neutral">{row.resourceType}</Badge>
+          <span className="mp-code">{row.resourceId}</span>
+        </span>
+      ),
+    },
+    {
+      key: "actor",
+      header: "Actor",
+      render: (row) => (
+        <span className="mp-muted">{row.actorId ?? "system"}</span>
+      ),
+    },
+    {
+      key: "request",
+      header: "Request",
+      render: (row) => (
+        <span className="mp-code">{row.requestId.slice(0, 8)}…</span>
+      ),
+    },
+    {
+      key: "inspect",
+      header: "",
+      align: "right",
+      render: (row) => (
+        <Button size="sm" variant="ghost" onClick={() => setInspect(row)}>
+          Chi tiết
+        </Button>
+      ),
+    },
+  ];
+
+  const hasNext = rows.length === pageSize;
+  const pageCount = page + (hasNext ? 1 : 0);
+
   return (
-    <main className="mx-auto grid max-w-6xl gap-5 p-8">
-      <header>
-        <h1 className="text-3xl font-semibold">Nhật ký quản trị</h1>
-        <p>Nhật ký bất biến, chỉ hiển thị metadata an toàn.</p>
-      </header>
-      <form
-        className="flex flex-wrap gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void refresh();
-        }}
+    <div className="mp-page">
+      <PageHeader
+        title="Nhật ký quản trị"
+        description="Nhật ký bất biến. Metadata chỉ được xem trong hộp thoại chi tiết."
+      />
+
+      <Panel title="Bộ lọc" description="Lọc theo tài nguyên, actor hoặc thời gian.">
+        <form className="mp-form" onSubmit={submit}>
+          <div className="mp-form-grid">
+            <TextField
+              label="Lọc loại tài nguyên"
+              name="resourceType"
+              value={filters.resourceType}
+              onChange={(event) =>
+                setFilters({ ...filters, resourceType: event.target.value })
+              }
+              placeholder="Product, User, SellerOrder…"
+            />
+            <TextField
+              label="Mã tài nguyên"
+              name="resourceId"
+              value={filters.resourceId}
+              onChange={(event) =>
+                setFilters({ ...filters, resourceId: event.target.value })
+              }
+            />
+            <TextField
+              label="Actor ID"
+              name="actorId"
+              value={filters.actorId}
+              onChange={(event) => setFilters({ ...filters, actorId: event.target.value })}
+            />
+            <TextField
+              label="Từ ngày"
+              name="from"
+              type="datetime-local"
+              value={filters.from}
+              onChange={(event) => setFilters({ ...filters, from: event.target.value })}
+            />
+            <TextField
+              label="Đến ngày"
+              name="to"
+              type="datetime-local"
+              value={filters.to}
+              onChange={(event) => setFilters({ ...filters, to: event.target.value })}
+            />
+          </div>
+          <div className="mp-form-actions">
+            <Button type="submit" loading={loading}>
+              Lọc
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setFilters(emptyFilters);
+                setApplied(emptyFilters);
+                setPage(1);
+              }}
+            >
+              Xóa bộ lọc
+            </Button>
+          </div>
+        </form>
+      </Panel>
+
+      <Panel
+        title="Bản ghi nhật ký"
+        description={loading ? undefined : `${rows.length} bản ghi trên trang này`}
+        flush
       >
-        <label className="grid gap-1">
-          Loại tài nguyên
-          <input
-            aria-label="Lọc loại tài nguyên"
-            value={resourceType}
-            onChange={(event) => setResourceType(event.target.value)}
-            className="rounded border p-2"
-          />
-        </label>
-        <label className="grid gap-1">
-          Actor ID
-          <input
-            aria-label="Actor ID"
-            value={actorId}
-            onChange={(event) => setActorId(event.target.value)}
-            className="rounded border p-2"
-          />
-        </label>
-        <button className="self-end rounded border px-4 py-2">Lọc</button>
-      </form>
-      {rows.map((row) => (
-        <article key={row.id} className="rounded border p-4">
-          <h2 className="font-semibold">{row.action}</h2>
-          <p>
-            {row.resourceType} {row.resourceId} · actor{" "}
-            {row.actorId ?? "system"}
-          </p>
-          <p>
-            {row.reason ?? "Không có lý do"} ·{" "}
-            {new Date(row.createdAt).toLocaleString("vi-VN")}
-          </p>
-          <p>Request {row.requestId}</p>
-          <pre className="overflow-auto rounded bg-neutral-100 p-2 text-sm">
-            {JSON.stringify(row.metadata, null, 2)}
-          </pre>
-        </article>
-      ))}
-      {rows.length === 0 && !error && <p>Chưa có bản ghi phù hợp.</p>}
-      {error && <p role="alert">{error}</p>}
-    </main>
+        <DataTable
+          columns={columns}
+          rows={rows}
+          rowKey={(row) => row.id}
+          caption="Nhật ký quản trị"
+          loading={loading}
+          error={error || null}
+          onRetry={() => void refresh()}
+          empty={
+            <div className="mp-panel__pad">
+              <EmptyState
+                icon={<ScrollText size={22} />}
+                title="Chưa có bản ghi phù hợp"
+                description="Thử nới rộng khoảng thời gian hoặc bỏ một vài bộ lọc."
+              />
+            </div>
+          }
+          footer={
+            <div className="mp-panel__pad">
+              <Pagination
+                page={page}
+                pageCount={pageCount}
+                pageSize={pageSize}
+                onPageChange={setPage}
+              />
+            </div>
+          }
+        />
+      </Panel>
+
+      <Dialog
+        open={Boolean(inspect)}
+        onClose={() => setInspect(null)}
+        title={inspect?.action ?? ""}
+        description={inspect ? `${inspect.resourceType} · ${inspect.resourceId}` : undefined}
+        size="md"
+        footer={
+          <Button variant="secondary" onClick={() => setInspect(null)}>
+            Đóng
+          </Button>
+        }
+      >
+        {inspect ? (
+          <>
+            <dl className="mp-summary-grid">
+              <div>
+                <dt>Thời điểm</dt>
+                <dd className="mp-summary-grid__plain">{formatDateTime(inspect.createdAt)}</dd>
+              </div>
+              <div>
+                <dt>Actor</dt>
+                <dd className="mp-summary-grid__plain">{inspect.actorId ?? "system"}</dd>
+              </div>
+            </dl>
+            <p className="mp-muted">
+              {`${inspect.reason ?? "Không có lý do"} · Request ${inspect.requestId}`}
+            </p>
+            <pre className="mp-code mp-code--block">
+              {JSON.stringify(inspect.metadata, null, 2)}
+            </pre>
+          </>
+        ) : null}
+      </Dialog>
+    </div>
   );
 }

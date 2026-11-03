@@ -134,16 +134,19 @@ test("seller sees simulated statistics and filters reviews (mock API)", async ({
     .poll(() => revenueRange.get("to"))
     .toBe("2026-10-31T17:00:00.000Z");
   await page.getByLabel("Nhóm doanh thu").selectOption("MONTH");
-  await expect(page.getByText("2026-10", { exact: true })).toBeVisible();
+  await expect(
+    page.locator(".mp-chart__bars").getByText("2026-10", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Đến trước (giờ Việt Nam)").fill("9999-12-31T23:59");
+  await page.getByRole("button", { name: "Áp dụng khoảng thời gian" }).click();
+  await expect(
+    page.getByText("Vui lòng nhập thời gian hợp lệ", { exact: false }),
+  ).toBeVisible();
+  await page.goto(`/shops/${shopId}/reviews`);
   await page.getByLabel("Mã sản phẩm").fill(productId);
   await page.getByLabel("Lọc số sao").selectOption("5");
   await page.getByRole("button", { name: "Lọc đánh giá" }).click();
   await expect(page.getByText("Rất tốt")).toBeVisible();
   expect(filter).toContain(`productId=${productId}`);
   expect(filter).toContain("rating=5");
-  await page.getByLabel("Đến trước (giờ Việt Nam)").fill("9999-12-31T23:59");
-  await page.getByRole("button", { name: "Áp dụng khoảng thời gian" }).click();
-  await expect(
-    page.getByText("Vui lòng nhập thời gian hợp lệ", { exact: false }),
-  ).toBeVisible();
 });

@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
+import { Button, StatusMessage } from "@marketplace/ui-web";
 import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
-import { webSession } from "../../app/auth-form";
+import { webSession } from "../../lib/session";
 
 export function ReceiveButton({
   orderId,
@@ -16,6 +17,7 @@ export function ReceiveButton({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
   async function receive() {
     setBusy(true);
     setError("");
@@ -42,16 +44,20 @@ export function ReceiveButton({
       setBusy(false);
     }
   }
+
   return (
-    <div className="mt-3">
-      <button
-        disabled={busy}
-        onClick={() => void receive()}
-        className="rounded border px-4 py-2 disabled:opacity-50"
-      >
-        {busy ? "Đang xác nhận…" : "Tôi đã nhận đủ hàng"}
-      </button>
-      {error && <p role="alert">{error}</p>}
+    <div className="mp-receive">
+      <Button loading={busy} onClick={() => void receive()}>
+        Xác nhận đã nhận hàng
+      </Button>
+      <p className="mp-receive__hint">
+        Chỉ xác nhận khi đã nhận đủ hàng và thanh toán xong phần của cửa hàng này.
+      </p>
+      {error && (
+        <StatusMessage tone="error" onDismiss={() => setError("")}>
+          {error}
+        </StatusMessage>
+      )}
     </div>
   );
 }

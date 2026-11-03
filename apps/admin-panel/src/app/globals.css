@@ -5,12 +5,37 @@
 @theme inline {
   --color-marketplace-accent: var(--color-accent);
   --color-marketplace-accent-foreground: var(--color-accent-foreground);
+  --color-marketplace-accent-strong: var(--color-accent-strong);
+  --color-marketplace-accent-soft: var(--color-accent-soft);
   --color-marketplace-background: var(--color-background);
   --color-marketplace-border: var(--color-border);
+  --color-marketplace-canvas: var(--color-canvas);
   --color-marketplace-danger: var(--color-danger);
+  --color-marketplace-danger-soft: var(--color-danger-soft);
   --color-marketplace-foreground: var(--color-foreground);
+  --color-marketplace-info: var(--color-info);
+  --color-marketplace-info-soft: var(--color-info-soft);
+  --color-marketplace-line: var(--color-line);
+  --color-marketplace-muted: var(--color-muted);
   --color-marketplace-muted-foreground: var(--color-muted-foreground);
   --color-marketplace-ring: var(--color-ring);
+  --color-marketplace-success: var(--color-success);
+  --color-marketplace-success-soft: var(--color-success-soft);
+  --color-marketplace-surface: var(--color-surface);
+  --color-marketplace-warning: var(--color-warning);
+  --color-marketplace-warning-soft: var(--color-warning-soft);
   --radius-marketplace-control: var(--radius-control);
+  --radius-marketplace-panel: var(--radius-panel);
+  --radius-marketplace-pill: var(--radius-pill);
+  --shadow-marketplace-card: var(--shadow-card);
+  --shadow-marketplace-popover: var(--shadow-popover);
   --spacing-control-gap: 0.5rem;
+  --text-marketplace-xs: var(--text-xs);
+  --text-marketplace-sm: var(--text-sm);
+  --text-marketplace-base: var(--text-base);
+  --text-marketplace-lg: var(--text-lg);
+  --text-marketplace-xl: var(--text-xl);
+  --text-marketplace-2xl: var(--text-2xl);
+  --text-marketplace-3xl: var(--text-3xl);
+  --font-sans: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
 }

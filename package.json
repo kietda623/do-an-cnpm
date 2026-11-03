@@ -15,6 +15,8 @@
     "format": "prettier --write \"apps/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/config/*.mjs\" \"eslint.config.mjs\" \"package.json\" \"pnpm-workspace.yaml\" \"turbo.json\"",
     "format:check": "prettier --check \"apps/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/**/*.{js,jsx,ts,tsx,mjs,cjs,json}\" \"packages/config/*.mjs\" \"eslint.config.mjs\" \"package.json\" \"pnpm-workspace.yaml\" \"turbo.json\"",
     "test": "turbo run test",
+    "test:contracts": "corepack pnpm --filter @marketplace/api test:contracts",
+    "test:concurrency": "corepack pnpm --filter @marketplace/api test:integration --testPathPatterns=payment-cancellation.spec.ts",
     "test:expiry": "corepack pnpm --filter @marketplace/api test:expiry",
     "test:e2e": "playwright test --config=playwright.config.ts",
     "test:e2e:admin": "playwright test --config=playwright.admin.config.ts",

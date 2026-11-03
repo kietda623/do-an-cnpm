@@ -92,15 +92,14 @@ export class ShipmentsController {
   ) {
     this.requireKey(key);
     const actor = this.actor(req);
-    return {
-      data: await this.shipping.event(
-        actor.userId,
-        actor.systemRole,
-        id,
-        key,
-        body,
-      ),
-    };
+    const result = await this.shipping.event(
+      actor.userId,
+      actor.systemRole,
+      id,
+      key,
+      body,
+    );
+    return { data: result.shipment };
   }
 
   @Post(":id/retry")
@@ -121,15 +120,14 @@ export class ShipmentsController {
   ) {
     this.requireKey(key);
     const actor = this.actor(req);
-    return {
-      data: await this.shipping.retry(
-        actor.userId,
-        actor.systemRole,
-        id,
-        key,
-        body,
-      ),
-    };
+    const result = await this.shipping.retry(
+      actor.userId,
+      actor.systemRole,
+      id,
+      key,
+      body,
+    );
+    return { data: result.shipment };
   }
 
   private actor(req: ApiRequest) {

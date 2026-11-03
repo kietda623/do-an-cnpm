@@ -5,9 +5,14 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
-import { useSession, type SessionUser } from "@marketplace/ui-web";
-import { webSession } from "../../auth-form";
-import { formatVnd } from "../../../features/money";
+import {
+  Button,
+  ImageOff,
+  SelectField,
+  StatusMessage,
+  formatVnd,
+  useApi,
+} from "@marketplace/ui-web";
 import { ReviewList } from "../../../features/reviews/review-list";
 
 type Product = {
@@ -27,12 +32,10 @@ type Product = {
     availableQuantity: number;
   }[];
 };
-const api = webSession.api;
-
 export default function ProductDetailPage() {
   const { productId } = useParams<{ productId: string }>();
   const queryClient = useQueryClient();
-  const { user, setUser } = useSession();
+  const { api, user, status } = useApi();
   const [product, setProduct] = useState<Product | null>(null);
   const [variantId, setVariantId] = useState("");
   const [imageIndex, setImageIndex] = useState(0);
@@ -41,6 +44,7 @@ export default function ProductDetailPage() {
   const [cartError, setCartError] = useState("");
   const [added, setAdded] = useState(false);
   const [adding, setAdding] = useState(false);
+
   useEffect(() => {
     let live = true;
     void api
@@ -59,74 +63,88 @@ export default function ProductDetailPage() {
     return () => {
       live = false;
     };
-  }, [productId]);
-  useEffect(() => {
-    if (user) return;
-    void webSession
-      .restore<SessionUser>()
-      .then(setUser)
-      .catch(() => {});
-  }, [setUser, user]);
+  }, [api, productId]);
+
   if (loading)
     return (
-      <main className="mx-auto max-w-6xl px-4 py-10" role="status">
-        Đang tải sản phẩm…
-      </main>
+      <div className="mp-container mp-detail" aria-busy="true">
+        <span className="mp-skeleton mp-detail__media-skeleton" />
+        <div className="mp-detail__info">
+          <span className="mp-skeleton mp-skeleton--line" />
+          <span className="mp-skeleton mp-skeleton--line" />
+          <span className="mp-skeleton mp-skeleton--line" />
+        </div>
+        <p className="mp-visually-hidden" role="status">
+          Đang tải sản phẩm…
+        </p>
+      </div>
     );
+
   if (error || !product)
     return (
-      <main className="mx-auto max-w-6xl px-4 py-10">
-        <div role="alert" className="rounded-xl border p-8">
+      <div className="mp-container mp-detail__error">
+        <StatusMessage tone="error" title="Không tìm thấy sản phẩm">
           Sản phẩm không tồn tại hoặc hiện không được bán công khai.{" "}
-          <Link className="underline" href="/products">
+          <Link className="mp-link" href="/products">
             Quay lại danh sách
           </Link>
-        </div>
-      </main>
+        </StatusMessage>
+      </div>
     );
+
   const selected =
     product.variants.find((variant) => variant.id === variantId) ?? product.variants[0];
   const image = product.images[imageIndex];
+
   return (
-    <main className="mx-auto grid max-w-6xl gap-8 px-4 py-8 md:grid-cols-2">
-      <section aria-label="Thư viện ảnh sản phẩm" className="space-y-3">
-        <div className="aspect-square overflow-hidden rounded-2xl bg-neutral-100">
-          {image && (
-            <img src={image.url} alt={product.name} className="h-full w-full object-cover" />
+    <div className="mp-container mp-detail">
+      <section aria-label="Thư viện ảnh sản phẩm" className="mp-detail__gallery">
+        <div className="mp-detail__image">
+          {image ? (
+            <img src={image.url} alt={product.name} />
+          ) : (
+            <span className="mp-detail__image-placeholder">
+              <ImageOff size={32} aria-hidden="true" />
+              <span>Chưa có ảnh sản phẩm</span>
+            </span>
           )}
         </div>
-        <div className="flex gap-2 overflow-x-auto">
-          {product.images.map((item, index) => (
-            <button
-              key={item.url}
-              aria-label={`Xem ảnh ${index + 1}`}
-              aria-pressed={imageIndex === index}
-              onClick={() => setImageIndex(index)}
-              className="h-16 w-16 shrink-0 overflow-hidden rounded border-2 aria-pressed:border-marketplace-accent"
-            >
-              <img src={item.url} alt="" className="h-full w-full object-cover" />
-            </button>
-          ))}
-        </div>
+        {product.images.length > 1 && (
+          <div className="mp-thumbs">
+            {product.images.map((item, index) => (
+              <button
+                key={item.url}
+                type="button"
+                aria-label={`Xem ảnh ${index + 1}`}
+                aria-pressed={imageIndex === index}
+                onClick={() => setImageIndex(index)}
+                className="mp-thumbs__item"
+              >
+                <img src={item.url} alt="" />
+              </button>
+            ))}
+          </div>
+        )}
       </section>
-      <section className="space-y-5">
-        <div>
-          <p className="text-sm text-neutral-600">Cửa hàng</p>
-          <Link className="underline" href={`/shops/${product.shop.id}`}>
-            {product.shop.name}
-          </Link>
-        </div>
-        <h1 className="text-3xl font-bold">{product.name}</h1>
-        <p className="text-2xl font-semibold text-marketplace-accent">
+
+      <section className="mp-detail__info">
+        <Link className="mp-detail__shop" href={`/shops/${product.shop.id}`}>
+          {product.shop.name}
+        </Link>
+        <h1 className="mp-detail__name">{product.name}</h1>
+        <p className="mp-detail__price" data-numeric>
           {formatVnd(selected?.price ?? product.minimumPrice)}
         </p>
-        <label className="block font-medium">
-          Phân loại
-          <select
+
+        {product.variants.length > 0 && (
+          <SelectField
+            label="Phân loại"
             aria-label="Phân loại sản phẩm"
             value={variantId}
-            onChange={(event) => setVariantId(event.target.value)}
-            className="mt-2 min-h-11 w-full rounded-lg border px-3"
+            onChange={(event) => {
+              setVariantId(event.target.value);
+              setAdded(false);
+            }}
           >
             {product.variants.map((variant) => (
               <option key={variant.id} value={variant.id}>
@@ -134,17 +152,24 @@ export default function ProductDetailPage() {
                 {formatVnd(variant.price)}
               </option>
             ))}
-          </select>
-        </label>
-        <p aria-live="polite" className="text-sm">
+          </SelectField>
+        )}
+
+        <p className="mp-detail__stock" aria-live="polite">
           {selected?.availableQuantity
             ? `Còn ${selected.availableQuantity} sản phẩm`
             : "Tạm hết hàng"}
         </p>
-        {user ? (
-          <div className="space-y-2">
-            <button
-              disabled={adding || !selected?.availableQuantity}
+
+        {status === "loading" ? (
+          <span className="mp-skeleton mp-detail__cta-skeleton" aria-hidden="true" />
+        ) : user ? (
+          <div className="mp-detail__cta">
+            <Button
+              size="lg"
+              fullWidth
+              loading={adding}
+              disabled={!selected?.availableQuantity}
               onClick={() => {
                 if (!selected) return;
                 setAdding(true);
@@ -157,22 +182,22 @@ export default function ProductDetailPage() {
                   })
                   .then(async () => {
                     if (user) await queryClient.invalidateQueries({ queryKey: ["cart", user.id] });
+                    window.dispatchEvent(new Event("marketplace:cart-changed"));
                     setAdded(true);
                   })
                   .catch((cause) => setCartError(normalizeFormError(cause)))
                   .finally(() => setAdding(false));
               }}
-              className="min-h-12 w-full rounded-lg bg-marketplace-accent px-5 font-semibold text-white disabled:opacity-50"
             >
-              {adding ? "Đang thêm…" : added ? "Đã thêm vào giỏ" : "Thêm vào giỏ hàng"}
-            </button>
+              {added ? "Đã thêm vào giỏ" : "Thêm vào giỏ hàng"}
+            </Button>
             {cartError && (
-              <p role="alert" className="text-sm text-red-700">
+              <p role="alert" className="mp-detail__error-text">
                 {cartError}
               </p>
             )}
             {added && (
-              <Link href="/cart" className="text-sm underline">
+              <Link href="/cart" className="mp-link">
                 Xem giỏ hàng
               </Link>
             )}
@@ -180,17 +205,38 @@ export default function ProductDetailPage() {
         ) : (
           <Link
             href={`/login?returnTo=${encodeURIComponent(`/products/${product.id}`)}`}
-            className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-marketplace-accent px-5 font-semibold text-white"
+            className="mp-button mp-button--primary mp-button--lg mp-button--block"
           >
             Đăng nhập để mua
           </Link>
         )}
-        <section>
-          <h2 className="mb-2 text-lg font-semibold">Mô tả</h2>
-          <p className="whitespace-pre-wrap leading-7">{product.description}</p>
+
+        <section className="mp-detail__description">
+          <h2>Mô tả</h2>
+          <p>{product.description}</p>
         </section>
+
+        <dl className="mp-detail__facts">
+          <div>
+            <dt>Cửa hàng</dt>
+            <dd>{product.shop.name}</dd>
+          </div>
+          <div>
+            <dt>Mã sản phẩm</dt>
+            <dd>{selected?.sku ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>Thanh toán</dt>
+            <dd>COD hoặc mô phỏng</dd>
+          </div>
+        </dl>
       </section>
-      <ReviewList productId={product.id} ratingAverage={product.ratingAverage} ratingCount={product.ratingCount ?? 0} />
-    </main>
+
+      <ReviewList
+        productId={product.id}
+        ratingAverage={product.ratingAverage}
+        ratingCount={product.ratingCount ?? 0}
+      />
+    </div>
   );
 }

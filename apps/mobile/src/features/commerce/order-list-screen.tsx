@@ -57,21 +57,28 @@ export function orderListQueryKey(userId: string, filters: OrderFilters) {
   return [...orderListQueryPrefix(userId), filters] as const;
 }
 
+const VIETNAM_UTC_OFFSET_MS = 7 * 60 * 60 * 1000;
+
 function dateBound(
   value: string,
   endOfDay: boolean,
 ): string | undefined | null {
   if (!value) return undefined;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const date = new Date(
-    `${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`,
-  );
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const calendar = new Date(Date.UTC(year, month - 1, day));
   if (
-    !Number.isFinite(date.getTime()) ||
-    date.toISOString().slice(0, 10) !== value
+    calendar.getUTCFullYear() !== year ||
+    calendar.getUTCMonth() !== month - 1 ||
+    calendar.getUTCDate() !== day
   )
     return null;
-  return date.toISOString();
+  const startOfDayUtc = calendar.getTime() - VIETNAM_UTC_OFFSET_MS;
+  const instant = new Date(startOfDayUtc + (endOfDay ? 86_399_999 : 0));
+  return Number.isFinite(instant.getTime()) ? instant.toISOString() : null;
 }
 
 function orderListPath(filters: OrderFilters): ApiPath {

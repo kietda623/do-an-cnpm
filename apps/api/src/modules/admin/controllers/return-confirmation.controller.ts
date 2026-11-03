@@ -32,6 +32,7 @@ import {
   AccessGuard,
   currentAccessContext,
 } from "../../identity/access.guard.js";
+import { OrderQueryService } from "../../order/services/order-query.service.js";
 import { AdminGuard } from "../../shop/admin.guard.js";
 import { ShippingService } from "../../shipping/services/shipping.service.js";
 
@@ -46,7 +47,10 @@ class ReturnConfirmationDto {
 @UseGuards(AccessGuard, AdminGuard)
 @RequireAdminPermission("confirmReturn")
 export class ReturnConfirmationController {
-  constructor(private readonly shipping: ShippingService) {}
+  constructor(
+    private readonly shipping: ShippingService,
+    private readonly orders: OrderQueryService,
+  ) {}
 
   @Post(":id/return-confirmation")
   @HttpCode(HttpStatus.OK)
@@ -69,14 +73,18 @@ export class ReturnConfirmationController {
     const actor = currentAccessContext(
       req as ApiRequest & { accessContext?: AccessContext },
     );
-    const shipment = await this.shipping.confirmReturn(
+    const result = await this.shipping.confirmReturn(
       actor.userId,
       id,
       key,
       body,
     );
     return {
-      data: { affectedResourceIds: [shipment.sellerOrderId], shipment },
+      data: {
+        affectedResourceIds: [result.shipment.sellerOrderId],
+        resultingOrder: await this.orders.get(actor.userId, result.orderId, true),
+        replay: result.replay,
+      },
     };
   }
 }

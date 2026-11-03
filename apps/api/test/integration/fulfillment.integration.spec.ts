@@ -221,7 +221,10 @@ describe("US7 fulfillment and suspended shop PostgreSQL integration", () => {
     expect(paid.status).toBe(200);
   }
 
-  async function failedShipment(test: Awaited<ReturnType<typeof fixture>>) {
+  async function moveShipment(
+    test: Awaited<ReturnType<typeof fixture>>,
+    events: Array<"PICKED_UP" | "IN_TRANSIT" | "FAILED" | "DELIVERED">,
+  ) {
     const auth = `Bearer ${test.seller.token}`;
     const confirmed = await request(app.getHttpServer())
       .post(`/api/v1/shops/${test.shopId}/orders/${test.sellerOrderId}/confirm`)
@@ -236,7 +239,7 @@ describe("US7 fulfillment and suspended shop PostgreSQL integration", () => {
       .send({ expectedVersion: confirmed.body.data.version });
     expect(packed.status).toBe(200);
     let shipment = packed.body.data.shipment;
-    for (const event of ["PICKED_UP", "IN_TRANSIT", "FAILED"]) {
+    for (const event of events) {
       const response = await request(app.getHttpServer())
         .post(`/api/v1/shipments/${shipment.id}/events`)
         .set("Authorization", auth)
@@ -251,6 +254,10 @@ describe("US7 fulfillment and suspended shop PostgreSQL integration", () => {
       shipment = response.body.data;
     }
     return shipment;
+  }
+
+  async function failedShipment(test: Awaited<ReturnType<typeof fixture>>) {
+    return moveShipment(test, ["PICKED_UP", "IN_TRANSIT", "FAILED"]);
   }
 
   it("lets an active member read and reject an existing order after shop suspension", async () => {
@@ -278,6 +285,21 @@ describe("US7 fulfillment and suspended shop PostgreSQL integration", () => {
       });
     expect(rejected.status).toBe(200);
     expect(rejected.body.data.status).toBe("CANCELLED");
+    expect(
+      await db.prisma.auditEvent.findFirstOrThrow({
+        where: {
+          action: "SELLER_ORDER_REJECTED",
+          targetId: test.sellerOrderId,
+        },
+      }),
+    ).toMatchObject({
+      actorUserId: test.seller.id,
+      actorKind: "USER",
+      targetType: "SellerOrder",
+      reason: "Cannot fulfill",
+      outcome: "SUCCESS",
+      safeMetadata: { orderId: test.orderId, shopId: test.shopId },
+    });
   });
 
   it("restricts Admin seller-order rejection to locked Seller recovery", async () => {
@@ -290,19 +312,42 @@ describe("US7 fulfillment and suspended shop PostgreSQL integration", () => {
     expect(rejected.status).toBe(409);
     expect(rejected.body.error.code).toBe("ADMIN_RECOVERY_NOT_REQUIRED");
     expect(
-      (await db.prisma.sellerOrder.findUniqueOrThrow({ where: { id: test.sellerOrderId } })).status,
+      (
+        await db.prisma.sellerOrder.findUniqueOrThrow({
+          where: { id: test.sellerOrderId },
+        })
+      ).status,
     ).toBe("PENDING");
-    await db.prisma.user.update({ where: { id: test.seller.id }, data: { status: "LOCKED", authVersion: { increment: 1 } } });
+    await db.prisma.user.update({
+      where: { id: test.seller.id },
+      data: { status: "LOCKED", authVersion: { increment: 1 } },
+    });
     const key = randomUUID();
-    const recoveryRequest = () => request(app.getHttpServer())
-      .post(`/api/v1/admin/seller-orders/${test.sellerOrderId}/reject`)
-      .set("Authorization", `Bearer ${test.admin.token}`)
-      .set("Idempotency-Key", key)
-      .send({ expectedVersion: 0, reason: "Locked Seller recovery" });
+    const recoveryRequest = () =>
+      request(app.getHttpServer())
+        .post(`/api/v1/admin/seller-orders/${test.sellerOrderId}/reject`)
+        .set("Authorization", `Bearer ${test.admin.token}`)
+        .set("Idempotency-Key", key)
+        .send({ expectedVersion: 0, reason: "Locked Seller recovery" });
     const recovered = await recoveryRequest();
     expect(recovered.status).toBe(200);
     expect(recovered.body.data.status).toBe("CANCELLED");
     expect((await recoveryRequest()).body.data).toEqual(recovered.body.data);
+    const recoveryAudit = await db.prisma.auditEvent.findMany({
+      where: {
+        action: "ADMIN_SELLER_ORDER_REJECTED",
+        targetId: test.sellerOrderId,
+      },
+    });
+    expect(recoveryAudit).toHaveLength(1);
+    expect(recoveryAudit[0]).toMatchObject({
+      actorUserId: test.admin.id,
+      actorKind: "USER",
+      targetType: "SellerOrder",
+      reason: "Locked Seller recovery",
+      outcome: "SUCCESS",
+      safeMetadata: { orderId: test.orderId, shopId: null },
+    });
     expect(
       await db.prisma.inventoryMovement.count({
         where: { sellerOrderId: test.sellerOrderId, effectType: "RESTORE" },
@@ -560,20 +605,70 @@ describe("US7 fulfillment and suspended shop PostgreSQL integration", () => {
       .get(`/api/v1/shops/${test.shopId}/orders/${test.sellerOrderId}`)
       .set("Authorization", sellerAuth);
     expect(sellerOrder.status).toBe(200);
-    const collected = await request(app.getHttpServer())
-      .post(
-        `/api/v1/payments/seller-orders/${test.sellerOrderId}/cod-collection`,
-      )
-      .set("Authorization", `Bearer ${test.admin.token}`)
-      .set("Idempotency-Key", randomUUID())
-      .send({
-        eventId: randomUUID(),
-        expectedVersion: sellerOrder.body.data.version,
-      });
+    const key = randomUUID();
+    const eventId = randomUUID();
+    const expectedVersion = sellerOrder.body.data.version;
+    const collect = (attemptKey: string, attemptEvent: string) =>
+      request(app.getHttpServer())
+        .post(
+          `/api/v1/payments/seller-orders/${test.sellerOrderId}/cod-collection`,
+        )
+        .set("Authorization", `Bearer ${test.admin.token}`)
+        .set("Idempotency-Key", attemptKey)
+        .send({ eventId: attemptEvent, expectedVersion });
+    const collected = await collect(key, eventId);
     expect(collected.status).toBe(200);
+    const replay = await collect(key, eventId);
+    expect(replay.status).toBe(200);
+    expect(replay.body.data.id).toBe(collected.body.data.id);
+    const replayedEvent = await collect(randomUUID(), eventId);
+    expect(replayedEvent.status).toBe(200);
+    expect(replayedEvent.body.data.id).toBe(collected.body.data.id);
+    const duplicate = await collect(randomUUID(), randomUUID());
+    expect(duplicate.status).toBe(409);
+    expect(duplicate.body.error.code).toBe("COD_ALREADY_COLLECTED");
     expect(
       await db.prisma.paymentAllocation.count({
         where: { sellerOrderId: test.sellerOrderId, kind: "COD_COLLECTION" },
+      }),
+    ).toBe(1);
+  });
+
+  it("keeps a COD collection key usable after a rejected version", async () => {
+    const test = await fixture("COD");
+    await moveShipment(test, ["PICKED_UP", "IN_TRANSIT", "DELIVERED"]);
+    const auth = `Bearer ${test.seller.token}`;
+    const detail = await request(app.getHttpServer())
+      .get(`/api/v1/shops/${test.shopId}/orders/${test.sellerOrderId}`)
+      .set("Authorization", auth);
+    expect(detail.status).toBe(200);
+    const expectedVersion = detail.body.data.version as number;
+    const key = randomUUID();
+    const eventId = randomUUID();
+    const collect = (version: number) =>
+      request(app.getHttpServer())
+        .post(
+          `/api/v1/payments/seller-orders/${test.sellerOrderId}/cod-collection`,
+        )
+        .set("Authorization", auth)
+        .set("Idempotency-Key", key)
+        .send({ eventId, expectedVersion: version });
+
+    const rejected = await collect(expectedVersion + 1);
+    expect(rejected.status).toBe(409);
+    expect(rejected.body.error.code).toBe("VERSION_CONFLICT");
+
+    const collected = await collect(expectedVersion);
+    expect(collected.status).toBe(200);
+    const replay = await collect(expectedVersion);
+    expect(replay.status).toBe(200);
+    expect(replay.body.data.id).toBe(collected.body.data.id);
+    expect(
+      await db.prisma.paymentAllocation.count({
+        where: {
+          sellerOrderId: test.sellerOrderId,
+          kind: "COD_COLLECTION",
+        },
       }),
     ).toBe(1);
   });
@@ -728,6 +823,39 @@ describe("US7 fulfillment and suspended shop PostgreSQL integration", () => {
     ).toBe(2);
   });
 
+  it("keeps a shipment key usable after rejection and denies replay once membership is revoked", async () => {
+    const test = await fixture();
+    const failed = await failedShipment(test);
+    const auth = `Bearer ${test.seller.token}`;
+    const key = randomUUID();
+    const retry = (expectedVersion: number) =>
+      request(app.getHttpServer())
+        .post(`/api/v1/shipments/${failed.id}/retry`)
+        .set("Authorization", auth)
+        .set("Idempotency-Key", key)
+        .send({ reason: "Try again", expectedVersion });
+
+    const rejected = await retry(failed.version + 1);
+    expect(rejected.status).toBe(409);
+    expect(rejected.body.error.code).toBe("VERSION_CONFLICT");
+
+    const retried = await retry(failed.version);
+    expect(retried.status).toBe(200);
+    expect(retried.body.data.status).toBe("WAITING_PICKUP");
+    expect(retried.body.data.attemptNumber).toBe(2);
+
+    const replay = await retry(failed.version);
+    expect(replay.status).toBe(200);
+    expect(replay.body.data.version).toBe(retried.body.data.version);
+
+    await db.prisma.shopMember.update({
+      where: { shopId_userId: { shopId: test.shopId, userId: test.seller.id } },
+      data: { status: "REVOKED" },
+    });
+    const revokedReplay = await retry(failed.version);
+    expect(revokedReplay.status).toBe(404);
+  });
+
   it("lets Admin confirm return once after failed delivery and restores inventory", async () => {
     const test = await fixture();
     const failed = await failedShipment(test);
@@ -739,6 +867,23 @@ describe("US7 fulfillment and suspended shop PostgreSQL integration", () => {
         .set("Idempotency-Key", key)
         .send({ reason: "Parcel returned", expectedVersion: failed.version });
       expect(response.status).toBe(200);
+      expect(Object.keys(response.body.data).sort()).toEqual([
+        "affectedResourceIds",
+        "replay",
+        "resultingOrder",
+      ]);
+      expect(response.body.data.affectedResourceIds).toEqual([
+        test.sellerOrderId,
+      ]);
+      expect(response.body.data.replay).toBe(replay === 1);
+      expect(response.body.data.resultingOrder.id).toBe(test.orderId);
+      expect(response.body.data.resultingOrder.status).toBe("CANCELLED");
+      expect(
+        response.body.data.resultingOrder.sellerOrders.find(
+          (sellerOrder: { id: string }) =>
+            sellerOrder.id === test.sellerOrderId,
+        )?.status,
+      ).toBe("CANCELLED");
     }
     const part = await db.prisma.sellerOrder.findUniqueOrThrow({
       where: { id: test.sellerOrderId },
@@ -785,6 +930,7 @@ describe("US7 fulfillment and suspended shop PostgreSQL integration", () => {
       .set("Idempotency-Key", randomUUID())
       .send({ reason: "Parcel returned", expectedVersion: failed.version });
     expect(returned.status).toBe(200);
+    expect(returned.body.data.resultingOrder.paymentStatus).toBe("REFUNDED");
     const order = await request(app.getHttpServer())
       .get(`/api/v1/orders/${test.orderId}`)
       .set("Authorization", `Bearer ${test.buyer.token}`);

@@ -66,20 +66,19 @@ export class OrderQueryService {
           }
         : {}),
     };
-    const result = await this.db.prisma.$transaction(async (tx) => {
+    const { rows, total } = await this.db.prisma.$transaction(async (tx) => {
       const [orders, total] = await Promise.all([
         tx.marketplaceOrder.findMany({
           where,
-          select: { id: true },
+          include: orderInclude,
           orderBy: [{ createdAt: "desc" }, { id: "desc" }],
           skip: (page - 1) * pageSize,
           take: pageSize,
         }),
         tx.marketplaceOrder.count({ where }),
       ]);
-      return { orders, total };
+      return { rows: orders.map((order) => aggregateOrder(order)), total };
     }, { isolationLevel: "RepeatableRead" });
-    const rows = await Promise.all(result.orders.map(({ id }) => this.get("", id, true)));
     return {
       data: rows.map((order) => ({
         id: order.id,
@@ -91,7 +90,7 @@ export class OrderQueryService {
         paymentStatus: order.paymentStatus,
         createdAt: order.createdAt,
       })),
-      meta: { page, pageSize, total: result.total },
+      meta: { page, pageSize, total },
     };
   }
 

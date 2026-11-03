@@ -4,9 +4,13 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
-import type { ShipmentStatus } from "../../../generated/prisma/client.js";
+import type {
+  Prisma,
+  ShipmentStatus,
+} from "../../../generated/prisma/client.js";
 import type { SystemRole } from "../../../common/auth/access-context.js";
 import { canFulfillExistingOrder } from "../../../common/auth/fulfillment-access.js";
+import { scopedOperationKey } from "../../../common/idempotency/operation-key.js";
 import { canConfirmReturn as canConfirmReturnPermission, canManageShipments, canViewAllOrders } from "../../../common/auth/permissions.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
 import { deriveMarketplaceOrderStatus } from "../../order/services/order-aggregate.js";
@@ -90,7 +94,9 @@ export class ShippingService {
   ) {
     const preview = await this.db.prisma.shipment.findUnique({
       where: { id: shipmentId },
-      select: { sellerOrder: { select: { orderId: true } } },
+      select: {
+        sellerOrder: { select: { orderId: true, shopId: true } },
+      },
     });
     if (!preview) throw new NotFoundException();
     const requestHash = createHash("sha256")
@@ -117,7 +123,17 @@ export class ShippingService {
           "IDEMPOTENCY_KEY_REUSED",
           "This key was used for another shipment request.",
         );
-      if (idem.state === "COMPLETED") return { replay: true };
+      if (idem.state === "COMPLETED") {
+        // Re-authorize even for replays so a revoked actor cannot read the
+        // stored response through an idempotent retry.
+        await this.authorize(
+          tx,
+          userId,
+          action,
+          preview.sellerOrder.shopId,
+        );
+        return { replay: true };
+      }
       await this.orderTx.lockOrderGraph(tx, preview.sellerOrder.orderId);
       await tx.$queryRaw`SELECT id FROM shipments WHERE id = ${shipmentId}::uuid FOR UPDATE`;
       const shipment = await tx.shipment.findUniqueOrThrow({
@@ -125,16 +141,7 @@ export class ShippingService {
         include: { sellerOrder: { include: { items: true } } },
       });
       const part = shipment.sellerOrder;
-      const user = await tx.user.findUnique({
-        where: { id: userId },
-        select: { status: true, systemRole: true },
-      });
-      if (user?.status !== "ACTIVE") throw new NotFoundException();
-      if (action === "RETURN") {
-        if (!canConfirmReturnPermission(user.systemRole)) throw new NotFoundException();
-      } else if (!canManageShipments(user.systemRole)) {
-        await canFulfillExistingOrder(tx, userId, part.shopId);
-      }
+      await this.authorize(tx, userId, action, part.shopId);
       if (shipment.version !== input.expectedVersion)
         throw conflict(
           "VERSION_CONFLICT",
@@ -210,7 +217,11 @@ export class ShippingService {
           toStatus: nextStatus,
           deliveryAttempt: attempt,
           reason: input.reason,
-          operationKey: `shipment:${action.toLowerCase()}:${key}`,
+          operationKey: scopedOperationKey(
+            `shipment:${action.toLowerCase()}`,
+            shipmentId,
+            key,
+          ),
         },
       });
       if (
@@ -233,7 +244,7 @@ export class ShippingService {
             action: `SHIPMENT_${nextStatus}`,
             fromStatus: part.status,
             toStatus: nextStatus === "PICKED_UP" ? "SHIPPING" : "DELIVERED",
-            operationKey: `shipment-order:${key}`,
+            operationKey: scopedOperationKey("shipment-order", shipmentId, key),
           },
         });
       }
@@ -281,9 +292,29 @@ export class ShippingService {
       return { replay: false };
     });
     return {
-      ...(await this.get(userId, systemRole, shipmentId)),
+      shipment: await this.get(userId, systemRole, shipmentId),
+      orderId: preview.sellerOrder.orderId,
       replay: result.replay,
     };
+  }
+
+  private async authorize(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    action: Action,
+    shopId: string,
+  ) {
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { status: true, systemRole: true },
+    });
+    if (user?.status !== "ACTIVE") throw new NotFoundException();
+    if (action === "RETURN") {
+      if (!canConfirmReturnPermission(user.systemRole))
+        throw new NotFoundException();
+    } else if (!canManageShipments(user.systemRole)) {
+      await canFulfillExistingOrder(tx, userId, shopId);
+    }
   }
 
   private present(shipment: {

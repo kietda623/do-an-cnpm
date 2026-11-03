@@ -2,43 +2,68 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { useSession } from "@marketplace/ui-web";
 import {
-  ApiClientError,
-  normalizeFormError,
-  type ApiPath,
-  WebSession,
-} from "@marketplace/api-client";
-import {
-  InventoryEditor,
-  ProductEditor,
-  type CatalogProduct,
-} from "@marketplace/ui-web/seller/catalog/product-editor";
+  Badge,
+  Button,
+  Camera,
+  DataTable,
+  EmptyState,
+  ImageOff,
+  Package,
+  PageHeader,
+  Panel,
+  Skeleton,
+  StatusMessage,
+  formatVnd,
+  useApi,
+  type DataTableColumn,
+} from "@marketplace/ui-web";
+import { ApiClientError, normalizeFormError, type ApiPath } from "@marketplace/api-client";
+import type { CatalogProduct, CatalogProductVariant } from "../../../../lib/types";
+import { ProductCreateForm } from "../../../../features/catalog/product-create-form";
+import { ProductEditForm } from "../../../../features/catalog/product-edit-form";
+import { InventoryEditor } from "../../../../features/catalog/inventory-editor";
 
-const api = new WebSession(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1").api;
-const request = <T,>(path: string, init?: RequestInit) => api.request<T>(path as ApiPath, init);
+function imageSrc(objectKey: string | undefined): string | null {
+  if (!objectKey) return null;
+  return `${process.env.NEXT_PUBLIC_ASSET_PUBLIC_READ_BASE ?? ""}/${objectKey}`;
+}
 
 export default function ProductsPage() {
   const { shopId } = useParams<{ shopId: string }>();
-  const { user } = useSession();
+  const { api, status } = useApi();
   const [rows, setRows] = useState<CatalogProduct[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState("");
-  const [editingVariant, setEditingVariant] = useState("");
+  const [togglingId, setTogglingId] = useState("");
+  const [notice, setNotice] = useState("");
+
   const refresh = useCallback(async () => {
+    setLoading(true);
     try {
-      setRows(await request<CatalogProduct[]>(`/shops/${shopId}/management/products`));
+      setRows(
+        await api.request<CatalogProduct[]>(`/shops/${shopId}/management/products` as ApiPath),
+      );
       setError("");
     } catch (cause) {
       setError(normalizeFormError(cause));
+    } finally {
+      setLoading(false);
     }
-  }, [shopId]);
+  }, [api, shopId]);
+
   useEffect(() => {
-    if (user) void refresh();
-  }, [user, refresh]);
-  async function toggle(product: CatalogProduct) {
+    if (status !== "authenticated") return;
+    void refresh();
+  }, [refresh, status]);
+
+  async function toggleSelling(product: CatalogProduct) {
+    setTogglingId(product.id);
+    setNotice("");
+    setError("");
     try {
-      await request(`/shops/${shopId}/products/${product.id}`, {
+      await api.request(`/shops/${shopId}/products/${product.id}` as ApiPath, {
         method: "PATCH",
         body: JSON.stringify({ selling: !product.selling, expectedVersion: product.version }),
       });
@@ -48,183 +73,173 @@ export default function ProductsPage() {
         setError("Sản phẩm vừa được sửa ở nơi khác. Đã tải lại dữ liệu mới.");
         await refresh();
       } else setError(normalizeFormError(cause));
+    } finally {
+      setTogglingId("");
     }
   }
+
+  const variantColumns: DataTableColumn<CatalogProductVariant>[] = [
+    {
+      key: "sku",
+      header: "SKU",
+      render: (variant) => <span className="mp-table__primary">{variant.sku}</span>,
+    },
+    {
+      key: "attributes",
+      header: "Phân loại",
+      render: (variant) =>
+        Object.entries(variant.attributes ?? {})
+          .map(([key, value]) => `${key}: ${value}`)
+          .join(" · ") || "—",
+    },
+    { key: "price", header: "Giá bán", numeric: true, render: (variant) => formatVnd(variant.price) },
+    {
+      key: "stock",
+      header: "Tồn kho",
+      numeric: true,
+      render: (variant) => <span>tồn {variant.availableQuantity}</span>,
+    },
+    {
+      key: "selling",
+      header: "Trạng thái",
+      render: (variant) => (
+        <Badge tone={variant.selling ? "success" : "neutral"} dot>
+          {variant.selling ? "Đang bán" : "Đã dừng"}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
-    <main className="mx-auto grid max-w-6xl gap-6 p-6">
-      <header>
-        <h1 className="text-2xl font-bold">Sản phẩm của cửa hàng</h1>
-        <p>Quản lý ảnh, biến thể, giá bán và tồn kho.</p>
-      </header>
-      <ProductEditor shopId={shopId} onCreated={refresh} />
-      {error && <p role="alert">{error}</p>}
-      <section className="grid gap-4" aria-label="Danh sách sản phẩm">
-        {rows.map((product) => (
-          <article className="grid gap-3 rounded-lg border p-4" key={product.id}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="font-semibold">{product.name}</h2>
-                <p>
-                  {product.selling ? "Đang bán" : "Đã dừng bán"} · {product.variants.length} biến
-                  thể
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setEditing(editing === product.id ? "" : product.id)}>
-                  Sửa
-                </button>
-                <button onClick={() => void toggle(product)}>
-                  {product.selling ? "Dừng bán" : "Đăng bán lại"}
-                </button>
-              </div>
-            </div>
-            {editing === product.id && (
-              <form
-                className="grid gap-2"
-                onSubmit={async (event) => {
-                  event.preventDefault();
-                  const targetForm = event.currentTarget;
-                  const form = new FormData(targetForm);
-                  try {
-                    const imageFiles = form
-                      .getAll("images")
-                      .filter((value): value is File => value instanceof File && value.size > 0);
-                    const uploadedImages = await Promise.all(
-                      imageFiles.map(async (file) => {
-                        const upload = new FormData();
-                        upload.set("file", file);
-                        upload.set("purpose", "PRODUCT_IMAGE");
-                        upload.set("shopId", shopId);
-                        return request<{ id: string }>("/users/me/assets", {
-                          method: "POST",
-                          body: upload,
-                        });
-                      }),
-                    );
-                    await request(`/shops/${shopId}/products/${product.id}`, {
-                      method: "PATCH",
-                      body: JSON.stringify({
-                        name: form.get("name"),
-                        description: form.get("description"),
-                        ...(uploadedImages.length
-                          ? {
-                              imageAssetIds: [
-                                ...product.images.map((image) => image.assetId),
-                                ...uploadedImages.map((image) => image.id),
-                              ],
-                            }
-                          : {}),
-                        expectedVersion: product.version,
-                      }),
-                    });
-                    setEditing("");
-                    await refresh();
-                  } catch (cause) {
-                    if (cause instanceof ApiClientError && cause.status === 409) {
-                      setError("Sản phẩm đã đổi. Đã tải lại; hãy mở sửa lại.");
-                      await refresh();
-                    } else setError(normalizeFormError(cause));
-                  }
-                }}
-              >
-                <label>
-                  Tên
-                  <input name="name" defaultValue={product.name} required />
-                </label>
-                <label>
-                  Mô tả
-                  <textarea name="description" defaultValue={product.description} />
-                </label>
-                <label>
-                  Thêm ảnh vào thư viện
-                  <input
-                    name="images"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
-                  />
-                </label>
-                <button>Lưu thay đổi</button>
-              </form>
-            )}
-            <div className="flex gap-2" aria-label="Thư viện ảnh">
-              {product.images.map(
-                (image) =>
-                  image.objectKey && (
-                    <img
-                      key={image.assetId}
-                      src={`${process.env.NEXT_PUBLIC_ASSET_PUBLIC_READ_BASE ?? ""}/${image.objectKey}`}
-                      alt={`Ảnh ${product.name}`}
-                      className="h-20 w-20 rounded object-cover"
-                    />
-                  ),
-              )}
-            </div>
-            <ul className="grid gap-2">
-              {product.variants.map((variant) => (
-                <li key={variant.id} className="rounded border p-3">
-                  {editingVariant === variant.id ? (
-                    <form
-                      className="grid gap-2"
-                      onSubmit={async (event) => {
-                        event.preventDefault();
-                        const form = new FormData(event.currentTarget);
-                        try {
-                          await request(`/shops/${shopId}/variants/${variant.id}`, {
-                            method: "PATCH",
-                            body: JSON.stringify({
-                              sku: form.get("sku"),
-                              price: form.get("price"),
-                              selling: form.get("selling") === "on",
-                              expectedVersion: variant.version,
-                            }),
-                          });
-                          setEditingVariant("");
-                          await refresh();
-                        } catch (cause) {
-                          if (cause instanceof ApiClientError && cause.status === 409) {
-                            setError("Biến thể đã đổi. Đã tải lại dữ liệu để anh kiểm tra.");
-                            await refresh();
-                          } else setError(normalizeFormError(cause));
-                        }
-                      }}
-                    >
-                      <label>
-                        SKU
-                        <input name="sku" defaultValue={variant.sku} required />
-                      </label>
-                      <label>
-                        Giá VND
-                        <input
-                          name="price"
-                          inputMode="numeric"
-                          pattern="[0-9]+"
-                          defaultValue={variant.price}
-                          required
-                        />
-                      </label>
-                      <label>
-                        <input type="checkbox" name="selling" defaultChecked={variant.selling} />{" "}
-                        Đang bán
-                      </label>
-                      <button>Lưu biến thể</button>
-                    </form>
-                  ) : (
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span>
-                        {variant.sku} · {variant.price} VND · tồn {variant.availableQuantity} ·{" "}
-                        {variant.selling ? "đang bán" : "đã dừng"}
-                      </span>
-                      <button onClick={() => setEditingVariant(variant.id)}>Sửa biến thể</button>
+    <div className="mp-page">
+      <PageHeader
+        title="Sản phẩm của cửa hàng"
+        description="Quản lý ảnh, biến thể, giá bán và tồn kho trên một màn hình."
+      />
+
+      <Panel
+        title="Thêm sản phẩm mới"
+        description="Sản phẩm được đăng bán ngay sau khi tạo; bạn có thể tạm dừng bất cứ lúc nào."
+        actions={<Camera size={18} aria-hidden="true" />}
+      >
+        <ProductCreateForm shopId={shopId} onCreated={refresh} />
+      </Panel>
+
+      {notice ? (
+        <StatusMessage tone="success" title="Đã cập nhật" onDismiss={() => setNotice("")}>
+          <p>{notice}</p>
+        </StatusMessage>
+      ) : null}
+
+      <Panel
+        title="Danh sách sản phẩm"
+        description={rows.length ? `${rows.length} sản phẩm trong cửa hàng` : undefined}
+        actions={
+          <Button variant="ghost" size="sm" onClick={() => void refresh()} loading={loading}>
+            Làm mới
+          </Button>
+        }
+      >
+        {error ? <StatusMessage tone="error" title="Không tải được sản phẩm"><p>{error}</p></StatusMessage> : null}
+
+        {loading && rows.length === 0 ? (
+          <div className="mp-stack mp-stack--loose" aria-label="Đang tải sản phẩm" role="status">
+            <Skeleton className="mp-skeleton--block" />
+            <Skeleton className="mp-skeleton--block" />
+            <Skeleton className="mp-skeleton--block" />
+          </div>
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon={<Package size={22} />}
+            title="Cửa hàng chưa có sản phẩm"
+            description="Dùng biểu mẫu phía trên để thêm sản phẩm đầu tiên."
+          />
+        ) : (
+          <ul className="mp-product-list">
+            {rows.map((product) => {
+              const isEditing = editing === product.id;
+              return (
+                <li className="mp-product" key={product.id}>
+                  <header className="mp-product__head">
+                    <div className="mp-product__media" aria-label="Thư viện ảnh">
+                      {product.images.length === 0 ? (
+                        <span className="mp-product__media-empty">
+                          <ImageOff size={18} aria-hidden="true" />
+                        </span>
+                      ) : (
+                        product.images.map((image) => {
+                          const src = imageSrc(image.objectKey);
+                          return src ? (
+                            <img
+                              key={image.assetId}
+                              src={src}
+                              alt={`Ảnh ${product.name}`}
+                              className="mp-product__thumb"
+                            />
+                          ) : null;
+                        })
+                      )}
                     </div>
-                  )}
+                    <div className="mp-product__title">
+                      <h3>{product.name}</h3>
+                      <p className="mp-muted">
+                        {product.selling ? "Đang bán" : "Đã dừng bán"} · {product.variants.length}{" "}
+                        biến thể · {formatVnd(product.variants[0]?.price)}
+                      </p>
+                    </div>
+                    <div className="mp-product__actions">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setEditing(isEditing ? "" : product.id)}
+                      >
+                        Sửa
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={product.selling ? "danger" : "primary"}
+                        loading={togglingId === product.id}
+                        onClick={() => void toggleSelling(product)}
+                      >
+                        {product.selling ? "Dừng bán" : "Đăng bán lại"}
+                      </Button>
+                    </div>
+                  </header>
+
+                  {isEditing ? (
+                    <ProductEditForm
+                      shopId={shopId}
+                      product={product}
+                      onSaved={async () => {
+                        setEditing("");
+                        setNotice(`Đã lưu thay đổi cho ${product.name}.`);
+                        await refresh();
+                      }}
+                      onCancel={() => setEditing("")}
+                    />
+                  ) : null}
+
+                  <DataTable
+                    caption={`Biến thể của ${product.name}`}
+                    columns={variantColumns}
+                    rows={product.variants}
+                    rowKey={(variant) => variant.id}
+                    dense
+                    empty={
+                      <EmptyState
+                        title="Chưa có biến thể"
+                        description="Thêm biến thể để bắt đầu bán sản phẩm này."
+                      />
+                    }
+                  />
+
+                  <InventoryEditor shopId={shopId} product={product} onChanged={refresh} />
                 </li>
-              ))}
-            </ul>
-            <InventoryEditor shopId={shopId} product={product} onChanged={refresh} />
-          </article>
-        ))}
-      </section>
-    </main>
+              );
+            })}
+          </ul>
+        )}
+      </Panel>
+    </div>
   );
 }

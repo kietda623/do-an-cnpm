@@ -1749,12 +1749,9 @@ export interface components {
       id: string;
       name: string;
       /** Format: uuid */
-      parentId?: string | null;
+      parentId: string | null;
       visible: boolean;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
+      version: number;
     };
     VariantCreate: {
       sku: string;
@@ -2065,13 +2062,30 @@ export interface components {
       trackingCode: string;
       attemptNumber: number;
       version: number;
-      history: {
-        [key: string]: unknown;
-      }[];
+      history: components["schemas"]["ShipmentHistoryEntry"][];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
+    };
+    ShipmentHistoryEntry: {
+      /** Format: uuid */
+      id: string;
+      /** @enum {string|null} */
+      fromStatus:
+        | "WAITING_PICKUP"
+        | "PICKED_UP"
+        | "IN_TRANSIT"
+        | "DELIVERED"
+        | "FAILED"
+        | null;
+      /** @enum {string} */
+      toStatus:
+        "WAITING_PICKUP" | "PICKED_UP" | "IN_TRANSIT" | "DELIVERED" | "FAILED";
+      attemptNumber: number;
+      reason: string | null;
+      /** Format: date-time */
+      createdAt: string;
     };
     SellerOrder: {
       /** Format: uuid */
@@ -2134,19 +2148,30 @@ export interface components {
       amount: string;
       /** @enum {string} */
       currency: "VND";
-      allocations: {
-        /** Format: uuid */
-        sellerOrderId: string;
-        /** @example 150000 */
-        amount: string;
-      }[];
-      refunds: {
-        [key: string]: unknown;
-      }[];
+      allocations: components["schemas"]["PaymentAllocation"][];
+      refunds: components["schemas"]["PaymentRefund"][];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
       resolvedAt?: string | null;
+    };
+    PaymentAllocation: {
+      /** Format: uuid */
+      sellerOrderId: string;
+      /** @example 150000 */
+      amount: string;
+    };
+    PaymentRefund: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      sellerOrderId: string;
+      /** @example 150000 */
+      amount: string;
+      /** @enum {string} */
+      reason: "CANCELLATION" | "LATE_SUCCESS" | "CONFIRMED_RETURN";
+      /** Format: date-time */
+      createdAt: string;
     };
     Order: {
       /** Format: uuid */
@@ -2362,8 +2387,9 @@ export interface components {
       id: string;
       name: string;
       /** Format: uuid */
-      parentId?: string | null;
+      parentId: string | null;
       visible: boolean;
+      version: number;
       children: components["schemas"]["CategoryTreeNode"][];
     };
   };

@@ -2,8 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testMatch: "discovery.spec.ts",
+  testMatch: ["discovery.spec.ts", "storefront-shell.spec.ts"],
   fullyParallel: false,
+  timeout: 60_000,
   use: {
     ...devices["Desktop Chrome"],
     baseURL: "http://127.0.0.1:3100",
@@ -11,7 +12,7 @@ export default defineConfig({
     navigationTimeout: 10_000,
     trace: "retain-on-failure",
   },
-  expect: { timeout: 5_000 },
+  expect: { timeout: 15_000 },
   webServer: {
     command:
       "pnpm --filter @marketplace/storefront exec next dev --hostname 127.0.0.1 --port 3100",

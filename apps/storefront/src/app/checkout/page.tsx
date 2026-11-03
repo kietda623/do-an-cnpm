@@ -4,11 +4,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSession, type SessionUser } from "@marketplace/ui-web";
-import { normalizeFormError } from "@marketplace/api-client";
-import { webSession } from "../auth-form";
+import {
+  Button,
+  EmptyState,
+  MapPin,
+  PageHeader,
+  SelectField,
+  StatusMessage,
+  formatVnd,
+  useApi,
+} from "@marketplace/ui-web";
+import { ApiClientError, normalizeFormError } from "@marketplace/api-client";
+import { webSession } from "../../lib/session";
 import { CheckoutConfirm } from "../../features/checkout/checkout-confirm";
-import { formatVnd } from "../../features/money";
 
 type Address = {
   id: string;
@@ -47,25 +55,30 @@ const retryStorageKey = "marketplace.checkout.retry.v1";
 export default function CheckoutPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, setUser } = useSession();
+  const { user, status, clear } = useApi();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [cart, setCart] = useState<Cart | null>(null);
-  const [buyerId, setBuyerId] = useState(user?.id ?? "");
   const [addressId, setAddressId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "MOCK">("COD");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState("");
   const [loading, setLoading] = useState(true);
+  const [bootstrapError, setBootstrapError] = useState("");
+  const [reload, setReload] = useState(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (status === "loading") return;
+    if (status === "anonymous") {
+      router.replace("/login?returnTo=%2Fcheckout");
+      return;
+    }
     let active = true;
+    setLoading(true);
+    setBootstrapError("");
     void (async () => {
       try {
-        const currentUser = user ?? (await webSession.restore<SessionUser>());
-        if (!user) setUser(currentUser);
-        setBuyerId(currentUser.id);
         const [savedAddresses, savedCart] = await Promise.all([
           webSession.api.request<Address[]>("/users/me/addresses"),
           webSession.api.request<Cart>("/cart"),
@@ -89,11 +102,14 @@ export default function CheckoutPage() {
             }
           }
         }
-      } catch {
-        if (active) {
-          await webSession.clear();
+      } catch (cause) {
+        if (!active) return;
+        if (cause instanceof ApiClientError && cause.status === 401) {
+          await clear();
           router.replace("/login?returnTo=%2Fcheckout");
+          return;
         }
+        setBootstrapError("Không thể tải thông tin thanh toán. Vui lòng thử lại.");
       } finally {
         if (active) setLoading(false);
       }
@@ -101,7 +117,7 @@ export default function CheckoutPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [clear, reload, router, status]);
 
   const selected =
     cart?.groups.flatMap((group) => group.items).filter((item) => item.selected) ?? [];
@@ -155,8 +171,8 @@ export default function CheckoutPage() {
       });
       sessionStorage.removeItem(retryStorageKey);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["cart", buyerId] }),
-        queryClient.invalidateQueries({ queryKey: ["orders", buyerId] }),
+        queryClient.invalidateQueries({ queryKey: ["cart", user?.id] }),
+        queryClient.invalidateQueries({ queryKey: ["orders", user?.id] }),
       ]);
       router.push(`/orders/${order.id}`);
     } catch (cause) {
@@ -165,38 +181,86 @@ export default function CheckoutPage() {
       setPending(false);
     }
   }
+
   if (loading)
     return (
-      <main className="mx-auto max-w-3xl px-5 py-10">
-        <p role="status">Đang tải thông tin thanh toán…</p>
-      </main>
-    );
-  return (
-    <main className="mx-auto max-w-3xl space-y-6 px-5 py-10">
-      <header>
-        <p className="text-sm text-neutral-600">Giỏ hàng</p>
-        <h1 className="text-3xl font-bold">Thanh toán</h1>
-      </header>
-      {error && (
-        <p role="alert" className="rounded-lg border border-red-300 p-3 text-red-800">
-          {error}
+      <div className="mp-container mp-checkout" aria-busy="true">
+        <PageHeader title="Thanh toán" />
+        <span className="mp-skeleton mp-checkout__skeleton" />
+        <p className="mp-visually-hidden" role="status">
+          Đang tải thông tin thanh toán…
         </p>
-      )}
-      {addresses.length === 0 ? (
-        <section className="space-y-3 rounded-xl border p-5">
-          <p>Anh chưa có địa chỉ nhận hàng.</p>
-          <Link className="underline" href="/account/addresses">
-            Thêm địa chỉ
+      </div>
+    );
+
+  if (bootstrapError)
+    return (
+      <div className="mp-container mp-checkout">
+        <PageHeader title="Thanh toán" />
+        <StatusMessage tone="error" title="Không thể tải thông tin thanh toán">
+          {bootstrapError}{" "}
+          <button
+            type="button"
+            className="mp-link"
+            onClick={() => {
+              setBootstrapError("");
+              setLoading(true);
+              setReload((value) => value + 1);
+            }}
+          >
+            Thử lại
+          </button>
+        </StatusMessage>
+      </div>
+    );
+
+  return (
+    <div className="mp-container mp-checkout">
+      <PageHeader
+        title="Thanh toán"
+        description="Giá và tồn kho được xác nhận lại khi tạo báo giá. Đơn sẽ được tách theo từng cửa hàng."
+        actions={
+          <Link className="mp-button mp-button--secondary" href="/cart">
+            Quay lại giỏ hàng
           </Link>
-        </section>
+        }
+      />
+
+      <ol className="mp-steps" aria-label="Các bước thanh toán">
+        <li className="mp-step mp-step--done">Giỏ hàng</li>
+        <li className="mp-step mp-step--current" aria-current="step">
+          Thanh toán
+        </li>
+        <li className="mp-step">Hoàn tất</li>
+      </ol>
+
+      {error && (
+        <StatusMessage tone="error" title="Chưa thể tiếp tục" onDismiss={() => setError("")}>
+          {error}
+        </StatusMessage>
+      )}
+
+      {addresses.length === 0 ? (
+        <EmptyState
+          icon={<MapPin size={22} />}
+          title="Anh chưa có địa chỉ nhận hàng."
+          description="Thêm địa chỉ để hệ thống tính phí và xác nhận giao hàng."
+          action={
+            <Link className="mp-button mp-button--primary" href="/account/addresses">
+              Thêm địa chỉ
+            </Link>
+          }
+        />
       ) : (
-        <>
-          <section className="space-y-3 rounded-xl border p-5">
-            <h2 className="text-lg font-semibold">Địa chỉ nhận hàng</h2>
-            <label className="grid gap-2">
-              Chọn địa chỉ
-              <select
-                className="min-h-11 rounded-lg border px-3"
+        <div className="mp-checkout__layout">
+          <div className="mp-checkout__main">
+            <section className="mp-checkout__panel" aria-labelledby="checkout-address">
+              <header>
+                <h2 id="checkout-address">Địa chỉ nhận hàng</h2>
+                <Link href="/account/addresses">Quản lý địa chỉ</Link>
+              </header>
+              <SelectField
+                label="Chọn địa chỉ"
                 value={addressId}
                 onChange={(event) => {
                   setAddressId(event.target.value);
@@ -206,80 +270,124 @@ export default function CheckoutPage() {
                 <option value="">Chọn địa chỉ</option>
                 {addresses.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.recipientName} · {item.phone} — {item.line1}, {item.ward}, {item.district}
-                    , {item.province}
+                    {item.recipientName} · {item.phone} — {item.line1}, {item.ward}, {item.district},{" "}
+                    {item.province}
                     {item.isDefault ? " (Mặc định)" : ""}
                   </option>
                 ))}
-              </select>
-            </label>
-            <Link className="text-sm underline" href="/account/addresses">
-              Quản lý địa chỉ
-            </Link>
-          </section>
-          <section className="space-y-3 rounded-xl border p-5">
-            <h2 className="text-lg font-semibold">Sản phẩm</h2>
-            {selected.map((item) => (
-              <p key={item.id} className="flex justify-between gap-4">
+              </SelectField>
+            </section>
+
+            <section className="mp-checkout__panel" aria-labelledby="checkout-items">
+              <header>
+                <h2 id="checkout-items">Sản phẩm</h2>
+                <span>{selected.length} sản phẩm đã chọn</span>
+              </header>
+              {selected.length === 0 ? (
+                <p className="mp-checkout__empty">
+                  Chưa chọn sản phẩm.{" "}
+                  <Link className="mp-link" href="/cart">
+                    Quay lại giỏ hàng
+                  </Link>
+                </p>
+              ) : (
+                <ul className="mp-checkout__items">
+                  {selected.map((item) => (
+                    <li key={item.id}>
+                      <span>
+                        {item.productName} × {item.quantity}
+                        {!item.purchasable ? " · cần kiểm tra tồn kho" : ""}
+                      </span>
+                      <strong data-numeric>
+                        {formatVnd(
+                          (BigInt(item.currentUnitPrice) * BigInt(item.quantity)).toString(),
+                        )}
+                      </strong>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <fieldset className="mp-checkout__panel mp-checkout__payment">
+              <legend>Phương thức thanh toán</legend>
+              <label className={paymentMethod === "COD" ? "mp-choice mp-choice--active" : "mp-choice"}>
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === "COD"}
+                  onChange={() => {
+                    setPaymentMethod("COD");
+                    discardQuote();
+                  }}
+                />
                 <span>
-                  {item.productName} × {item.quantity}
-                  {!item.purchasable ? " · cần kiểm tra tồn kho" : ""}
+                  <strong>Thanh toán khi nhận hàng</strong>
+                  <small>Trả tiền cho đơn vị giao hàng khi nhận đủ.</small>
                 </span>
-                <strong>
-                  {formatVnd((BigInt(item.currentUnitPrice) * BigInt(item.quantity)).toString())}
-                </strong>
-              </p>
-            ))}
-            {selected.length === 0 && (
-              <p>
-                Chưa chọn sản phẩm.{" "}
-                <Link className="underline" href="/cart">
-                  Quay lại giỏ hàng
-                </Link>
-              </p>
+              </label>
+              <label className={paymentMethod === "MOCK" ? "mp-choice mp-choice--active" : "mp-choice"}>
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === "MOCK"}
+                  onChange={() => {
+                    setPaymentMethod("MOCK");
+                    discardQuote();
+                  }}
+                />
+                <span>
+                  <strong>Thanh toán thử nghiệm</strong>
+                  <small>Mô phỏng kết quả thành công hoặc thất bại.</small>
+                </span>
+              </label>
+            </fieldset>
+
+            {quote && (
+              <CheckoutConfirm
+                quote={quote}
+                pending={pending}
+                onConfirm={() => void placeOrder()}
+              />
             )}
-          </section>
-          <section className="space-y-3 rounded-xl border p-5">
-            <h2 className="text-lg font-semibold">Phương thức thanh toán</h2>
-            <label className="flex gap-2">
-              <input
-                type="radio"
-                name="payment"
-                checked={paymentMethod === "COD"}
-                onChange={() => {
-                  setPaymentMethod("COD");
-                  discardQuote();
-                }}
-              />{" "}
-              Thanh toán khi nhận hàng
-            </label>
-            <label className="flex gap-2">
-              <input
-                type="radio"
-                name="payment"
-                checked={paymentMethod === "MOCK"}
-                onChange={() => {
-                  setPaymentMethod("MOCK");
-                  discardQuote();
-                }}
-              />{" "}
-              Thanh toán thử nghiệm
-            </label>
-          </section>
-          {quote && (
-            <CheckoutConfirm quote={quote} pending={pending} onConfirm={() => void placeOrder()} />
-          )}
-          <div className="flex flex-wrap gap-3">
-            <button
-              disabled={pending || !selected.length || !addressId}
-              onClick={() => void createQuote()}
-              className="min-h-11 rounded-lg border px-5 font-semibold disabled:opacity-50"
-            >
-              {quote ? "Cập nhật báo giá" : "Kiểm tra giá và tồn kho"}
-            </button>
+
+            <div className="mp-checkout__actions">
+              <Button
+                variant={quote ? "secondary" : "primary"}
+                size="lg"
+                loading={pending}
+                disabled={!selected.length || !addressId}
+                onClick={() => void createQuote()}
+              >
+                {quote ? "Cập nhật báo giá" : "Kiểm tra giá và tồn kho"}
+              </Button>
+            </div>
           </div>
-        </>
+
+          <aside className="mp-checkout__summary" aria-label="Tóm tắt thanh toán">
+            <h2>Đơn hàng của anh</h2>
+            <dl>
+              <div>
+                <dt>Tạm tính</dt>
+                <dd data-numeric>{formatVnd(cart?.selectedTotal)}</dd>
+              </div>
+              <div>
+                <dt>Phí vận chuyển</dt>
+                <dd>Theo báo giá</dd>
+              </div>
+            </dl>
+            <p className="mp-checkout__note">
+              Báo giá được lưu lại để có thể tiếp tục nếu cần thử lại. Mã đơn chỉ được tạo một
+              lần cho mỗi lần xác nhận.
+            </p>
+            <ul className="mp-cart__assurances">
+              <li>Hủy từng cửa hàng khi còn chờ xác nhận</li>
+              <li>Theo dõi vận chuyển riêng từng kiện</li>
+              <li>Xác nhận nhận hàng sau khi giao đủ</li>
+            </ul>
+          </aside>
+        </div>
       )}
-    </main>
+    </div>
   );
 }

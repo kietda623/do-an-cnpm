@@ -87,7 +87,7 @@ Read DTO có `id`, `createdAt`, `updatedAt` trừ projection/command ghi khác.
 | Membership | shopId; shopName; shopStatus; role:`OWNER|MANAGER` (seed memberships, no invitation UI in MVP) |
 | ReasonVersion | reason 1–500; expectedVersion |
 | CategoryWrite | name 1–120; parentId? UUID; visible boolean |
-| Category | id; name; parentId?; visible; timestamps |
+| Category | id; name; parentId nullable; visible; version |
 | VariantCreate | sku 1–80 unique per shop; attributes map string->string max10 entries, keys<=50 values<=100; price money >0; stock integer >=0; selling boolean |
 | ProductCreate | name 1–200; description 1–20000; categoryId; imageAssetIds UUID[] length1–10; selling boolean; variants VariantCreate[] length1–100 |
 | ProductPatch | name,description,categoryId,imageAssetIds,selling optional; no shop reassignment |
@@ -111,7 +111,7 @@ Read DTO có `id`, `createdAt`, `updatedAt` trừ projection/command ghi khác.
 | PaymentAttemptCreate | orderId |
 | Payment | id; orderId; transactionCode; method:`COD|MOCK`; status:`PENDING|SUCCEEDED|FAILED|CANCELLED`; settlementKind:`NORMAL|LATE_COMPENSATION`; originalAttemptId optional UUID (late compensation); amount; currency; allocations:{sellerOrderId,amount}[]; refunds:{id,sellerOrderId,amount,reason,createdAt}[]; createdAt; resolvedAt? |
 | MockResult | eventId UUID; outcome:`SUCCEEDED|FAILED|CANCELLED`; expectedVersion = MarketplaceOrder.version |
-| Shipment | id; sellerOrderId; status:`WAITING_PICKUP|PICKED_UP|IN_TRANSIT|DELIVERED|FAILED`; trackingCode; attemptNumber; version; history:{id,event,status,actorId,reason?,createdAt}[]; timestamps |
+| Shipment | id; sellerOrderId; status:`WAITING_PICKUP|PICKED_UP|IN_TRANSIT|DELIVERED|FAILED`; trackingCode; attemptNumber; version; history:{id,fromStatus?,toStatus,attemptNumber,reason?,createdAt}[]; timestamps |
 | ShipmentEvent | eventId UUID; event:`PICKED_UP|IN_TRANSIT|DELIVERED|FAILED`; reason optional required FAILED; expectedVersion |
 | CodCollection | eventId UUID; expectedVersion = SellerOrder.version; amount comes from seller order, never client input |
 | ReviewCreate | orderItemId; rating integer1–5; comment trimmed1–2000 |

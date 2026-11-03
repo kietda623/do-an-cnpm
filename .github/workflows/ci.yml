@@ -72,11 +72,26 @@ jobs:
       - name: Run unit tests
         run: pnpm test
 
+      - name: Run contract tests
+        run: pnpm test:contracts
+
       - name: Build workspaces
         run: pnpm build
 
       - name: Run PostgreSQL integration tests
         run: pnpm --filter @marketplace/api test:integration
+
+      - name: Run payment and cancellation concurrency tests
+        run: pnpm test:concurrency
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run storefront checkout E2E
+        run: pnpm test:e2e:checkout
+
+      - name: Run fulfillment E2E
+        run: pnpm test:e2e:fulfillment
 
       - name: Check database migration and Prisma schema parity
         run: pnpm --filter @marketplace/api prisma:schema:check

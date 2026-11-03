@@ -3,6 +3,18 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import {
+  Button,
+  EmptyState,
+  ImageOff,
+  Pagination,
+  Skeleton,
+  Star,
+  StatusMessage,
+  TextField,
+  SelectField,
+  formatVnd,
+} from "@marketplace/ui-web";
 
 type Asset = { url: string; mimeType: string };
 type Product = {
@@ -23,7 +35,6 @@ const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v
 );
 const flatten = (items: Category[]): Category[] =>
   items.flatMap((item) => [item, ...flatten(item.children ?? [])]);
-const money = (value: string) => `${Number(value).toLocaleString("vi-VN")}₫`;
 
 export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
   const searchParams = useSearchParams();
@@ -85,10 +96,12 @@ export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
   }
 
+  const pageCount = result ? Math.max(1, Math.ceil(result.meta.total / result.meta.pageSize)) : 1;
+
   return (
-    <section aria-label="Danh sách sản phẩm" className="space-y-5">
+    <section aria-label="Danh sách sản phẩm" className="mp-catalog__body">
       <form
-        className="grid gap-3 rounded-xl border border-marketplace-border bg-white p-4 sm:grid-cols-2 lg:grid-cols-6"
+        className="mp-filter"
         onSubmit={(event) => {
           event.preventDefault();
           const next = new URLSearchParams(search);
@@ -104,149 +117,163 @@ export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
           router.replace(`${pathname}?${next.toString()}`, { scroll: false });
         }}
       >
-        <label className="text-sm font-medium lg:col-span-2">
-          Tìm sản phẩm
-          <input
+        <div className="mp-filter__search">
+          <TextField
+            label="Tìm sản phẩm"
             name="q"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Tên hoặc mô tả sản phẩm"
-            className="mt-1 min-h-11 w-full rounded-lg border px-3"
+            autoComplete="off"
           />
-        </label>
-        <label className="text-sm font-medium">
-          Danh mục
-          <select
-            aria-label="Danh mục"
-            value={params.get("categoryId") ?? ""}
-            onChange={(event) => update("categoryId", event.target.value)}
-            className="mt-1 min-h-11 w-full rounded-lg border px-3"
-          >
-            <option value="">Tất cả danh mục</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm font-medium">
-          Sắp xếp
-          <select
-            aria-label="Sắp xếp"
-            value={params.get("sort") ?? "NEWEST"}
-            onChange={(event) => update("sort", event.target.value)}
-            className="mt-1 min-h-11 w-full rounded-lg border px-3"
-          >
-            <option value="NEWEST">Mới nhất</option>
-            <option value="PRICE_ASC">Giá tăng dần</option>
-            <option value="PRICE_DESC">Giá giảm dần</option>
-          </select>
-        </label>
-        <label className="text-sm font-medium">
-          Giá từ
-          <input
-            inputMode="numeric"
-            aria-label="Giá từ"
-            value={minPrice}
-            onChange={(event) => setMinPrice(event.target.value.replace(/\D/g, ""))}
-            className="mt-1 min-h-11 w-full rounded-lg border px-3"
-          />
-        </label>
-        <label className="text-sm font-medium">
-          Giá đến
-          <input
-            inputMode="numeric"
-            aria-label="Giá đến"
-            value={maxPrice}
-            onChange={(event) => setMaxPrice(event.target.value.replace(/\D/g, ""))}
-            className="mt-1 min-h-11 w-full rounded-lg border px-3"
-          />
-        </label>
-        <div className="flex items-end">
-          <button className="min-h-11 w-full rounded-lg bg-marketplace-accent px-4 font-semibold text-white">
-            Tìm kiếm
-          </button>
+        </div>
+        <SelectField
+          label="Danh mục"
+          value={params.get("categoryId") ?? ""}
+          placeholder="Tất cả danh mục"
+          onChange={(event) => update("categoryId", event.target.value)}
+        >
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField
+          label="Sắp xếp"
+          value={params.get("sort") ?? "NEWEST"}
+          onChange={(event) => update("sort", event.target.value)}
+        >
+          <option value="NEWEST">Mới nhất</option>
+          <option value="PRICE_ASC">Giá tăng dần</option>
+          <option value="PRICE_DESC">Giá giảm dần</option>
+        </SelectField>
+        <TextField
+          label="Giá từ"
+          inputMode="numeric"
+          value={minPrice}
+          onChange={(event) => setMinPrice(event.target.value.replace(/\D/g, ""))}
+          placeholder="0"
+        />
+        <TextField
+          label="Giá đến"
+          inputMode="numeric"
+          value={maxPrice}
+          onChange={(event) => setMaxPrice(event.target.value.replace(/\D/g, ""))}
+          placeholder="Không giới hạn"
+        />
+        <div className="mp-filter__submit">
+          <Button type="submit">Tìm kiếm</Button>
         </div>
       </form>
+
       {loading && (
-        <p role="status" className="py-8 text-center">
-          Đang tải sản phẩm…
-        </p>
+        <>
+          <p className="mp-visually-hidden" role="status">
+            Đang tải sản phẩm…
+          </p>
+          <div className="mp-product-grid" aria-hidden="true">
+            {Array.from({ length: 8 }, (_, index) => (
+              <div key={index} className="mp-product-card">
+                <Skeleton className="mp-product-card__media" />
+                <div className="mp-product-card__body">
+                  <Skeleton className="mp-skeleton--line" />
+                  <Skeleton className="mp-skeleton--line" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
+
       {error && !loading && (
-        <div role="alert" className="rounded-lg border border-red-300 p-5">
-          Không tải được sản phẩm.{" "}
-          <button className="underline" onClick={() => setRetryKey((value) => value + 1)}>
+        <StatusMessage tone="error" title="Không tải được sản phẩm.">
+          Kiểm tra kết nối rồi thử lại.{" "}
+          <button
+            type="button"
+            className="mp-link"
+            onClick={() => setRetryKey((value) => value + 1)}
+          >
             Thử lại
           </button>
-        </div>
+        </StatusMessage>
       )}
-      {!loading && !error && !result?.data.length && (
-        <p className="rounded-lg border p-8 text-center">Chưa tìm thấy sản phẩm phù hợp.</p>
+
+      {!loading && !error && result && result.data.length === 0 && (
+        <EmptyState
+          icon={<ImageOff size={22} />}
+          title="Chưa tìm thấy sản phẩm phù hợp."
+          description="Thử bỏ bớt bộ lọc hoặc tìm với từ khóa khác."
+          action={
+            <Button
+              variant="secondary"
+              onClick={() => router.replace(pathname, { scroll: false })}
+            >
+              Xóa bộ lọc
+            </Button>
+          }
+        />
       )}
-      {!loading && !error && !!result?.data.length && (
+
+      {!loading && !error && result && result.data.length > 0 && (
         <>
-          <p aria-live="polite" className="text-sm text-neutral-600">
+          <p className="mp-catalog__count" aria-live="polite">
             {result.meta.total} sản phẩm
           </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
+          <div className="mp-product-grid">
             {result.data.map((product) => (
-              <article
-                key={product.id}
-                className="overflow-hidden rounded-xl border bg-white transition-shadow hover:shadow-md"
-              >
-                <Link
-                  href={`/products/${product.id}`}
-                  className="block focus-visible:outline-2 focus-visible:outline-offset-2"
-                >
-                  <div className="aspect-square bg-neutral-100">
-                    {product.image && (
-                      <img src={product.image.url} alt="" className="h-full w-full object-cover" />
-                    )}
-                  </div>
-                  <div className="space-y-2 p-3">
-                    <h2 className="line-clamp-2 min-h-12 font-medium">{product.name}</h2>
-                    <p className="font-semibold text-marketplace-accent">
-                      {money(product.minimumPrice)}
-                    </p>
-                    <p className="text-xs text-neutral-600">
+              <article key={product.id} className="mp-product-card">
+                <Link href={`/products/${product.id}`} className="mp-product-card__media">
+                  {product.image ? (
+                    <img src={product.image.url} alt="" loading="lazy" />
+                  ) : (
+                    <span className="mp-product-card__placeholder" aria-hidden="true">
+                      <ImageOff size={26} />
+                    </span>
+                  )}
+                </Link>
+                <div className="mp-product-card__body">
+                  <Link href={`/products/${product.id}`} className="mp-product-card__name">
+                    {product.name}
+                  </Link>
+                  <p className="mp-product-card__price" data-numeric>
+                    {formatVnd(product.minimumPrice)}
+                  </p>
+                  <div className="mp-product-card__meta">
+                    <span
+                      className={
+                        product.available
+                          ? "mp-product-card__stock"
+                          : "mp-product-card__stock mp-product-card__stock--out"
+                      }
+                    >
                       {product.available ? "Còn hàng" : "Tạm hết hàng"}
-                    </p>
+                    </span>
+                    {product.ratingCount > 0 ? (
+                      <span className="mp-product-card__rating">
+                        <Star size={13} aria-hidden="true" />
+                        {product.ratingCount}
+                      </span>
+                    ) : null}
                   </div>
-                </Link>
-                <Link
-                  href={`/shops/${product.shopId}`}
-                  className="block truncate px-3 pb-3 text-xs text-neutral-600 underline"
-                >
-                  {product.shopName}
-                </Link>
+                  <Link href={`/shops/${product.shopId}`} className="mp-product-card__shop">
+                    {product.shopName}
+                  </Link>
+                </div>
               </article>
             ))}
           </div>
-          <nav
-            aria-label="Phân trang sản phẩm"
-            className="flex items-center justify-center gap-4 py-4"
-          >
-            <button
-              disabled={result.meta.page <= 1}
-              onClick={() => update("page", String(result.meta.page - 1))}
-              className="min-h-11 rounded border px-4 disabled:opacity-40"
-            >
-              Trang trước
-            </button>
-            <span>
-              Trang {result.meta.page} /{" "}
-              {Math.max(1, Math.ceil(result.meta.total / result.meta.pageSize))}
-            </span>
-            <button
-              disabled={result.meta.page * result.meta.pageSize >= result.meta.total}
-              onClick={() => update("page", String(result.meta.page + 1))}
-              className="min-h-11 rounded border px-4 disabled:opacity-40"
-            >
-              Trang sau
-            </button>
-          </nav>
+          <Pagination
+            page={result.meta.page}
+            pageCount={pageCount}
+            total={result.meta.total}
+            pageSize={result.meta.pageSize}
+            hrefForPage={(page) => {
+              const next = new URLSearchParams(search);
+              next.set("page", String(page));
+              return `${pathname}?${next.toString()}`;
+            }}
+          />
         </>
       )}
     </section>

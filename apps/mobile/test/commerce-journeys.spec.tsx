@@ -888,6 +888,72 @@ test("B08 PRICE_CHANGED requires an explicit new quote and has no replacement qu
   expect(checkoutReads).toBe(1);
 });
 
+test("B08 retries the same checkout after an auth failure instead of re-quoting", async () => {
+  const quote = makeQuote();
+  const order = makeOrder();
+  const calls: Array<RequestInit | undefined> = [];
+  let quoteReads = 0;
+  mockRequest.mockImplementation(async (path, init) => {
+    if (String(path) === "/cart") return makeCart();
+    if (String(path) === "/users/me/addresses") return [makeAddress()];
+    if (String(path) === "/checkout/quotes") {
+      quoteReads += 1;
+      return quote;
+    }
+    if (String(path) === "/checkout") {
+      calls.push(init);
+      if (calls.length === 1)
+        throw new ApiClientError("UNAUTHORIZED", 401, {
+          error: { code: "UNAUTHORIZED", message: "Unauthorized" },
+        });
+      return order;
+    }
+    throw new Error(`Unexpected request: ${path}`);
+  });
+
+  renderCommerce(<CheckoutRoute />);
+  fireEvent.press(await screen.findByText("Tạo báo giá"));
+  fireEvent.press(await screen.findByLabelText("Đặt hàng"));
+
+  expect(
+    await screen.findByText(
+      "Không thể xác nhận đơn hàng. Vui lòng thử lại.",
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText("Tạo báo giá mới")).toBeNull();
+  fireEvent.press(screen.getByText("Thử đặt hàng lại"));
+
+  await waitFor(() =>
+    expect(mockRouter.push).toHaveBeenCalledWith(`/orders/${order.id}`),
+  );
+  expect(quoteReads).toBe(1);
+  expect(calls).toHaveLength(2);
+  expect(new Headers(calls[1]?.headers).get("Idempotency-Key")).toBe(
+    new Headers(calls[0]?.headers).get("Idempotency-Key"),
+  );
+});
+
+test("B08 offers a checkout retry for an internal server error", async () => {
+  const quote = makeQuote();
+  mockRequest.mockImplementation(async (path) => {
+    if (String(path) === "/cart") return makeCart();
+    if (String(path) === "/users/me/addresses") return [makeAddress()];
+    if (String(path) === "/checkout/quotes") return quote;
+    if (String(path) === "/checkout")
+      throw new ApiClientError("INTERNAL_ERROR", 500, {
+        error: { code: "INTERNAL_ERROR", message: "Internal" },
+      });
+    throw new Error(`Unexpected request: ${path}`);
+  });
+
+  renderCommerce(<CheckoutRoute />);
+  fireEvent.press(await screen.findByText("Tạo báo giá"));
+  fireEvent.press(await screen.findByLabelText("Đặt hàng"));
+
+  expect(await screen.findByText("Thử đặt hàng lại")).toBeTruthy();
+  expect(screen.queryByText("Tạo báo giá mới")).toBeNull();
+});
+
 test("B09 shows loading while the buyer's orders are being fetched", async () => {
   let resolveOrders:
     ((orders: ReturnType<typeof makeOrderSummary>[]) => void) | undefined;
@@ -959,7 +1025,7 @@ test("B09 sends status and payment filters to the server", async () => {
   });
 });
 
-test("B09 converts inclusive ISO date filters to RFC3339 UTC bounds", async () => {
+test("B09 converts Vietnam local dates to inclusive UTC bounds", async () => {
   mockRequest.mockResolvedValue([]);
 
   renderCommerce(<OrdersRoute />);
@@ -973,8 +1039,8 @@ test("B09 converts inclusive ISO date filters to RFC3339 UTC bounds", async () =
     const filteredPath = paths.find((path) => path.includes("from="));
     expect(filteredPath).toBeTruthy();
     const params = new URL(filteredPath!, "https://example.test").searchParams;
-    expect(params.get("from")).toBe("2026-10-20T00:00:00.000Z");
-    expect(params.get("to")).toBe("2026-10-21T23:59:59.999Z");
+    expect(params.get("from")).toBe("2026-10-19T17:00:00.000Z");
+    expect(params.get("to")).toBe("2026-10-21T16:59:59.999Z");
   });
 });
 

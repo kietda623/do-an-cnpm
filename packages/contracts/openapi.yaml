@@ -8622,15 +8622,16 @@ components:
         name: *id017
         parentId: *id018
         visible: *id019
-        createdAt: *id002
-        updatedAt: *id002
+        version:
+          type: integer
+          minimum: 0
       additionalProperties: false
       required:
       - id
       - name
+      - parentId
       - visible
-      - createdAt
-      - updatedAt
+      - version
     VariantCreate:
       type: object
       properties:
@@ -9304,8 +9305,7 @@ components:
         history:
           type: array
           items:
-            type: object
-            additionalProperties: true
+            $ref: '#/components/schemas/ShipmentHistoryEntry'
         createdAt: *id002
         updatedAt: *id002
       additionalProperties: false
@@ -9319,6 +9319,43 @@ components:
       - history
       - createdAt
       - updatedAt
+    ShipmentHistoryEntry:
+      type: object
+      properties:
+        id: *id001
+        fromStatus:
+          type: string
+          nullable: true
+          enum:
+          - WAITING_PICKUP
+          - PICKED_UP
+          - IN_TRANSIT
+          - DELIVERED
+          - FAILED
+        toStatus:
+          type: string
+          enum:
+          - WAITING_PICKUP
+          - PICKED_UP
+          - IN_TRANSIT
+          - DELIVERED
+          - FAILED
+        attemptNumber:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          nullable: true
+          maxLength: 500
+        createdAt: *id002
+      additionalProperties: false
+      required:
+      - id
+      - fromStatus
+      - toStatus
+      - attemptNumber
+      - reason
+      - createdAt
     SellerOrder:
       type: object
       properties:
@@ -9428,18 +9465,11 @@ components:
         allocations:
           type: array
           items:
-            type: object
-            required:
-            - sellerOrderId
-            - amount
-            properties:
-              sellerOrderId: *id001
-              amount: *id020
+            $ref: '#/components/schemas/PaymentAllocation'
         refunds:
           type: array
           items:
-            type: object
-            additionalProperties: true
+            $ref: '#/components/schemas/PaymentRefund'
         createdAt: *id002
         resolvedAt:
           type: string
@@ -9457,6 +9487,35 @@ components:
       - currency
       - allocations
       - refunds
+      - createdAt
+    PaymentAllocation:
+      type: object
+      properties:
+        sellerOrderId: *id001
+        amount: *id020
+      additionalProperties: false
+      required:
+      - sellerOrderId
+      - amount
+    PaymentRefund:
+      type: object
+      properties:
+        id: *id001
+        sellerOrderId: *id001
+        amount: *id020
+        reason:
+          type: string
+          enum:
+          - CANCELLATION
+          - LATE_SUCCESS
+          - CONFIRMED_RETURN
+        createdAt: *id002
+      additionalProperties: false
+      required:
+      - id
+      - sellerOrderId
+      - amount
+      - reason
       - createdAt
     Order:
       type: object
@@ -9880,8 +9939,10 @@ components:
       type: object
       required:
       - id
+      - parentId
       - name
       - visible
+      - version
       - children
       properties:
         id:
@@ -9895,7 +9956,11 @@ components:
           nullable: true
         visible:
           type: boolean
+        version:
+          type: integer
+          minimum: 0
         children:
           type: array
           items:
             $ref: '#/components/schemas/CategoryTreeNode'
+      additionalProperties: false

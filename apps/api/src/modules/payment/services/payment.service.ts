@@ -8,6 +8,8 @@ import type { Prisma } from "../../../generated/prisma/client.js";
 import { DatabaseService } from "../../../database/prisma.service.js";
 import { canFulfillExistingOrder } from "../../../common/auth/fulfillment-access.js";
 import { canCollectCod } from "../../../common/auth/permissions.js";
+import { scopedOperationKey } from "../../../common/idempotency/operation-key.js";
+import { deriveMarketplaceOrderStatus } from "../../order/services/order-aggregate.js";
 import { OrderTransaction } from "../../order/services/order-transaction.js";
 import { SettlementService } from "./settlement.service.js";
 import { sumVnd } from "./payment-policy.js";
@@ -135,14 +137,16 @@ export class PaymentService {
         0,
         ...payment.attempts.map((attempt) => attempt.attemptNumber),
       );
-      const previous = payment.attempts.at(-1);
       const attempt = await tx.paymentAttempt.create({
         data: {
           paymentId: payment.id,
           attemptNumber: lastAttemptNumber + 1,
           provider: "MOCK",
           settlementKind: "NORMAL",
-          originalAttemptId: previous?.id ?? null,
+          // originalAttemptId is reserved for LATE_COMPENSATION attempts and is
+          // set by SettlementService.compensateLate; NORMAL retries must not
+          // chain to an earlier attempt.
+          originalAttemptId: null,
           status: "PENDING",
           targetSellerOrdersSnapshot: buildTargetSellerOrdersSnapshot({
             mode: "NEW",
@@ -153,7 +157,7 @@ export class PaymentService {
           }),
           amount,
           expiresAt: order.paymentDeadline,
-          operationKey: `mock-attempt:${key}`,
+          operationKey: scopedOperationKey("mock-attempt", userId, key),
         },
         include: attemptInclude,
       });
@@ -522,7 +526,7 @@ export class PaymentService {
           amount: part.originalTotal,
           externalTransactionId: `COD-${eventId}`,
           settledAt: now,
-          operationKey: `cod-collection:${key}`,
+          operationKey: scopedOperationKey("cod-collection", userId, key),
           allocations: {
             create: {
               sellerOrderId,
@@ -613,6 +617,10 @@ export class PaymentService {
           )
         )
           return false;
+        const pendingParts = row.sellerOrders.filter(
+          (sellerOrder) => sellerOrder.status === "PENDING",
+        );
+        if (!pendingParts.length) return false;
         for (const attempt of row.payment?.attempts ?? []) {
           if (attempt.provider === "MOCK" && attempt.status === "PENDING")
             await tx.paymentAttempt.update({
@@ -620,9 +628,7 @@ export class PaymentService {
               data: { status: "CANCELLED", settledAt: now },
             });
         }
-        for (const part of row.sellerOrders.filter(
-          (sellerOrder) => sellerOrder.status === "PENDING",
-        )) {
+        for (const part of pendingParts) {
           await this.settlement.cancelAndRestore(
             tx,
             part.id,
@@ -635,9 +641,18 @@ export class PaymentService {
             "PAYMENT_EXPIRED",
           );
         }
+        const parts = await tx.sellerOrder.findMany({
+          where: { orderId: row.id },
+          select: { status: true },
+        });
         await tx.marketplaceOrder.update({
           where: { id: row.id },
-          data: { version: { increment: 1 } },
+          data: {
+            status: deriveMarketplaceOrderStatus(
+              parts.map((part) => part.status),
+            ) as never,
+            version: { increment: 1 },
+          },
         });
         await tx.payment.update({
           where: { id: row.payment!.id },
@@ -653,9 +668,7 @@ export class PaymentService {
             outcome: "SUCCESS",
             requestId: randomUUID(),
             safeMetadata: {
-              restoredSellerOrderCount: row.sellerOrders.filter(
-                (part) => part.status === "PENDING",
-              ).length,
+              restoredSellerOrderCount: pendingParts.length,
             },
           },
         });

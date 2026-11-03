@@ -73,6 +73,12 @@ function apiErrorCode(error: unknown): string | undefined {
   return payload?.error?.code;
 }
 
+function requiresNewQuote(error: unknown): boolean {
+  if (!(error instanceof ApiClientError) || error.status !== 409) return false;
+  const code = apiErrorCode(error);
+  return code === "PRICE_CHANGED" || code === "QUOTE_EXPIRED";
+}
+
 function RadioOption({
   label,
   selected,
@@ -210,7 +216,7 @@ export function CheckoutScreen() {
       router.push(`/orders/${order.id}`);
     },
     onError: (error, currentQuote) => {
-      if (!(error instanceof ApiClientError) || !userId) return;
+      if (!requiresNewQuote(error) || !userId) return;
       const body: CheckoutCreate = { quoteId: currentQuote.quoteId };
       const scope = `${userId}:POST:/checkout:${currentQuote.quoteId}`;
       writeIntentRegistry.complete(scope, body);
@@ -253,8 +259,7 @@ export function CheckoutScreen() {
   );
   const quoteUsable = Boolean(activeQuote?.valid && !quoteExpired);
   const priceChanged =
-    checkoutMutation.error instanceof ApiClientError &&
-    checkoutMutation.error.status === 409 &&
+    requiresNewQuote(checkoutMutation.error) &&
     apiErrorCode(checkoutMutation.error) === "PRICE_CHANGED";
   const quoteError = quoteMutation.error;
   const selectedItemNames = new Map(
@@ -462,7 +467,7 @@ export function CheckoutScreen() {
       {checkoutErrorMessage ? (
         <View style={{ gap: 8 }}>
           <Text accessibilityRole="alert">{checkoutErrorMessage}</Text>
-          {checkoutMutation.error instanceof ApiClientError ? (
+          {requiresNewQuote(checkoutMutation.error) ? (
             <ActionButton
               label="Tạo báo giá mới"
               onPress={() => void createQuote()}

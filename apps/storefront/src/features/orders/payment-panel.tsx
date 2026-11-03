@@ -1,10 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import {
+  Badge,
+  Button,
+  CreditCard,
+  StatusBadge,
+  StatusMessage,
+  formatVnd,
+  paymentAttemptStatuses,
+  paymentMethods,
+  paymentStatuses,
+} from "@marketplace/ui-web";
 import { normalizeFormError } from "@marketplace/api-client";
 import type { ApiPath } from "@marketplace/api-client";
-import { webSession } from "../../app/auth-form";
-import { formatVnd } from "../money";
+import { webSession } from "../../lib/session";
 
 type Payment = {
   id: string;
@@ -23,6 +33,7 @@ type Props = {
   deadline: string | null;
   onChange: () => Promise<void>;
 };
+
 export function PaymentPanel({
   orderId,
   method,
@@ -36,15 +47,21 @@ export function PaymentPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState<number | null>(null);
+
   useEffect(() => {
+    setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
   }, []);
+
   const reload = useCallback(async () => {
-    const data = await webSession.api.request<Payment[]>(`/payments?orderId=${orderId}` as ApiPath);
+    const data = await webSession.api.request<Payment[]>(
+      `/payments?orderId=${orderId}` as ApiPath,
+    );
     setPayments(data);
   }, [orderId]);
+
   useEffect(() => {
     void reload().catch((cause) => setError(normalizeFormError(cause)));
   }, [reload]);
@@ -110,7 +127,11 @@ export function PaymentPanel({
       await webSession.api.request(`/payments/${attempt.id}/mock-result` as ApiPath, {
         method: "POST",
         headers: { "Idempotency-Key": key },
-        body: JSON.stringify({ eventId, outcome, expectedVersion: Number(expectedVersion) }),
+        body: JSON.stringify({
+          eventId,
+          outcome,
+          expectedVersion: Number(expectedVersion),
+        }),
       });
       sessionStorage.removeItem(`${intentKey}.key`);
       sessionStorage.removeItem(`${intentKey}.event`);
@@ -129,57 +150,93 @@ export function PaymentPanel({
     }
   }
 
+  const remainingSeconds =
+    deadline && now !== null
+      ? Math.max(0, Math.ceil((new Date(deadline).getTime() - now) / 1_000))
+      : null;
+  const canMock =
+    method === "MOCK" && status !== "CANCELLED" && paymentStatus !== "PAID" && paymentStatus !== "REFUNDED";
+
   return (
-    <section className="space-y-3 rounded-xl border p-5" aria-label="Thanh toán">
-      <div className="flex flex-wrap justify-between gap-3">
-        <h2 className="font-semibold">Thanh toán</h2>
-        <span>{paymentStatus}</span>
-      </div>
-      <p>
-        {method === "COD" ? "Thanh toán khi nhận hàng" : "Thanh toán mô phỏng"} · Còn phải trả{" "}
-        {formatVnd(outstandingAmount)}
-      </p>
-      {deadline && (
-        <p className="text-sm text-neutral-600">
-          Hạn thanh toán: {new Date(deadline).toLocaleString("vi-VN")} · Còn{" "}
-          {Math.max(0, Math.ceil((new Date(deadline).getTime() - now) / 1_000))} giây (máy chủ quyết
-          định trạng thái hết hạn)
-        </p>
-      )}
-      {payments.map((payment) => (
-        <div key={payment.id} className="text-sm">
-          {payment.transactionCode} · {payment.status} · {formatVnd(payment.amount)}
-          {payment.refunds.map((refund, index) => (
-            <span key={index}>
-              {" "}
-              · Hoàn {formatVnd(refund.amount)} ({refund.reason})
-            </span>
-          ))}
+    <section className="mp-payment" aria-label="Thanh toán">
+      <header className="mp-payment__head">
+        <div>
+          <h2>
+            <CreditCard size={17} aria-hidden="true" />
+            Thanh toán
+          </h2>
+          <p>{paymentMethods[method]?.label ?? method}</p>
         </div>
-      ))}
-      {method === "MOCK" &&
-        status !== "CANCELLED" &&
-        paymentStatus !== "PAID" &&
-        paymentStatus !== "REFUNDED" && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              disabled={busy}
-              className="min-h-10 rounded-lg border px-4 disabled:opacity-50"
-              onClick={() => void mockPay("SUCCEEDED")}
-            >
-              Mô phỏng thanh toán thành công
-            </button>
-            <button
-              disabled={busy}
-              className="min-h-10 rounded-lg border px-4 disabled:opacity-50"
-              onClick={() => void mockPay("FAILED")}
-            >
-              Mô phỏng thất bại
-            </button>
+        <StatusBadge status={paymentStatus} map={paymentStatuses} />
+      </header>
+
+      <dl className="mp-payment__facts">
+        <div>
+          <dt>Còn phải trả</dt>
+          <dd data-numeric>{formatVnd(outstandingAmount)}</dd>
+        </div>
+        {deadline && (
+          <div>
+            <dt>Hạn thanh toán</dt>
+            <dd>
+              {new Date(deadline).toLocaleString("vi-VN")}
+              {remainingSeconds !== null ? (
+                <span className="mp-payment__countdown">
+                  {" "}
+                  · Còn {remainingSeconds} giây
+                </span>
+              ) : null}
+            </dd>
           </div>
         )}
-      {message && <p role="status">{message}</p>}
-      {error && <p role="alert">{error}</p>}
+      </dl>
+      <p className="mp-payment__note">Máy chủ quyết định trạng thái hết hạn của đơn.</p>
+
+      {payments.length > 0 && (
+        <ul className="mp-payment__attempts">
+          {payments.map((payment) => (
+            <li key={payment.id}>
+              <div>
+                <p className="mp-payment__code">{payment.transactionCode}</p>
+                <p className="mp-payment__settlement">{payment.settlementKind}</p>
+              </div>
+              <StatusBadge status={payment.status} map={paymentAttemptStatuses} />
+              <span data-numeric>{formatVnd(payment.amount)}</span>
+              {payment.refunds.length > 0 && (
+                <div className="mp-payment__refunds">
+                  {payment.refunds.map((refund, index) => (
+                    <Badge key={index} tone="info">
+                      Hoàn {formatVnd(refund.amount)} ({refund.reason})
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {canMock && (
+        <div className="mp-payment__actions">
+          <Button loading={busy} onClick={() => void mockPay("SUCCEEDED")}>
+            Mô phỏng thanh toán thành công
+          </Button>
+          <Button variant="secondary" disabled={busy} onClick={() => void mockPay("FAILED")}>
+            Mô phỏng thất bại
+          </Button>
+        </div>
+      )}
+
+      {message && (
+        <p role="status" className="mp-payment__message">
+          {message}
+        </p>
+      )}
+      {error && (
+        <StatusMessage tone="error" onDismiss={() => setError("")}>
+          {error}
+        </StatusMessage>
+      )}
     </section>
   );
 }
