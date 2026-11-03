@@ -78,7 +78,10 @@ async function stopApi() {
       active.once("exit", () => done()),
     );
     active.kill();
+    const force = setTimeout(() => active.kill("SIGKILL"), 5_000);
+    force.unref();
     await exited;
+    clearTimeout(force);
   }
 }
 async function post(path: string, token: string | undefined, data: unknown) {
@@ -229,39 +232,66 @@ test.afterAll(async () => {
 test("live two-shop commerce: MOCK, COD, cancellation, retry, return and restart", async ({
   browser,
 }) => {
-  const admin = await actor("ADMIN");
-  const buyer = await actor();
-  const ownerA = await actor();
-  const ownerB = await actor();
-  const category = await post("/admin/categories", admin.token, {
-    name: `Live ${randomUUID()}`,
-    parentId: null,
-    visible: true,
+  const { admin, buyer, ownerA, ownerB, a, b } =
+    await test.step("seed accounts, shops and default address", async () => {
+      const admin = await actor("ADMIN");
+      const buyer = await actor();
+      const ownerA = await actor();
+      const ownerB = await actor();
+      const category = await post("/admin/categories", admin.token, {
+        name: `Live ${randomUUID()}`,
+        parentId: null,
+        visible: true,
+      });
+      const a = await shop(ownerA, admin, category.id, "Live Shop A");
+      const b = await shop(ownerB, admin, category.id, "Live Shop B");
+      await post("/users/me/addresses", buyer.token, {
+        recipientName: "Live buyer",
+        phone: "0901234567",
+        line1: "1 Test Road",
+        ward: "Ward",
+        district: "District",
+        province: "HCMC",
+        country: "VN",
+        isDefault: true,
+      });
+      return { admin, buyer, ownerA, ownerB, a, b };
+    });
+
+  const {
+    buyerContext,
+    sellerAContext,
+    sellerBContext,
+    adminContext,
+    buyerPage,
+    sellerA,
+    sellerB,
+    adminPage,
+  } = await test.step("sign in buyer, sellers and admin", async () => {
+    const buyerContext = await browser.newContext();
+    const sellerAContext = await browser.newContext();
+    const sellerBContext = await browser.newContext();
+    const adminContext = await browser.newContext();
+    const buyerPage = await buyerContext.newPage();
+    const sellerA = await sellerAContext.newPage();
+    const sellerB = await sellerBContext.newPage();
+    const adminPage = await adminContext.newPage();
+    await login(buyerPage, 3100, buyer);
+    await login(sellerA, 3101, ownerA);
+    await login(sellerB, 3101, ownerB);
+    await login(adminPage, 3102, admin);
+    return {
+      buyerContext,
+      sellerAContext,
+      sellerBContext,
+      adminContext,
+      buyerPage,
+      sellerA,
+      sellerB,
+      adminPage,
+    };
   });
-  const a = await shop(ownerA, admin, category.id, "Live Shop A");
-  const b = await shop(ownerB, admin, category.id, "Live Shop B");
-  await post("/users/me/addresses", buyer.token, {
-    recipientName: "Live buyer",
-    phone: "0901234567",
-    line1: "1 Test Road",
-    ward: "Ward",
-    district: "District",
-    province: "HCMC",
-    country: "VN",
-    isDefault: true,
-  });
-  const buyerContext = await browser.newContext();
-  const sellerAContext = await browser.newContext();
-  const sellerBContext = await browser.newContext();
-  const adminContext = await browser.newContext();
-  const buyerPage = await buyerContext.newPage();
-  const sellerA = await sellerAContext.newPage();
-  const sellerB = await sellerBContext.newPage();
-  const adminPage = await adminContext.newPage();
-  await login(buyerPage, 3100, buyer);
-  await login(sellerA, 3101, ownerA);
-  await login(sellerB, 3101, ownerB);
-  await login(adminPage, 3102, admin);
+
   async function checkout(method: "MOCK" | "COD") {
     for (const item of [a, b])
       await post("/cart/items", buyer.token, {
@@ -279,155 +309,182 @@ test("live two-shop commerce: MOCK, COD, cancellation, retry, return and restart
     await expect(buyerPage).toHaveURL(/\/orders\/[0-9a-f-]+$/);
     return buyerPage.url().split("/").at(-1)!;
   }
-  const mockId = await checkout("MOCK");
-  await buyerPage
-    .getByRole("button", {
-      name: "Mô phỏng thanh toán thành công",
-      exact: true,
-    })
-    .click();
-  await expect(
-    buyerPage.getByText("Thanh toán thử nghiệm thành công.", { exact: true }),
-  ).toBeVisible();
-  let order = await getOrder(mockId, buyer);
-  const mockA = order.sellerOrders.find((p) => p.shopId === a.id)!;
-  const mockB = order.sellerOrders.find((p) => p.shopId === b.id)!;
-  await buyerPage
-    .getByRole("button", { name: `Hủy riêng ${b.label}`, exact: true })
-    .click();
-  await buyerPage
-    .getByRole("textbox")
-    .fill("Cancel second shop after mock capture");
-  await buyerPage
-    .getByRole("button", { name: "Xác nhận hủy", exact: true })
-    .click();
-  await expect
-    .poll(
-      async () =>
-        (await getOrder(mockId, buyer)).sellerOrders.find(
-          (p) => p.id === mockB.id,
-        )!.status,
-    )
-    .toBe("CANCELLED");
-  await sellerStep(sellerA, a.id, mockA.id, "Xác nhận đơn");
-  await sellerStep(sellerA, a.id, mockA.id, "Đã đóng gói");
-  for (const step of ["PICKED_UP", "IN_TRANSIT", "FAILED"]) {
-    if (step === "FAILED") {
-      await sellerA.getByRole("textbox").fill("Recipient unavailable");
+
+  const { mockId, mockA } =
+    await test.step("place MOCK order, capture payment and cancel the second shop", async () => {
+      const mockId = await checkout("MOCK");
+      await buyerPage
+        .getByRole("button", {
+          name: "Mô phỏng thanh toán thành công",
+          exact: true,
+        })
+        .click();
+      await expect(
+        buyerPage.getByText("Thanh toán thử nghiệm thành công.", {
+          exact: true,
+        }),
+      ).toBeVisible();
+      const order = await getOrder(mockId, buyer);
+      const mockA = order.sellerOrders.find((p) => p.shopId === a.id)!;
+      const mockB = order.sellerOrders.find((p) => p.shopId === b.id)!;
+      await buyerPage
+        .getByRole("button", { name: `Hủy riêng ${b.label}`, exact: true })
+        .click();
+      await buyerPage
+        .getByRole("textbox")
+        .fill("Cancel second shop after mock capture");
+      await buyerPage
+        .getByRole("button", { name: "Xác nhận hủy", exact: true })
+        .click();
+      await expect
+        .poll(
+          async () =>
+            (await getOrder(mockId, buyer)).sellerOrders.find(
+              (p) => p.id === mockB.id,
+            )!.status,
+        )
+        .toBe("CANCELLED");
+      return { mockId, mockA };
+    });
+
+  await test.step("deliver MOCK order, restart the API and confirm receipt", async () => {
+    await sellerStep(sellerA, a.id, mockA.id, "Xác nhận đơn");
+    await sellerStep(sellerA, a.id, mockA.id, "Đã đóng gói");
+    for (const step of ["PICKED_UP", "IN_TRANSIT", "FAILED"]) {
+      if (step === "FAILED") {
+        await sellerA.getByRole("textbox").fill("Recipient unavailable");
+      }
+      await sellerStep(sellerA, a.id, mockA.id, step);
     }
-    await sellerStep(sellerA, a.id, mockA.id, step);
-  }
-  await sellerA.getByRole("textbox").fill("Retry delivery after contact");
-  await sellerStep(sellerA, a.id, mockA.id, "Giao lại");
-  for (const step of ["PICKED_UP", "IN_TRANSIT", "DELIVERED"])
-    await sellerStep(sellerA, a.id, mockA.id, step);
-  await stopApi();
-  await startApi();
-  await buyerPage.reload();
-  await buyerPage
-    .getByRole("button", { name: "Xác nhận đã nhận hàng", exact: true })
-    .click();
-  await expect
-    .poll(
-      async () =>
-        (await getOrder(mockId, buyer)).sellerOrders.find(
-          (p) => p.id === mockA.id,
-        )!.status,
-    )
-    .toBe("COMPLETED");
-  const codId = await checkout("COD");
-  order = await getOrder(codId, buyer);
-  const codA = order.sellerOrders.find((p) => p.shopId === a.id)!;
-  const codB = order.sellerOrders.find((p) => p.shopId === b.id)!;
-  await sellerStep(sellerA, a.id, codA.id, "Xác nhận đơn");
-  await sellerStep(sellerA, a.id, codA.id, "Đã đóng gói");
-  for (const step of ["PICKED_UP", "IN_TRANSIT", "DELIVERED"])
-    await sellerStep(sellerA, a.id, codA.id, step);
-  await buyerPage.reload();
-  await expect(
-    buyerPage.getByRole("button", { name: "Xác nhận đã nhận hàng" }),
-  ).toHaveCount(0);
-  await sellerStep(sellerA, a.id, codA.id, "Ghi nhận đã thu COD");
-  await buyerPage.reload();
-  await buyerPage
-    .getByRole("button", { name: "Xác nhận đã nhận hàng", exact: true })
-    .click();
-  await sellerStep(sellerB, b.id, codB.id, "Xác nhận đơn");
-  await sellerStep(sellerB, b.id, codB.id, "Đã đóng gói");
-  for (const step of ["PICKED_UP", "IN_TRANSIT", "FAILED"]) {
-    if (step === "FAILED")
-      await sellerB.getByRole("textbox").fill("Return to sender");
-    await sellerStep(sellerB, b.id, codB.id, step);
-  }
-  order = await getOrder(codId, buyer);
-  const failed = order.sellerOrders.find((p) => p.id === codB.id)!.shipment!;
-  await adminPage.goto("http://127.0.0.1:3102/shipments");
-  await adminPage.getByLabel("Mã shipment").fill(failed.id);
-  await adminPage.getByRole("button", { name: "Tra cứu kiện hàng", exact: true }).click();
-  await adminPage
-    .getByLabel(/^Lý do/)
-    .fill("Warehouse inspected returned goods");
-  await adminPage
-    .getByRole("button", {
-      name: "Xác nhận trả về",
-      exact: true,
-    })
-    .click();
-  await expect
-    .poll(
-      async () =>
-        (await getOrder(codId, buyer)).sellerOrders.find(
-          (p) => p.id === codB.id,
-        )!.status,
-    )
-    .toBe("CANCELLED");
-  expect(await getOrder(mockId, buyer)).toMatchObject({
-    capturedAmount: "2500",
-    refundedAmount: "1250",
-    outstandingAmount: "0",
-    paymentStatus: "PARTIALLY_REFUNDED",
+    await sellerA.getByRole("textbox").fill("Retry delivery after contact");
+    await sellerStep(sellerA, a.id, mockA.id, "Giao lại");
+    for (const step of ["PICKED_UP", "IN_TRANSIT", "DELIVERED"])
+      await sellerStep(sellerA, a.id, mockA.id, step);
+    await stopApi();
+    await startApi();
+    await buyerPage.reload();
+    await buyerPage
+      .getByRole("button", { name: "Xác nhận đã nhận hàng", exact: true })
+      .click();
+    await expect
+      .poll(
+        async () =>
+          (await getOrder(mockId, buyer)).sellerOrders.find(
+            (p) => p.id === mockA.id,
+          )!.status,
+      )
+      .toBe("COMPLETED");
   });
-  expect(await getOrder(codId, buyer)).toMatchObject({
-    capturedAmount: "1250",
-    refundedAmount: "0",
-    outstandingAmount: "0",
-    paymentStatus: "PAID",
+
+  const { codId, codB } =
+    await test.step("place and settle the COD order", async () => {
+      const codId = await checkout("COD");
+      const order = await getOrder(codId, buyer);
+      const codA = order.sellerOrders.find((p) => p.shopId === a.id)!;
+      const codB = order.sellerOrders.find((p) => p.shopId === b.id)!;
+      await sellerStep(sellerA, a.id, codA.id, "Xác nhận đơn");
+      await sellerStep(sellerA, a.id, codA.id, "Đã đóng gói");
+      for (const step of ["PICKED_UP", "IN_TRANSIT", "DELIVERED"])
+        await sellerStep(sellerA, a.id, codA.id, step);
+      await buyerPage.reload();
+      await expect(
+        buyerPage.getByRole("button", { name: "Xác nhận đã nhận hàng" }),
+      ).toHaveCount(0);
+      await sellerStep(sellerA, a.id, codA.id, "Ghi nhận đã thu COD");
+      await buyerPage.reload();
+      await buyerPage
+        .getByRole("button", { name: "Xác nhận đã nhận hàng", exact: true })
+        .click();
+      return { codId, codB };
+    });
+
+  await test.step("return the COD shipment from seller B via admin", async () => {
+    await sellerStep(sellerB, b.id, codB.id, "Xác nhận đơn");
+    await sellerStep(sellerB, b.id, codB.id, "Đã đóng gói");
+    for (const step of ["PICKED_UP", "IN_TRANSIT", "FAILED"]) {
+      if (step === "FAILED")
+        await sellerB.getByRole("textbox").fill("Return to sender");
+      await sellerStep(sellerB, b.id, codB.id, step);
+    }
+    const order = await getOrder(codId, buyer);
+    const failed = order.sellerOrders.find((p) => p.id === codB.id)!.shipment!;
+    await adminPage.goto("http://127.0.0.1:3102/shipments");
+    await adminPage.getByLabel("Mã shipment").fill(failed.id);
+    await adminPage
+      .getByRole("button", { name: "Tra cứu kiện hàng", exact: true })
+      .click();
+    await adminPage
+      .getByLabel(/^Lý do/)
+      .fill("Warehouse inspected returned goods");
+    await adminPage
+      .getByRole("button", {
+        name: "Xác nhận trả về",
+        exact: true,
+      })
+      .click();
+    await expect
+      .poll(
+        async () =>
+          (await getOrder(codId, buyer)).sellerOrders.find(
+            (p) => p.id === codB.id,
+          )!.status,
+      )
+      .toBe("CANCELLED");
   });
-  const stocks = await pool.query(
-    "SELECT variant_id,available_quantity FROM inventory WHERE variant_id=ANY($1::uuid[]) ORDER BY variant_id",
-    [[a.variantId, b.variantId]],
-  );
-  expect(
-    stocks.rows.find((row) => row.variant_id === a.variantId)
-      ?.available_quantity,
-  ).toBe(8);
-  expect(
-    stocks.rows.find((row) => row.variant_id === b.variantId)
-      ?.available_quantity,
-  ).toBe(10);
-  await buyerPage.goto(`http://127.0.0.1:3100/orders/${codId}`);
-  await expect(
-    buyerPage.getByRole("region", { name: "Live Shop A" }).getByText("Hoàn tất", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    buyerPage.getByRole("region", { name: "Live Shop B" }).getByText("Đã hủy", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    adminPage.getByText("Đã xác nhận kiện hàng trả về", { exact: true }),
-  ).toBeVisible();
-  await buyerPage.screenshot({
-    path: "test-results/fulfillment-live-buyer.png",
-    fullPage: true,
+
+  await test.step("verify settlement, inventory and final UI", async () => {
+    expect(await getOrder(mockId, buyer)).toMatchObject({
+      capturedAmount: "2500",
+      refundedAmount: "1250",
+      outstandingAmount: "0",
+      paymentStatus: "PARTIALLY_REFUNDED",
+    });
+    expect(await getOrder(codId, buyer)).toMatchObject({
+      capturedAmount: "1250",
+      refundedAmount: "0",
+      outstandingAmount: "0",
+      paymentStatus: "PAID",
+    });
+    const stocks = await pool.query(
+      "SELECT variant_id,available_quantity FROM inventory WHERE variant_id=ANY($1::uuid[]) ORDER BY variant_id",
+      [[a.variantId, b.variantId]],
+    );
+    expect(
+      stocks.rows.find((row) => row.variant_id === a.variantId)
+        ?.available_quantity,
+    ).toBe(8);
+    expect(
+      stocks.rows.find((row) => row.variant_id === b.variantId)
+        ?.available_quantity,
+    ).toBe(10);
+    await buyerPage.goto(`http://127.0.0.1:3100/orders/${codId}`);
+    await expect(
+      buyerPage
+        .getByRole("region", { name: "Live Shop A" })
+        .getByText("Hoàn tất", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      buyerPage
+        .getByRole("region", { name: "Live Shop B" })
+        .getByText("Đã hủy", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      adminPage.getByText("Đã xác nhận kiện hàng trả về", { exact: true }),
+    ).toBeVisible();
+    await buyerPage.screenshot({
+      path: "test-results/fulfillment-live-buyer.png",
+      fullPage: true,
+    });
+    await adminPage.screenshot({
+      path: "test-results/fulfillment-live-admin.png",
+      fullPage: true,
+    });
+    for (const context of [
+      buyerContext,
+      sellerAContext,
+      sellerBContext,
+      adminContext,
+    ])
+      await context.close();
   });
-  await adminPage.screenshot({
-    path: "test-results/fulfillment-live-admin.png",
-    fullPage: true,
-  });
-  for (const context of [
-    buyerContext,
-    sellerAContext,
-    sellerBContext,
-    adminContext,
-  ])
-    await context.close();
 });
