@@ -40,9 +40,25 @@ function auditRow(index: number) {
   };
 }
 
+function shopRow(index: number) {
+  const suffix = String(index).padStart(2, "0");
+  return {
+    id: `00000000-0000-4000-8000-0000000006${suffix}`,
+    name: `Shop ${suffix}`,
+    slug: `shop-${suffix}`,
+    status: "PENDING",
+    description: `Fixture shop ${suffix}`,
+    rejectionReason: null,
+    version: 0,
+    logo: null,
+    createdAt: "2026-10-27T09:00:00.000Z",
+  };
+}
+
 async function mockAdmin(page: Page) {
   const usersParams: URLSearchParams[] = [];
   const auditParams: URLSearchParams[] = [];
+  const shopsParams: URLSearchParams[] = [];
   await page.route("**/api/v1/**", async (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname.replace("/api/v1", "");
@@ -51,6 +67,17 @@ async function mockAdmin(page: Page) {
     if (path === "/auth/refresh")
       return route.fulfill({ json: { data: { accessToken: "access", user: admin } } });
     if (path === "/users/me") return route.fulfill({ json: { data: admin } });
+    if (path === "/admin/shops") {
+      shopsParams.push(url.searchParams);
+      const pageNumber = Number(url.searchParams.get("page") ?? 1);
+      const rows =
+        pageNumber === 1
+          ? Array.from({ length: 20 }, (_, index) => shopRow(index + 1))
+          : Array.from({ length: 3 }, (_, index) => shopRow(index + 21));
+      return route.fulfill({
+        json: { data: rows, meta: { page: pageNumber, pageSize: 20, total: 23 } },
+      });
+    }
     if (path === "/admin/users") {
       usersParams.push(url.searchParams);
       const pageNumber = Number(url.searchParams.get("page") ?? 1);
@@ -92,8 +119,23 @@ async function mockAdmin(page: Page) {
       json: { error: { code: "NOT_FOUND", message: "Not found" } },
     });
   });
-  return { usersParams, auditParams };
+  return { usersParams, auditParams, shopsParams };
 }
+
+test("admin shop queue uses the server total and paginates", async ({ page }) => {
+  const calls = await mockAdmin(page);
+  await page.goto("/shops");
+
+  const table = page.getByRole("table", { name: "Hồ sơ cửa hàng" });
+  await expect(table).toContainText("Shop 01");
+  await expect(table).toContainText("Shop 20");
+  await expect(page.getByText("23 hồ sơ trong bộ lọc hiện tại")).toBeVisible();
+
+  await page.getByRole("button", { name: "Sau" }).click();
+  await expect.poll(() => calls.shopsParams.at(-1)?.get("page")).toBe("2");
+  await expect(table).toContainText("Shop 21");
+  await expect(page.getByRole("button", { name: "Sau" })).toBeDisabled();
+});
 
 test("admin user list applies filters and paginates on the server", async ({ page }) => {
   const calls = await mockAdmin(page);

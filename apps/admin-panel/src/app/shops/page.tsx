@@ -33,11 +33,6 @@ type Shop = {
   createdAt: string;
 };
 
-type ShopPage = {
-  data: Shop[];
-  meta: { total: number; page: number; pageSize: number };
-};
-
 type ShopAction = "approve" | "reject" | "suspend" | "resume";
 
 const pageSize = 20;
@@ -74,9 +69,11 @@ export default function ShopQueuePage() {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (status) params.set("status", status);
     try {
-      const result = await api.request<ShopPage>(`/admin/shops?${params}` as ApiPath);
-      setShops(result.data);
-      setTotal(result.meta.total);
+      const { data, meta } = await api.requestEnvelope<Shop[]>(
+        `/admin/shops?${params}` as ApiPath,
+      );
+      setShops(data);
+      setTotal(meta?.total ?? null);
     } catch (cause) {
       setShops([]);
       setTotal(null);

@@ -56,6 +56,26 @@ describe("API transport auth behavior", () => {
     assert.equal(await store.read(), null);
   });
 
+  it("returns pagination metadata alongside the unwrapped data", async () => {
+    const tokens = new MemoryTokenStore();
+    const fetcher: typeof fetch = async () =>
+      Response.json({
+        data: [{ id: "shop-1" }],
+        meta: { page: 2, pageSize: 20, total: 41 },
+      });
+    const client = new ApiTransport({
+      baseUrl: "https://api.example.test/api/v1",
+      clientPlatform: "WEB",
+      tokens,
+      fetcher,
+    });
+
+    const page = await client.requestEnvelope<{ id: string }[]>("/admin/shops");
+
+    assert.deepEqual(page.data, [{ id: "shop-1" }]);
+    assert.deepEqual(page.meta, { page: 2, pageSize: 20, total: 41 });
+  });
+
   it("shares concurrent refresh and retries safe reads once", async () => {
     const tokens = new MemoryTokenStore();
     await tokens.write({ accessToken: "stale", refreshToken: "refresh" });
