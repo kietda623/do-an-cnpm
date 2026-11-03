@@ -1,25 +1,167 @@
-# Multi-vendor Marketplace MVP
+# Marketplace MVP
 
-Workspace cho đồ án nền tảng thương mại điện tử đa người bán. Phạm vi MVP và các quyết định sản phẩm nằm trong `specs/001-marketplace-mvp/`.
+Nền tảng thương mại điện tử đa người bán cho thị trường Việt Nam. Người mua tìm kiếm sản phẩm từ nhiều cửa hàng, đặt một đơn gồm nhiều shop, thanh toán COD hoặc MOCK, theo dõi và xác nhận nhận hàng; người bán quản lý cửa hàng, catalog, tồn kho và xử lý đơn; quản trị viên duyệt cửa hàng/sản phẩm, khóa tài khoản, xử lý hoàn trả và tra cứu audit log.
 
-## Trạng thái hiện tại
-
-Repo đã có monorepo, NestJS API, PostgreSQL/Prisma migrations đến `0007_shipments`, Docker Compose, ba ứng dụng web và mã cho identity, shop, catalog, inventory, cart, checkout, thanh toán mô phỏng và hủy đơn. Giao hàng hiện có schema và policy; các route xử lý SellerOrder, shipment, review và phần lớn admin vẫn chưa hoàn tất. Tình trạng task và giới hạn kiểm thử được ghi trong [task list](specs/001-marketplace-mvp/tasks.md) và `docs/testing/`. Chưa có bằng chứng nghiệm thu toàn bộ marketplace trên môi trường local hiện tại.
+Giao diện tiếng Việt, tiền tệ VND, múi giờ Asia/Saigon.
 
 ## Nền tảng
 
-- **Buyer:** web storefront (`apps/storefront`); desktop app là Tauri wrapper quanh storefront — **kế hoạch, chưa triển khai** ([ADR-0004](docs/adr/0004-buyer-desktop-webview-wrapper.md)).
-- **Seller:** web (`apps/seller-center`). **Admin:** web (`apps/admin-panel`).
-- Không có app mobile (Android/iOS); `apps/mobile` đã bị gỡ. Desktop chưa có trong repo, chỉ là kế hoạch Tauri wrapper theo [ADR-0004](docs/adr/0004-buyer-desktop-webview-wrapper.md).
+| Đối tượng | Bề mặt | Trạng thái |
+| --- | --- | --- |
+| Buyer | Web storefront — `apps/storefront` | Có |
+| Seller | Web console — `apps/seller-center` | Có |
+| Admin | Web console — `apps/admin-panel` | Có |
+| Buyer desktop | Tauri wrapper quanh storefront | Kế hoạch, chưa có mã ([ADR-0004](docs/adr/0004-buyer-desktop-webview-wrapper.md)) |
 
-## Bắt đầu
+Không có app mobile (Android/iOS); `apps/mobile` đã được gỡ khỏi workspace.
 
-- [Hướng dẫn phát triển local](docs/development/local.md): toolchain, ports, env, scripts và bảo vệ database.
-- [Quickstart và validation guide](specs/001-marketplace-mvp/quickstart.md): các bước setup/test mục tiêu và acceptance scenarios.
-- [Specification](specs/001-marketplace-mvp/spec.md), [implementation plan](specs/001-marketplace-mvp/plan.md) và [task list](specs/001-marketplace-mvp/tasks.md).
+## Kiến trúc và công nghệ
 
-## Các lệnh đã cấu hình
+- **Monorepo:** pnpm workspace + Turborepo, Node.js 24.18.0, pnpm 12.14.0.
+- **API:** NestJS 12 modular monolith, Prisma 7 + PostgreSQL 17, migrations trong `apps/api/prisma/migrations`.
+- **Web:** Next.js 16 App Router, React 19, Tailwind CSS 4; ba app dùng chung `@marketplace/ui-web` và `@marketplace/design-tokens`.
+- **Hợp đồng API:** OpenAPI 3.0.3 tại `packages/contracts/openapi.yaml`; type client được sinh tự động, không chỉnh tay.
+- **Phiên đăng nhập:** JWT access token ngắn hạn + refresh session; web gửi `X-CSRF-Token` cho request ghi.
+- **Tiền tệ và thời gian:** VND, thời gian nghiệp vụ theo Asia/Saigon; thanh toán chỉ có `COD` và `MOCK` (số liệu MOCK được đánh dấu `simulated`).
 
-Dùng Node.js 24.18.0 và pnpm 12.14.0 theo `.nvmrc` và `package.json`. Repo cấu hình `pnpm lint:workspaces`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`, `pnpm build`, API integration test và Prisma schema check. Việc có script không đồng nghĩa các lệnh đã chạy thành công trên máy của bạn; xem kết quả thực tế trong CI và tài liệu bằng chứng từng story.
+## Cấu trúc repository
 
-Xem [hướng dẫn local](docs/development/local.md) trước khi cài dependencies hoặc chạy service.
+| Đường dẫn | Nội dung |
+| --- | --- |
+| `apps/api` | API NestJS (admin, cart, catalog, identity, inventory, order, payment, review, shipping, shop), Prisma schema/migrations/seed |
+| `apps/storefront` | Web cho buyer: discovery, giỏ hàng, checkout, đơn hàng, đánh giá |
+| `apps/seller-center` | Web cho seller: onboarding shop, catalog, tồn kho, đơn, doanh thu |
+| `apps/admin-panel` | Web cho admin: duyệt shop/sản phẩm, người dùng, đơn, hoàn trả, audit |
+| `packages/api-client` | Transport gọi API, quản lý token/session, type sinh từ OpenAPI |
+| `packages/contracts` | `openapi.yaml` và ví dụ request/response |
+| `packages/ui-web` | Component dùng chung cho ba web app |
+| `packages/design-tokens` | Token màu, typography, spacing |
+| `packages/validation` | Khung package dùng chung (chưa có mã) |
+| `packages/config` | ESLint/TypeScript/typecheck dùng chung |
+| `tests/e2e` | Playwright cho storefront, seller và admin |
+| `specs/001-marketplace-mvp` | Spec, plan, task list, quickstart |
+| `docs` | Kiến trúc, database, thiết kế, kiểm thử, ADR |
+
+## Yêu cầu môi trường
+
+| Thành phần | Phiên bản |
+| --- | --- |
+| Node.js | 24.18.0 (`.nvmrc`; engine `>=24.15.0 <25`) |
+| pnpm | 12.14.0 (pin trong `packageManager`; bật bằng `corepack enable`) |
+| Docker + Compose plugin | Cho PostgreSQL và stack đầy đủ |
+| PostgreSQL | 17 (Compose dùng `postgres:17.11-bookworm`) |
+
+## Chạy nhanh bằng Docker Compose
+
+```bash
+cp .env.compose.example .env.compose
+# Sửa POSTGRES_PASSWORD và JWT_SIGNING_SECRET trước khi chạy
+corepack pnpm install --frozen-lockfile
+docker compose --env-file .env.compose up -d --build postgres api storefront seller-center admin-panel
+docker compose --env-file .env.compose run --rm api pnpm prisma:migrate:deploy
+```
+
+| Dịch vụ | URL |
+| --- | --- |
+| Storefront | http://localhost:3000 |
+| Seller Center | http://localhost:3001 |
+| Admin Panel | http://localhost:3002 |
+| API | http://localhost:4000/api/v1 |
+| Swagger | http://localhost:4000/api/docs |
+| Liveness / Readiness | `/health/live`, `/health/ready` |
+
+PostgreSQL development của Compose bind `127.0.0.1:55432`; test database bind `127.0.0.1:55433` và chỉ chạy với profile `test`.
+
+## Chạy từ source (không Docker)
+
+Cần một PostgreSQL 17 đang chạy. Nếu dùng PostgreSQL của Compose, kết nối từ host qua port `55432`.
+
+```bash
+corepack pnpm install --frozen-lockfile
+cp .env.example .env
+# Điền DATABASE_URL và JWT_SIGNING_SECRET trong .env
+```
+
+Chạy API (package API không có script `dev`; build rồi start):
+
+```bash
+corepack pnpm --filter @marketplace/api prisma:migrate:deploy
+corepack pnpm --filter @marketplace/api build
+corepack pnpm --filter @marketplace/api start
+```
+
+Chạy từng web app với port cố định để khớp `CORS_ORIGINS` mặc định (`3000,3001,3002`):
+
+```bash
+export NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+corepack pnpm --filter @marketplace/storefront exec next dev --hostname 0.0.0.0 --port 3000
+corepack pnpm --filter @marketplace/seller-center exec next dev --hostname 0.0.0.0 --port 3001
+corepack pnpm --filter @marketplace/admin-panel exec next dev --hostname 0.0.0.0 --port 3002
+```
+
+Trên PowerShell, thay dòng `export` bằng `$env:NEXT_PUBLIC_API_URL="http://localhost:4000/api/v1"`. Root có script `pnpm dev` chạy song song ba app, nhưng nên dùng lệnh riêng ở trên khi cần port ổn định.
+
+## Database và dữ liệu mẫu
+
+- Migration local: `pnpm --filter @marketplace/api prisma:migrate:dev`.
+- Migration môi trường đã triển khai: `prisma:migrate:deploy` (không dùng reset).
+- Kiểm tra schema: `pnpm --filter @marketplace/api prisma:migrate:status`.
+
+Seed có trong `apps/api/prisma/seed`:
+
+```bash
+corepack pnpm --filter @marketplace/api seed:identity
+corepack pnpm --filter @marketplace/api seed:shops
+corepack pnpm --filter @marketplace/api seed:catalog
+corepack pnpm --filter @marketplace/api seed:payments
+corepack pnpm --filter @marketplace/api seed:reviews-statistics
+```
+
+Chỉ chạy seed trên database local disposable. Các seed fixture kiểm tra `TEST_DATABASE_URL` có hậu tố `_test`/`_disposable` và yêu cầu `TEST_DATABASE_NAME_CONFIRMATION` trùng chính xác tên database; xem [fixture design](docs/testing/fixture-design.md).
+
+## Kiểm thử
+
+```bash
+# Unit + contract
+corepack pnpm test
+corepack pnpm test:contracts
+
+# PostgreSQL integration (đọc .env.test, reset database đã xác nhận)
+corepack pnpm --filter @marketplace/api test:integration
+corepack pnpm test:concurrency
+corepack pnpm test:expiry
+
+# E2E (Playwright tự khởi động Next ở port 3100/3101/3102)
+corepack pnpm test:e2e
+corepack pnpm test:e2e:discovery
+corepack pnpm test:e2e:checkout
+corepack pnpm test:e2e:seller
+corepack pnpm test:e2e:catalog
+corepack pnpm test:e2e:admin
+corepack pnpm test:e2e:fulfillment
+corepack pnpm test:e2e:us8
+corepack pnpm test:e2e:us8-live
+```
+
+Integration test và `prisma:schema:check` chỉ chấp nhận database disposable: copy `.env.test.example` thành `.env.test`, điền `TEST_DATABASE_URL` và đặt `TEST_DATABASE_NAME_CONFIRMATION` đúng bằng tên database. Không trỏ vào database demo hoặc database dùng chung.
+
+Không bao giờ chạy `prisma migrate reset`, `docker compose down -v` hay xóa volume trên database không phải disposable.
+
+CI tại `.github/workflows/ci.yml` chạy trên PostgreSQL 17 tạm: lint, typecheck, kiểm tra generated OpenAPI type không lệch, unit, contract, build, integration, concurrency, checkout E2E và fulfillment E2E; artifact Playwright được upload khi thất bại và schema được đối chiếu lần cuối.
+
+## Quy ước phát triển
+
+- **Hợp đồng trước:** sửa `packages/contracts/openapi.yaml`, sau đó chạy `pnpm --filter @marketplace/api-client generate:types`. Không sửa tay `packages/api-client/src/generated/index.ts`.
+- **Envelope API:** response có dạng `{ data, meta? }`. Dùng `request()` khi chỉ cần `data`; dùng `requestEnvelope()` khi cần `meta` (ví dụ phân trang).
+- **Ghi dữ liệu:** dùng `Idempotency-Key` và `expectedVersion`; nhận `409` thì tải lại trước khi thử tiếp.
+- **Bí mật:** chỉ đặt trong `.env`/secret store. Không đặt token, mật khẩu database hay access key vào biến `NEXT_PUBLIC_*`.
+- **UI:** giữ copy tiếng Việt thống nhất với các Playwright spec (spec chọn theo accessible name).
+
+## Tài liệu
+
+- [Spec](specs/001-marketplace-mvp/spec.md) · [Plan](specs/001-marketplace-mvp/plan.md) · [Tasks](specs/001-marketplace-mvp/tasks.md) · [Quickstart](specs/001-marketplace-mvp/quickstart.md)
+- [Kiến trúc: BFD, DFD, use case, ERD, sequence](docs/architecture/README.md)
+- [Thiết kế dữ liệu](docs/database/data-design.md) · [Kế hoạch kiểm thử](docs/testing/test-plan.md)
+- [Phát triển local](docs/development/local.md) · [Toolchain](docs/development/toolchain.md)
+- [ADR-0001 modular monolith](docs/adr/0001-modular-monolith.md) · [ADR-0002 contract naming](docs/adr/0002-contract-naming.md) · [ADR-0003 data integrity](docs/adr/0003-data-integrity.md) · [ADR-0004 desktop wrapper](docs/adr/0004-buyer-desktop-webview-wrapper.md)
+- [Product brief](PRODUCT.md) · [Design system](DESIGN.md)
