@@ -97,10 +97,10 @@ export default function AdminDashboardPage() {
     setShopsLoading(true);
     setShopsError("");
     try {
-      const result = await api.request<{ data: PendingShop[] }>(
+      const result = await api.request<PendingShop[]>(
         "/admin/shops?status=PENDING&page=1&pageSize=5" as ApiPath,
       );
-      setShops(result.data);
+      setShops(result);
     } catch (cause) {
       setShopsError(normalizeFormError(cause));
     } finally {

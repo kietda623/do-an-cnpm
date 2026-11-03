@@ -162,7 +162,7 @@ async function shop(
 }
 async function login(page: Page, port: number, user: Actor) {
   await page.goto(`http://127.0.0.1:${port}/login`);
-  await page.getByLabel("Email", { exact: true }).fill(user.email);
+  await page.getByLabel(/^Email/).fill(user.email);
   await page.getByLabel(/^Mật khẩu/).fill(password);
   await page.getByRole("button", { name: /Đăng nhập/ }).click();
   await expect(page).not.toHaveURL(/\/login/);
@@ -325,7 +325,7 @@ test("live two-shop commerce: MOCK, COD, cancellation, retry, return and restart
   await startApi();
   await buyerPage.reload();
   await buyerPage
-    .getByRole("button", { name: "Tôi đã nhận đủ hàng", exact: true })
+    .getByRole("button", { name: "Xác nhận đã nhận hàng", exact: true })
     .click();
   await expect
     .poll(
@@ -345,12 +345,12 @@ test("live two-shop commerce: MOCK, COD, cancellation, retry, return and restart
     await sellerStep(sellerA, a.id, codA.id, step);
   await buyerPage.reload();
   await expect(
-    buyerPage.getByRole("button", { name: "Tôi đã nhận đủ hàng" }),
+    buyerPage.getByRole("button", { name: "Xác nhận đã nhận hàng" }),
   ).toHaveCount(0);
   await sellerStep(sellerA, a.id, codA.id, "Ghi nhận đã thu COD");
   await buyerPage.reload();
   await buyerPage
-    .getByRole("button", { name: "Tôi đã nhận đủ hàng", exact: true })
+    .getByRole("button", { name: "Xác nhận đã nhận hàng", exact: true })
     .click();
   await sellerStep(sellerB, b.id, codB.id, "Xác nhận đơn");
   await sellerStep(sellerB, b.id, codB.id, "Đã đóng gói");
@@ -363,13 +363,13 @@ test("live two-shop commerce: MOCK, COD, cancellation, retry, return and restart
   const failed = order.sellerOrders.find((p) => p.id === codB.id)!.shipment!;
   await adminPage.goto("http://127.0.0.1:3102/shipments");
   await adminPage.getByLabel("Mã shipment").fill(failed.id);
-  await adminPage.getByRole("button", { name: "Tra cứu", exact: true }).click();
+  await adminPage.getByRole("button", { name: "Tra cứu kiện hàng", exact: true }).click();
   await adminPage
-    .getByLabel("Lý do", { exact: true })
+    .getByLabel(/^Lý do/)
     .fill("Warehouse inspected returned goods");
   await adminPage
     .getByRole("button", {
-      name: "Xác nhận hàng đã hoàn về và hủy đơn",
+      name: "Xác nhận trả về",
       exact: true,
     })
     .click();
@@ -406,12 +406,14 @@ test("live two-shop commerce: MOCK, COD, cancellation, retry, return and restart
       ?.available_quantity,
   ).toBe(10);
   await buyerPage.goto(`http://127.0.0.1:3100/orders/${codId}`);
-  await expect(buyerPage.getByText("COMPLETED", { exact: true })).toBeVisible();
-  await expect(buyerPage.getByText("CANCELLED", { exact: true })).toBeVisible();
   await expect(
-    adminPage
-      .getByRole("listitem")
-      .filter({ hasText: "Warehouse inspected returned goods" }),
+    buyerPage.getByRole("region", { name: "Live Shop A" }).getByText("Hoàn tất", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    buyerPage.getByRole("region", { name: "Live Shop B" }).getByText("Đã hủy", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    adminPage.getByText("Đã xác nhận kiện hàng trả về", { exact: true }),
   ).toBeVisible();
   await buyerPage.screenshot({
     path: "test-results/fulfillment-live-buyer.png",
