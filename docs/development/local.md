@@ -52,7 +52,7 @@ Copy-Item .env.example .env
 | `pnpm --filter @marketplace/api build` / `start` | NestJS bootstrap đã cấu hình; `start` cần build trước |
 | `pnpm dev`, `pnpm build`, `pnpm test`, `pnpm clean` | Root orchestration đã có; package tasks tương ứng chưa được triển khai |
 | `pnpm test:unit`, `test:integration`, `test:contract`, `test:e2e`, `test:concurrency`, `test:security`, `test:performance` | Contract mục tiêu trong quickstart; chưa có script thực thi |
-| API `db:migrate:deploy`, `db:seed:demo`, `test:expiry`; Desktop `tauri`, `build:desktop` | Contract mục tiêu; desktop buyer chưa triển khai, các lệnh còn lại chưa có script/service tương ứng |
+| API `db:migrate:deploy`, `db:seed:demo`, `test:expiry`; Desktop `tauri`, `build:desktop` | Contract mục tiêu; desktop buyer chưa có workspace và chưa triển khai, các lệnh còn lại chưa có script/service tương ứng |
 
 Cập nhật quickstart cùng task implementation nếu tên script hoặc service đổi. Không báo test pass khi lệnh chưa tồn tại hoặc chưa chạy được.
 

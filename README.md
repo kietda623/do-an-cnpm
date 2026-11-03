@@ -10,7 +10,7 @@ Repo đã có monorepo, NestJS API, PostgreSQL/Prisma migrations đến `0007_sh
 
 - **Buyer:** web storefront (`apps/storefront`); desktop app là Tauri wrapper quanh storefront — **kế hoạch, chưa triển khai** ([ADR-0004](docs/adr/0004-buyer-desktop-webview-wrapper.md)).
 - **Seller:** web (`apps/seller-center`). **Admin:** web (`apps/admin-panel`).
-- Không có app mobile (Android/iOS); `apps/mobile` đã bị gỡ. `apps/desktop` hiện chỉ là scaffold.
+- Không có app mobile (Android/iOS); `apps/mobile` đã bị gỡ. Desktop chưa có trong repo, chỉ là kế hoạch Tauri wrapper theo [ADR-0004](docs/adr/0004-buyer-desktop-webview-wrapper.md).
 
 ## Bắt đầu
 

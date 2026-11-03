@@ -38,9 +38,6 @@ playwright-report/
 test-results/
 artifacts/
 
-# Desktop build output
-src-tauri/target/
-
 # Local databases and uploaded files
 *.sqlite
 *.sqlite3

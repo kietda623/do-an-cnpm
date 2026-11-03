@@ -87,7 +87,6 @@ apps/
   storefront/                  # Next Buyer
   seller-center/               # Next Seller, share client views
   admin-panel/                 # Next Admin
-  desktop/                     # Tauri wrapper cho Buyer (kế hoạch, scaffold)
   api/src/
     modules/{identity,shop,catalog,inventory,cart,order,payment,shipping,review,admin}/
     common/                    # DTO/error/guards/requestId
@@ -107,7 +106,7 @@ pnpm-workspace.yaml
 turbo.json
 ```
 
-**Structure Decision**: 5 apps (storefront, seller-center, admin-panel, desktop scaffold, api) và 6 packages. Desktop buyer là Tauri webview mở storefront URL, dùng lại `ui-web`/design tokens; không nhân đôi UI.
+**Structure Decision**: 4 apps (storefront, seller-center, admin-panel, api) và 6 packages = 10 workspace projects. Desktop buyer là kế hoạch: sẽ tạo `apps/desktop` khi triển khai, dùng Tauri webview mở storefront URL và dùng lại `ui-web`/design tokens; không nhân đôi UI.
 Seller/Admin chỉ dùng web. Không có client mobile. Domain sở hữu repository;
 Order coordinator gọi public services với cùng Prisma transaction context, không import repository
 nội bộ. Không nhúng Next server vào Tauri.

@@ -10,7 +10,7 @@ Buyer dùng **web storefront** làm giao diện gốc. App desktop là một **T
 
 - `apps/mobile` và adapter `ExpoSession` bị gỡ khỏi workspace.
 - Desktop chỉ dành cho buyer; không có seller/admin desktop.
-- Trạng thái hiện tại: `apps/desktop` chỉ còn scaffold manifest/tsconfig, **chưa có** `tauri.conf.json`, Rust crate hay script build. Không có bằng chứng build/chạy desktop.
+- Trạng thái hiện tại: repo **không có** `apps/desktop`, `tauri.conf.json`, Rust crate hay script build. Khi triển khai sẽ tạo workspace Tauri riêng; hiện không có bằng chứng build/chạy desktop.
 - Khi triển khai, desktop dùng cùng API base URL và CORS origin như web; phiên dùng refresh cookie HttpOnly + CSRF của webview, không thêm cơ chế token riêng.
 - CI hiện tại không yêu cầu Rust/MSVC vì desktop chưa nằm trong `build`/`test`/`dev`.
 

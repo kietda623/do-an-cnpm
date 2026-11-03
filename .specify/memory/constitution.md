@@ -79,7 +79,6 @@ ecommerce-platform/
 │   ├── storefront/
 │   ├── seller-center/
 │   ├── admin-panel/
-│   ├── desktop/
 │   └── api/
 ├── packages/
 │   ├── api-client/

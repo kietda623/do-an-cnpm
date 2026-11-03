@@ -12,7 +12,7 @@
 | Next.js / React | Next 16.4.2 / React + React DOM 19.2.3 | Peer range Next 16 chấp nhận React 19; ba web app dùng cùng React patch. |
 | NestJS | Nest 12.2.0 / RxJS 7.8.2 | Core, common và platform-express dùng cùng patch; package ESM. |
 | Prisma / PostgreSQL | Prisma 7.10.1 / adapter-pg 7.10.1 / pg 8.23.1 / PostgreSQL 17 | Prisma 7 hỗ trợ Node >=24.0 và TypeScript >=5.4; adapter và client được pin cùng patch. Migration/generate chưa chạy vì T013 chưa triển khai schema. |
-| Vite / Tauri | Vite 8.3.4 / API 2.12.4 / CLI 2.12.3 / Rust stable | Desktop buyer = Tauri wrapper quanh storefront (kế hoạch). Vite 8 chạy trên Node 24; Windows cần MSVC C++ Build Tools và WebView2; macOS cần Xcode/Rust targets. Chưa có script build desktop trong CI. |
+| Vite / Tauri | Vite 8.3.4 / API 2.12.4 / CLI 2.12.3 / Rust stable | Desktop buyer = Tauri wrapper quanh storefront (kế hoạch). Chưa có workspace/package desktop trong repo; pins dùng khi triển khai. Vite 8 chạy trên Node 24; Windows cần MSVC C++ Build Tools và WebView2; macOS cần Xcode/Rust targets. Chưa có script build desktop trong CI. |
 | Container | Docker Engine + Compose plugin | Compose PostgreSQL/API/web; không dùng volume/database chia sẻ cho test. |
 
 Các major đã thống nhất trong [research](../../specs/001-marketplace-mvp/research.md). Lockfile và peer graph đã được kiểm ở T008; application build smoke vẫn chờ source và được thực hiện theo task nền tảng/T022.

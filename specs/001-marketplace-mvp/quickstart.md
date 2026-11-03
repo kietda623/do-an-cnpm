@@ -31,7 +31,7 @@ API package `@marketplace/api` có `test:unit` và `test:integration` (Jest/Supe
 migration và `prisma:migrate:dev|deploy|status`; integration test chỉ nhận `TEST_DATABASE_URL` riêng.
 `@marketplace/api-client` có `generate:types` và `test`; `@marketplace/contracts` là workspace package cho OpenAPI/examples.
 Database demo seed, contract/E2E/concurrency/security, performance và expiry suites sẽ được bổ sung ở các task tương ứng.
-`@marketplace/desktop`: scaffold Tauri (chưa có script build trong baseline). Không còn workspace mobile.
+`@marketplace/desktop`: chưa có workspace trong baseline; desktop buyer là kế hoạch Tauri wrapper sẽ được tạo khi triển khai. Không còn workspace mobile.
 Compose services: postgres, api, storefront, seller-center, admin-panel; profile `test` có PostgreSQL/API test riêng.
 Contract này là công việc W011/015–17/033/040/057.
 
@@ -127,7 +127,7 @@ Báo cáo tách target expected với observed results, không tick acceptance k
 
 ## Desktop validation (kế hoạch — chưa chạy)
 
-Desktop buyer chưa có `tauri.conf.json` hay script build; các lệnh dưới là contract tương lai:
+Desktop buyer chưa có workspace, `tauri.conf.json` hay script build; các lệnh dưới là contract tương lai:
 
 ```powershell
 pnpm --filter @marketplace/desktop tauri dev
