@@ -12,7 +12,7 @@ Mọi màn hình thể hiện đúng năm trạng thái:
 - **S — Success:** dữ liệu server đã lưu, trạng thái/feedback mới; mutation chỉ báo thành công sau commit response.
 - **Unauthorized:** chưa login chuyển login kèm return path; thiếu quyền hiển thị 403/404 phù hợp và không lộ resource/private fields.
 
-Web hỗ trợ bàn phím, focus lỗi, nhãn và màn hình 360/1280 px. Native hỗ trợ safe area, back, touch target, accessibility labels và resume/refetch. Tiền là server decimal-string VND; client không tính tổng giao dịch cuối. Logout/user switch xóa sensitive query cache; đổi shop re-key/invalidate dữ liệu theo shop.
+Web hỗ trợ bàn phím, focus lỗi, nhãn và màn hình 360/1280 px. Desktop buyer là Tauri webview quanh cùng storefront nên thừa hưởng keyboard/focus/label và responsive hiện có; chỉ khác window chrome và chiều rộng tối thiểu. Không có client mobile. Tiền là server decimal-string VND; client không tính tổng giao dịch cuối. Logout/user switch xóa sensitive query cache; đổi shop re-key/invalidate dữ liệu theo shop.
 
 ## Buyer Web: 13 màn hình
 
@@ -78,16 +78,14 @@ flowchart LR
 
 Checkout quote/confirm là một ý định có cùng idempotency key; bất kỳ lỗi eligibility/stock nào rollback toàn bộ. Buyer nhìn một aggregate với phần theo shop; mỗi seller chỉ nhìn phần được cấp quyền. Partial cancel áp dụng lên một SellerOrder, nêu rõ phần tiền/kho liên quan và giữ nguyên phần kia.
 
-## Seller client-only reuse cho Tauri
+## Buyer desktop wrapper (kế hoạch)
 
 ```mermaid
 flowchart LR
-  NEXT[Seller Center Next Web] --> CLIENT[Client-only views and shared ui-web]
-  CLIENT --> WEB[Browser transport adapter]
-  CLIENT --> DESKTOP[Tauri React/Vite bundle]
-  DESKTOP --> VAULT[Stronghold refresh adapter]
-  WEB --> API[HTTPS API]
-  VAULT --> API
+  NEXT[Buyer Storefront Next Web] --> WRAP[Tauri 2 window]
+  WRAP --> WEBVIEW[System WebView opens storefront URL]
+  WEBVIEW --> COOKIE[HttpOnly cookie + CSRF like web]
+  COOKIE --> API[HTTPS API]
 ```
 
-S01–S11 dùng chung client views, validation, tokens, API client và nghiệp vụ hiển thị. Tauri package không import Next server components, Server Actions hay remote web page; chỉ thay adapter auth/navigation/file selection theo platform. Seller authorization luôn ở API. Access token ở memory; desktop refresh vault mở bằng mật khẩu người dùng; không có plaintext fallback. Desktop screen matrix/endpoint chi tiết ở [UI plan](../../specs/001-marketplace-mvp/ui-plan.md).
+Desktop buyer không có UI thứ hai: Tauri chỉ mở storefront URL trong webview hệ điều hành, dùng chung design system, components, validation và cookie/CSRF với web. Không có Stronghold/SecureStore trong baseline vì không có native refresh token. Seller và Admin chỉ dùng web. Desktop chưa được build; xem [ADR-0004](../adr/0004-buyer-desktop-webview-wrapper.md) và [UI plan](../../specs/001-marketplace-mvp/ui-plan.md).

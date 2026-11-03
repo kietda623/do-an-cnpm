@@ -8,14 +8,14 @@ kiểm tra peer dependencies, advisory và smoke build; không dùng tag latest 
 ## R-01 — Runtime và các baseline tương thích
 
 **Decision:** Node.js 24 LTS, tối thiểu 24.15 để đáp ứng CLI Nest hiện hành; pnpm 12;
-Turborepo 2. Next.js 16/React 19.2 cho web; Expo SDK 57 + React Native 0.86 + React 19.2.3
-cho mobile; Tauri 2 cho desktop; NestJS 12 + Prisma 7 + PostgreSQL 17 cho API.
-Backend TypeScript 6 theo CLI Nest 12; compiler của web/mobile khóa riêng theo peer range
+Turborepo 2. Next.js 16/React 19.2 cho web; Tauri 2 cho desktop buyer (wrapper quanh storefront,
+kế hoạch); NestJS 12 + Prisma 7 + PostgreSQL 17 cho API. Không có client mobile.
+Backend TypeScript 6 theo CLI Nest 12; compiler của web/desktop khóa riêng theo peer range
 của framework, không ép một phiên bản compiler cho toàn monorepo. Strict mode ở mọi package.
-React/React DOM web dùng patch an toàn tương thích Next; mobile giữ đúng bộ Expo hướng dẫn.
+React/React DOM web dùng patch an toàn tương thích Next; desktop dùng đúng patch React của web.
 
 **Rationale:** Các phiên bản major trên có tài liệu stable hiện hành. Node 24 đáp ứng yêu cầu
-Prisma 7 (Node 24 hoặc các nhánh khác được hỗ trợ), Expo (Node >=22.13), pnpm installer
+Prisma 7 (Node 24 hoặc các nhánh khác được hỗ trợ), pnpm installer
 (>=22.13), Next (>=20.9) và Nest CLI (Node24 >=24.15). PostgreSQL17 được Prisma7 hỗ trợ
 và còn được PostgreSQL hỗ trợ đến 2029-11-08. Chọn database trưởng thành thay vì đổi major
 chỉ vì mới hơn. Nest12/Prisma7 dùng ESM cần spike adapter PostgreSQL, generate/build và test
@@ -25,12 +25,11 @@ smoke build là gate trước merge foundation; thay major chỉ sau ghi nhận 
 
 **Alternatives considered:** Node22 mới nhất đủ floor nhưng thời gian hỗ trợ ngắn hơn;
 Nest11/Prisma6 có nhiều ví dụ cũ nhưng không mặc định là lựa chọn còn được bảo trì tốt nhất;
-Expo/RN nâng riêng dễ mismatch. Không dùng canary, beta hoặc React Native ngoài bộ Expo.
+React Native/Expo đã bị loại cùng app mobile. Không dùng canary hoặc beta.
 
 **Sources:** [Node releases](https://nodejs.org/en/about/previous-releases),
 [pnpm installation](https://pnpm.io/installation),
 [Next installation](https://nextjs.org/docs/app/getting-started/installation),
-[Expo compatibility](https://docs.expo.dev/versions/latest/),
 [Nest migration/CLI floor](https://docs.nestjs.com/migration-guide),
 [Prisma7 requirements](https://www.prisma.io/docs/orm/v7/reference/system-requirements),
 [Prisma databases](https://www.prisma.io/docs/orm/v7/reference/supported-databases),
@@ -41,29 +40,30 @@ Expo/RN nâng riêng dễ mismatch. Không dùng canary, beta hoặc React Nativ
 **Decision:** Một Nest process và một PostgreSQL; domain public services rõ ràng;
 Order orchestration gọi Inventory/Payment/Shipping qua interface có transaction context.
 Share contracts, generated client, validation và design tokens. Web share React components;
-mobile dùng native components, không import shadcn/ui/Tailwind DOM. TanStack Query quản lý
-server state; React state quản lý form/UI, Zustand chỉ khi có nhu cầu thực sự.
+desktop buyer dùng lại chính storefront web trong Tauri, không có bộ component thứ hai.
+TanStack Query quản lý server state; React state quản lý form/UI, Zustand chỉ khi có nhu cầu thực sự.
 
 **Rationale:** Đủ 5 người/16 tuần, giao dịch nguyên tử dễ chứng minh, tránh phí vận hành hệ phân tán.
 **Alternatives considered:** Microservices/Kafka/Kubernetes bị loại theo constitution;
-share nguyên màn hình DOM sang native gây chi phí chuyển đổi và UX không phù hợp.
+nhân đôi UI sang native/desktop riêng gây chi phí chuyển đổi và hành vi lệch nhau.
 **Source:** Hiến chương dự án, spec BR-01–10 và platform coverage.
 
-## R-03 — Desktop reuse phải là React client có thể đóng gói
+## R-03 — Desktop buyer là Tauri webview quanh storefront
 
-**Decision:** Seller Center Next dùng các page client và components chung không lệ thuộc
-SSR/Server Actions; apps/desktop là Tauri2 + React static frontend (Vite), dùng cùng package
-ui-web và api-client. Tauri chỉ tải bundle đóng gói, gọi Nest HTTPS; không nhúng Node server.
-W008 Sprint1 kiểm quyền truy cập máy/runner; W014/W017 Sprint2 kiểm compatibility static view/auth adapter. W047 Sprint6 chạy Tauri login/product-list shell, W055 Sprint7 hoàn tất Windows/macOS flows.
+**Decision:** Buyer desktop dùng Tauri 2 mở chính web storefront URL trong webview hệ điều hành;
+không có bundle React riêng, không nhúng Next server, không nhân đôi component.
+`build.frontendDist` trỏ storefront URL (hoặc asset tĩnh của storefront nếu chuyển hẳn sang export sau này);
+`build.devUrl` trỏ dev server khi phát triển. CSP/allow-list và capability tối thiểu; không shell/filesystem IPC tùy ý.
+W008 kiểm toolchain máy build; khi máy có Rust/MSVC/WebView2 mới thêm script build/launch evidence.
+Quyết định chi tiết ở [ADR-0004](../../docs/adr/0004-buyer-desktop-webview-wrapper.md).
 
-**Rationale:** Tauri không hỗ trợ giải pháp Next server-side. Reuse tính năng Seller Center
-bằng component/client layer tránh chờ chuyển cả Next server sang desktop cuối kỳ.
-**Alternatives considered:** Next static export được Tauri hướng dẫn nhưng dynamic route,
-server function và image optimizer phải giới hạn; chọn shell React riêng để giữ Next web
-linh hoạt. Remote website wrapper bị loại vì mở rộng bề mặt remote content/IPC.
-**Source:** [Tauri Next constraints](https://v2.tauri.app/start/frontend/nextjs/).
+**Rationale:** Một UI duy nhất giữ hành vi web và desktop đồng nhất, giảm test matrix và tránh
+phải duy trì hai bản storefront. Seller/Admin không cần desktop.
+**Alternatives considered:** Bundle React/Vite riêng (đã cân nhắc ở bản trước) nhân đôi UI và lệch Next;
+Electron nặng hơn và cần Node runtime; React Native/Expo cho buyer đã bị gỡ.
+**Source:** [Tauri configuration](https://v2.tauri.app/reference/config/).
 
-## R-04 — Phiên riêng cho Web, Mobile và Desktop
+## R-04 — Phiên cho Web và Desktop buyer
 
 **Decision:** Access JWT 10 phút, refresh session tối đa 7 ngày, rotate mỗi lần đổi,
 chỉ lưu hash refresh phía server, revoke family khi reuse. Đây là giá trị cấu hình ban đầu.
@@ -72,20 +72,17 @@ host-only theo API origin; HTTPS, CORS exact allowlist + credentials, CSRF token
 Origin trên thao tác dùng cookie (login/refresh/logout). Không lưu token localStorage.
 Local HTTP được ngoại lệ Secure chỉ trong development. Client refresh single-flight,
 retry tối đa một lần; không tự retry mutation nếu thiếu idempotency.
-Mobile dùng Expo SecureStore cho refresh; desktop dùng vault mã hóa Stronghold với password
-người dùng nhập mỗi lần mở khóa, không hardcode mật khẩu vault hoặc lưu bên cạnh vault.
-Access token native trong memory; refresh chỉ qua auth endpoint, không log token.
-Vault bị khóa/thiếu thì đăng nhập lại; không persist token plaintext. Logout xóa client secret
+Desktop buyer dùng lại webview/cookie của storefront; không có secure store/token store native.
+Access token ở memory; refresh chỉ qua auth endpoint, không log token. Logout xóa client secret
 và revoke session. Backend kiểm tra user active/session revoked cả khi JWT chưa hết hạn để
 khóa tài khoản/đổi mật khẩu có hiệu lực ngay. shop membership kiểm tra tại mọi mutation.
 
-**Rationale:** Cookie giảm khả năng trộm refresh từ JavaScript nhưng cần CSRF; native có
-secure storage riêng và bearer flow, không giả định browser cookie dùng được nguyên trạng.
+**Rationale:** Cookie giảm khả năng trộm refresh từ JavaScript nhưng cần CSRF; desktop dùng cùng
+webview nên thừa hưởng đúng hành vi cookie/CSRF của web thay vì thêm flow thứ hai.
 **Alternatives considered:** JWT dài hạn không revoke hoặc localStorage refresh bị loại;
-Stronghold có mật khẩu cố định trong bundle không tạo bảo vệ có ý nghĩa.
+Stronghold/SecureStore chỉ còn ý nghĩa nếu có native client, hiện không có.
 **Sources:** [OWASP sessions](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html),
-[Expo SecureStore](https://docs.expo.dev/versions/latest/sdk/securestore/),
-[Tauri Stronghold](https://v2.tauri.app/plugin/stronghold/).
+[Tauri WebView](https://v2.tauri.app/reference/webview-versions/).
 
 ## R-05 — Checkout đồng thời, idempotency và lịch sử tiền
 
@@ -149,8 +146,8 @@ phù hợp fixture cô lập nếu có đánh giá rõ ràng, không tự phát 
 
 **Decision:** OpenAPI contract review trước UI, generated TypeScript client drift check trong CI;
 Swagger lấy cùng schema runtime, contract smoke xác nhận responses thực tế. Backend Jest +
-Supertest, integration PostgreSQL thật trong Compose/CI; Playwright web, native smoke và
-manual device acceptance ghi bằng chứng. Concurrency test 20 requests/5 stock cùng barrier;
+Supertest, integration PostgreSQL thật trong Compose/CI; Playwright web, desktop wrapper manual
+acceptance khi được triển khai. Concurrency test 20 requests/5 stock cùng barrier;
 replay10 lần; fake clock + real DB race payment/expiry. Không mock DB trong bài integrity.
 
 Demo dùng một Linux VPS có Docker Compose + reverse proxy HTTPS + PostgreSQL volume,
@@ -160,29 +157,27 @@ DB integration và contract; secret không vào PR untrusted. Migration deploy t
 thích schema; backup ngoài VPS, restore drill. Rollback app image cũ với migration additive,
 không tự down migration phá dữ liệu. Log structured có requestId, redact tokens/PII.
 
-Windows build cần Rust/MSVC/WebView2; macOS và iOS build/smoke phải có macOS/Xcode runner,
-thiết bị hoặc simulator tương ứng. Expo cloud build có thể hỗ trợ build iOS từ Windows nhưng
-không thay thế kiểm chứng chạy iOS. Signing/distribution account và budget là điều kiện quản
-lý phải kiểm Sprint1; không coi store publishing là MVP. Android và Windows smoke sớm,
-iOS/macOS không dồn Sprint8. pnpm build scripts được allowlist/review, lockfile frozen.
+Windows build cần Rust/MSVC/WebView2; macOS build cần Xcode/Rust targets tương ứng.
+Desktop buyer chưa được build nên các tuyên bố desktop phải để ở trạng thái planned/BLOCKED.
+Signing/distribution account và budget là điều kiện quản lý phải kiểm khi triển khai;
+không coi store publishing là MVP. Windows smoke sớm khi có toolchain; macOS không dồn Sprint8.
+pnpm build scripts được allowlist/review, lockfile frozen.
 
-**Rationale:** Phù hợp quy mô sinh viên, vẫn có transaction/security và bằng chứng đa nền tảng.
+**Rationale:** Phù hợp quy mô sinh viên, vẫn có transaction/security và bằng chứng web thực.
 **Alternatives considered:** Serverless nhiều nhà cung cấp/free tiers làm phức tạp cookie,
-connection pooling và debug; Kubernetes không cần. Chỉ emulator/screenshots không chứng minh
-đầy đủ target-platform acceptance.
+connection pooling và debug; Kubernetes không cần. Screenshots không chứng minh target-platform acceptance.
 **Sources:** [Next deploy](https://nextjs.org/docs/app/getting-started/deploying),
 [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/),
-[Expo builds](https://docs.expo.dev/build/introduction/),
 [GitHub Actions secrets](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions).
 
 ## Research exit gate
 
 Các lựa chọn kỹ thuật đã được chốt ở mức thiết kế, không còn NEEDS CLARIFICATION.
-Exact pins, interoperability smoke, ngân sách hosting và quyền truy cập macOS/iOS là đầu ra
+Exact pins, interoperability smoke, ngân sách hosting và quyền truy cập toolchain desktop là đầu ra
 verification/gate Sprint1–2; chưa phải kết quả đã thực hiện. Nếu không đạt gate, cập nhật ADR,
 effort/risk và kế hoạch trước implementation; không âm thầm bỏ nền tảng hoặc tính năng đã đặc tả.
 
 
-## Delivery alignment — 2026-10-20
+## Delivery alignment — 2026-11-03
 
-Nhánh Mobile sớm T130/S4/W032 giữ ngân sách 2 PD, chỉ phụ thuộc foundation/auth/discovery. S6 tái dùng app và SecureStore adapter đã kiểm chứng; không đợi Admin cho bước thử S4. Package contract thống nhất packages/contracts, DTO selling và sale_status nội bộ. Không thay các quyết định stack/nghiệp vụ của nghiên cứu.
+Buyer mobile (Expo) đã bị gỡ khỏi workspace; T130/S4/W032 và SecureStore adapter không còn hiệu lực. Desktop buyer là Tauri wrapper quanh storefront, chưa nằm trong baseline build/CI. Package contract thống nhất packages/contracts, DTO selling và sale_status nội bộ. Không thay các quyết định stack/nghiệp vụ khác của nghiên cứu.

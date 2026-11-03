@@ -44,6 +44,8 @@
 
 Three client-only defects found in review of `3d1cf1c..f72a831`; no backend, contract or generated client change.
 
+> **Cập nhật 2026-11-03:** app mobile đã bị gỡ. Các dòng M1/M2 nêu lệnh `@marketplace/mobile` là evidence lịch sử tại thời điểm chạy, không thể tái lập trong workspace hiện tại. Hành vi tương ứng trên web/desktop buyer nằm ở `apps/storefront` và được kiểm bằng Playwright; mobile không còn là acceptance target.
+
 | Behavior | Red before fix | Green after fix |
 | --- | --- | --- |
 | M1 Vietnam date filter | Mobile B09 expected `from=2026-10-19T17:00:00.000Z` / `to=2026-10-21T16:59:59.999Z` but received `2026-10-20T00:00:00.000Z` / `2026-10-21T23:59:59.999Z`: the old `dateBound` treated the picked calendar day as UTC, so a UTC+7 buyer lost the first 7 hours of the day and included the previous evening. | `dateBound` validates the calendar date with a `Date.UTC` round-trip (still rejects `2026-02-30`) and subtracts a fixed `+07:00` offset before building inclusive `00:00:00.000`/`23:59:59.999` instants. B09 passed 15/15, including the invalid-range test. |

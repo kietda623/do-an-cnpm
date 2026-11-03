@@ -16,11 +16,12 @@ DoD chỉ đạt khi command/evidence thật được ghi lại; không dùng gu
   exact patch/version metadata trong lockfile/runtime matrix W008/W017.
 - S3-compatible dev/demo bucket với credentials scoped, endpoints/region/namespace cấu hình riêng.
   Unit tests có adapter mock, upload E2E phải có bucket thật; không tự mặc định MinIO legacy.
-- Windows Desktop: Rust/MSVC/WebView2 theo Tauri prerequisites; macOS: Rust/Xcode runner.
-- Android emulator/device; iOS simulator/device và macOS/Xcode access. Build iOS từ cloud
-  không thay bằng chứng chạy iOS. Không yêu cầu đưa app lên store trong MVP.
+- Windows Desktop (kế hoạch): Rust/MSVC/WebView2 theo Tauri prerequisites; macOS: Rust/Xcode runner.
+  Desktop buyer chưa được build trong MVP hiện tại; không yêu cầu toolchain này để chạy web/API.
+- Không có app mobile (Android/iOS); không cần emulator, simulator hay macOS/Xcode cho buyer.
+  Không yêu cầu đưa app lên store trong MVP.
 - CPU/RAM/disk đủ chạy containers; môi trường không trùng tên/database production.
-  Thiết bị native phải truy cập được API: URL LAN/HTTPS hợp lệ, không dùng localhost của máy khác.
+  Web/desktop phải truy cập được API qua URL hợp lệ.
 
 ## Scripts và services hiện có
 
@@ -30,14 +31,13 @@ API package `@marketplace/api` có `test:unit` và `test:integration` (Jest/Supe
 migration và `prisma:migrate:dev|deploy|status`; integration test chỉ nhận `TEST_DATABASE_URL` riêng.
 `@marketplace/api-client` có `generate:types` và `test`; `@marketplace/contracts` là workspace package cho OpenAPI/examples.
 Database demo seed, contract/E2E/concurrency/security, performance và expiry suites sẽ được bổ sung ở các task tương ứng.
-`@marketplace/mobile`: start. `@marketplace/desktop`: tauri, build:desktop.
+`@marketplace/desktop`: scaffold Tauri (chưa có script build trong baseline). Không còn workspace mobile.
 Compose services: postgres, api, storefront, seller-center, admin-panel; profile `test` có PostgreSQL/API test riêng.
 Contract này là công việc W011/015–17/033/040/057.
 
 Ports mục tiêu: storefront3000, seller3001, admin3002, API4000; Compose PostgreSQL development bind
 127.0.0.1:55432 và test database riêng bind 127.0.0.1:55433, không dùng database `cnpm`.
-Mobile/native PUBLIC_API_URL theo thiết bị;
-Web apps dùng cùng scheme/site với API ở demo để cookie SameSite hợp lệ.
+Web apps dùng cùng scheme/site với API ở demo để cookie SameSite hợp lệ; desktop buyer dùng cùng URL.
 
 ## Local setup sau khi foundation/feature code có đủ
 
@@ -125,25 +125,23 @@ V07 dùng test clock chỉ trong test process và fixture disposable, không end
 Expiry kiểm tại request và sweep30s; worker trễ không cho payment sau deadline.
 Báo cáo tách target expected với observed results, không tick acceptance khi chưa có evidence.
 
-## Native validation
+## Desktop validation (kế hoạch — chưa chạy)
+
+Desktop buyer chưa có `tauri.conf.json` hay script build; các lệnh dưới là contract tương lai:
 
 ```powershell
-pnpm --filter @marketplace/mobile start
 pnpm --filter @marketplace/desktop tauri dev
 pnpm --filter @marketplace/desktop build:desktop
 ```
 
-Mobile start mở dev server và chọn Android/iOS trên môi trường tương ứng; production-like acceptance
-cần release/dev build phù hợp và API HTTPS/LAN được cấu hình, không giả định localhost.
-Win/Mac build chạy trên runner OS đích; Mac/iOS commands thực hiện ở Mac/Xcode, không tuyên bố
-build/test iOS đã chạy từ PowerShell Windows hiện tại.
+Khi triển khai, wrapper trỏ storefront URL và dùng lại webview/cookie của web. Acceptance cần build
+trên OS đích (Windows Rust/MSVC/WebView2 hoặc macOS Xcode/Rust targets), ghi OS/tool versions,
+app/API SHA và thời điểm chạy. Build pass không thay flow pass; thiếu evidence thì ghi BLOCKED.
 
-- Android/iOS: US1,4–8 bao gồm addresses/profile/review, search→cart→checkout→tracking;
-  refresh SecureStore, logout revoke, app resume refetch, không token plaintext.
-- Windows/macOS: US2,3,7,8 toàn Seller screens; Stronghold unlock password không hardcode,
-  create/edit/stock/fulfill/revenue/review, wrong shop access denied.
-- Trên mỗi target ghi OS/device/tool versions, API release, start/end timestamp, thao tác và response
-  redacted, screenshots/video khi phù hợp, record/totals evidence từ server. Build pass không là flow pass.
+- Buyer desktop: US1,4–8 trong webview, gồm reload/session restore, cookie HttpOnly/CSRF, không token plaintext.
+- Seller/Admin: chỉ web; không có desktop hay mobile client riêng.
+
+Trên mỗi target ghi thao tác, response redacted, screenshots/video khi phù hợp và record/totals evidence từ server.
 
 ## Demo release và recovery rehearsal
 

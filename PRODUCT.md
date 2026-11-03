@@ -34,7 +34,7 @@ The differentiator is the settlement and fulfillment model: multi-shop orders, 1
 - No voucher engine, no monthly GMV series, no rating-distribution endpoint. Do not fabricate them.
 - Writes use `Idempotency-Key` and `expectedVersion`; 409 means reload before retry.
 - Existing Playwright specs select by Vietnamese accessible name; keep one consistent copy set and update specs with it.
-- Mobile (`apps/mobile`) and desktop (`apps/desktop`) are out of scope.
+- Buyers use the web storefront, packaged later as a desktop app (Tauri wrapper around the same web UI). There is no buyer mobile app.
 
 ## Brand Commitments
 

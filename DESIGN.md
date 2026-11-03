@@ -2,6 +2,10 @@
 
 One system for the buyer storefront, seller console, and admin console. Two densities: **Storefront** (decide and buy) and **Console** (scan and act). Same tokens, type, states, and controls everywhere.
 
+## Desktop direction
+
+The buyer desktop app is a Tauri webview around the same storefront — not a second UI. It inherits these tokens, components, density, and copy unchanged; only window chrome and minimum viewport width differ. Seller and admin have no desktop surface. There is no mobile app. Desktop implementation is planned, not shipped (see [ADR-0004](docs/adr/0004-buyer-desktop-webview-wrapper.md)).
+
 ## Color
 
 | Token | Value | Use |

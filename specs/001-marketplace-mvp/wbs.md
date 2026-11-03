@@ -1,6 +1,7 @@
 # Work Breakdown Structure — Marketplace MVP
 
 Planning baseline 2026-10-20; mọi hàng là công việc dự kiến, chưa hoàn thành.
+**Cập nhật 2026-11-03:** buyer dùng web + desktop wrapper (Tauri, kế hoạch); app mobile đã bị gỡ. W032/W048/W054 trước đây là Buyer Mobile nay là desktop wrapper **chưa triển khai**; W055/W062 trước đây là Seller Desktop nay là packaging/verify desktop buyer **chưa triển khai**. Các hàng này được giữ để tham chiếu effort gốc và không nằm trong baseline build/CI hiện tại; capacity totals bên dưới là baseline lập kế hoạch trước khi retire.
 Person-day (PD) = 8 giờ tập trung. Effort gồm lập trình/tài liệu và test tại task;
 review chéo, họp, học tập và buffer được trừ riêng trong plan.md.
 P0: chặn phụ thuộc/toàn vẹn/release; P1: bắt buộc MVP có thể xếp sau;
@@ -13,13 +14,13 @@ Task 3–4 PD UI có thể chia theo màn hình mà giữ AC và tổng effort.
 | ID | Sprint | Nhóm | Task / mô tả | Owner | Reviewer | Priority | Difficulty | PD | Dependency | Deliverable | Acceptance Criteria | Test Cases chính |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | W001 | 1 | Requirement Analysis | Chốt use case/BR theo actor | M1 | M3 | P0 | Medium | 2 | — | SRS + map FR01–50 | 50 FR có actor/AC; chốt expiry/cancel | Review 4 actor/nhánh lỗi |
-| W002 | 1 | System Architecture | Public interfaces và auth trust boundaries | M1 | M2 | P0 | High | 2 | W001 | Module interfaces + ADR auth | Không import nội bộ chéo, mô tả web/native auth | Walkthrough ownership/logout |
+| W002 | 1 | System Architecture | Public interfaces và auth trust boundaries | M1 | M2 | P0 | High | 2 | W001 | Module interfaces + ADR auth | Không import nội bộ chéo, mô tả web auth | Walkthrough ownership/logout |
 | W003 | 1 | Database Design | ERD và bất biến checkout/khóa | M2 | M1 | P0 | High | 2.5 | W001 | ERD + ADR database/transaction | UUID/NUMERIC/FK; chống oversell/refund trùng | Tabletop 20 buyers/5 stock |
 | W004 | 1 | Backend Infrastructure | DTO/OpenAPI auth/shop/catalog và mock examples | M2 | M4 | P0 | Medium | 2 | W002,W003 | Contract revision + fixtures | Ví dụ schema có 401/403/409/422 | Mock consumer smoke |
 | W005 | 1 | Buyer Web | Wireframe hành trình mua/state UI | M3 | M4 | P1 | Medium | 3.5 | W001 | Buyer wireframes | 12 màn hình, đa shop, responsive/a11y | Walkthrough 360/1280 |
-| W006 | 1 | Seller Center/Admin | Wireframe quản trị và Desktop reuse | M4 | M3 | P1 | Medium | 3.5 | W001,W002 | Seller/Admin wireframes + reuse ADR | 17 màn hình, scope shop/state rõ | Cross-shop UX review |
-| W007 | 1 | Testing | Fixture và test matrix MVP | M5 | M2 | P0 | Medium | 2 | W001,W003 | Test Plan map SC01–10 | Có concurrency/idempotency/native matrix | Review 50 FR + 10 SC |
-| W008 | 1 | Deployment | Toolchain, Mac/iOS access và storage/CI | M5 | M4 | P0 | Medium | 1.5 | W002 | Environment/budget evidence | Có đường build/test macOS/iOS và S3 | Kiểm chứng quyền truy cập tài nguyên |
+| W006 | 1 | Seller Center/Admin | Wireframe quản trị và desktop buyer reuse | M4 | M3 | P1 | Medium | 3.5 | W001,W002 | Seller/Admin wireframes + reuse ADR | 17 màn hình, scope shop/state rõ | Cross-shop UX review |
+| W007 | 1 | Testing | Fixture và test matrix MVP | M5 | M2 | P0 | Medium | 2 | W001,W003 | Test Plan map SC01–10 | Có concurrency/idempotency/desktop matrix (kế hoạch) | Review 50 FR + 10 SC |
+| W008 | 1 | Deployment | Toolchain, storage/CI và desktop evidence | M5 | M4 | P0 | Medium | 1.5 | W002 | Environment/budget evidence | Có S3; đường build desktop buyer ghi nhận (kế hoạch) | Kiểm chứng quyền truy cập tài nguyên |
 | W009 | 2 | Authentication | User/Session/register/login | M1 | M2 | P0 | High | 2.5 | W003,W004,W017,W011 | Auth service + identity migration | Email unique, hash an toàn, phiên thu hồi được | Login đúng/sai/trùng email |
 | W010 | 2 | Authentication | Rotation/logout/password và guards | M1 | M5 | P0 | High | 2 | W009 | RBAC/ownership/session adapters | Logout/khóa có hiệu lực, reuse bị chặn | CSRF/refresh reuse/cross-user |
 | W011 | 2 | Backend Infrastructure | Nest shell/validation/error/Swagger/health | M2 | M1 | P0 | Medium | 2 | W004,W017 | API bootstrap + schema generation | Prefix v1, lỗi chuẩn, health DB | Invalid DTO/docs snapshot |
@@ -43,7 +44,7 @@ Task 3–4 PD UI có thể chia theo màn hình mà giữ AC và tổng effort.
 | W029 | 4 | Inventory | Checkout transaction/concurrency proof | M2 | M1 | P0 | High | 2 | W021,W027 | Transactional integration prototype | 20 buyer/5 stock không oversell | SC003/rollback/concurrent edit |
 | W030 | 4 | Buyer Web | Search/filter/cart account integration | M3 | M2 | P0 | Medium | 4 | W022,W026,W028 | Discovery/cart hoàn chỉnh | Selected lines/tổng giỏ/login gate | US4/5.1/empty/error/a11y |
 | W031 | 4 | Seller Center/Admin | Stock UI và order contract mocks | M4 | M2 | P0 | Medium | 4 | W023,W021,W027 | Inventory screen + order mocks | Stale conflict reload, shop scope rõ | Concurrent stock UX/mock schema |
-| W032 | 4 | Buyer Mobile | Expo/navigation/secure login/discovery spike | M5 | M3 | P1 | Medium | 2 | W008,W010,W028 | Android/iOS thin client | Login→list, không token plain storage | Device session/network smoke |
+| W032 | 4 | Buyer Desktop (kế hoạch) | Tauri wrapper spike: mở storefront URL, secure login/discovery | M5 | M3 | P1 | Medium | 2 | W008,W010,W028 | Tauri shell + cookie/session proof (chưa triển khai) | Login→list qua webview, cookie HttpOnly, không token plain | Windows smoke/cookie refresh |
 | W033 | 4 | Testing | Schema drift CI và load baseline | M5 | M2 | P0 | Medium | 2 | W004,W028,W029 | Contract diff gate + 1000-product fixture | Breaking drift bị chặn, có p95 baseline | SC006 rehearsal/fixture review |
 | W034 | 5 | Order Management | State machine/cancel/restore inventory | M1 | M2 | P0 | High | 2.5 | W027,W029,W035 | Transitions/cancel/audit API | All-or-nothing hủy tổng; hoàn tồn 1 lần | Partial cancel/retry10 |
 | W035 | 5 | Checkout | Order/split/snapshot/idempotency | M2 | M1 | P0 | High | 2.5 | W026,W027,W029 | Order migrations + checkout API | Tạo đơn/trừ tồn/xóa giỏ nguyên tử | US5/SC003/004/price change |
@@ -57,23 +58,23 @@ Task 3–4 PD UI có thể chia theo màn hình mà giữ AC và tổng effort.
 | W043 | 6 | Reviews & Ratings | Review unique/item + public/Seller list | M1 | M3 | P1 | Medium | 2 | W034,W037 | Review API + migration | Đúng Buyer/COMPLETED/1–5/một lần | US8.1/3/duplicate race |
 | W044 | 6 | Seller Dashboard | Counts/revenue/day/month filters | M2 | M4 | P1 | Medium | 2 | W034,W036 | Seller stats + indexes | Asia/Saigon, chỉ COMPLETED, scope shop | US8.2/midnight boundary |
 | W045 | 6 | Admin Dashboard | System stats/reconciliation | M2 | M1 | P1 | Medium | 2 | W042,W044 | Admin stats + known fixtures | Không đếm kép Order/SellerOrder | SC008/refund known totals |
-| W046 | 6 | Buyer Web | Review UX/a11y và Mobile integration support | M3 | M5 | P1 | Medium | 4 | W038,W043 | Web reviews + shared client updates | Đủ Buyer screens, a11y 360/1280 | US8/10/keyboard/form errors |
-| W047 | 6 | Seller Center/Admin | Dashboard/reviews/ops final + Tauri shell | M4 | M5 | P1 | High | 4 | W039,W042,W043,W044,W045 | Ops web + Desktop login proof | Stats đúng, auth qua secure adapter | US8/9/Desktop login |
-| W048 | 6 | Buyer Mobile | Detail/cart/checkout/order/account integration | M5 | M3 | P0 | High | 3 | W032,W035,W036,W037,W046 | Buyer Android/iOS core flows | US1/4–7, shared persistent data | Native payment/cancel/network |
-| W049 | 6 | Testing | Cross-platform auth/contract smoke | M5 | M1 | P0 | Medium | 1 | W047,W048 | Native security report | Không plain token, scopes/CORS đúng | Native rotation/logout |
+| W046 | 6 | Buyer Web | Review UX/a11y và desktop readiness | M3 | M5 | P1 | Medium | 4 | W038,W043 | Web reviews + shared client updates | Đủ Buyer screens, a11y 360/1280 | US8/10/keyboard/form errors |
+| W047 | 6 | Seller Center/Admin | Dashboard/reviews/ops final | M4 | M5 | P1 | High | 4 | W039,W042,W043,W044,W045 | Ops web hoàn chỉnh | Stats đúng, auth web đúng | US8/9 |
+| W048 | 6 | Buyer Desktop (kế hoạch) | Tauri wrapper: detail/cart/checkout trong storefront | M5 | M3 | P0 | High | 3 | W032,W035,W036,W037,W046 | Desktop buyer core flows (chưa triển khai) | US1/4–7, cùng API/cookie như web | Payment/cancel/network trong webview |
+| W049 | 6 | Testing | Web auth/contract smoke | M5 | M1 | P0 | Medium | 1 | W047 | Web auth security report | Không plain token, scopes/CORS đúng | Web rotation/logout/CORS |
 | W050 | 7 | Testing | Auth/upload/resource security hardening | M1 | M5 | P0 | High | 2.5 | W042,W049 | Threat tests + fixes | SC007, secrets redacted, rate limit | IDOR/CSRF/refresh reuse/upload spoof |
 | W051 | 7 | Documentation | OpenAPI và use-case trace freeze | M1 | M4 | P1 | Low | 1.5 | W043,W045,W050 | API docs + FR matrix | 50 FR map endpoint/tests, no drift | Schema validation/examples smoke |
 | W052 | 7 | Testing | Money/stock/state regression + query tuning | M2 | M1 | P0 | High | 3 | W040,W045 | Integrity/performance fixes + evidence | SC003/004/006/008 measured | DB races/p95/known money |
 | W053 | 7 | Database Design | Migration/restore rehearsal + ADR update | M2 | M5 | P0 | Medium | 1 | W052 | Migration compatibility/recovery report | Không sửa migration shared, restore đúng | Fresh/upgrade/restore checks |
-| W054 | 7 | Buyer Mobile | Native completion và 5-user usability | M3 | M5 | P0 | High | 4 | W046,W048,W043 | Mobile review/all screens + UX fixes | US8/10, SC005:4/5 trong 3 phút | Android/iOS purchase/a11y |
-| W055 | 7 | Seller Desktop | Secure sessions/full Seller/Win+Mac build | M4 | M5 | P0 | High | 4 | W047,W049 | Desktop packages + platform evidence | US2/3/7/8 on Windows/macOS | Native logout/stock/fulfill/OS build |
-| W056 | 7 | Testing | Full E2E/native matrix và triage | M5 | M3 | P0 | High | 2.5 | W050,W052,W054,W055 | Acceptance report + release blockers | SC001–009 measured or blocked explicitly | Cross-device/retry/permissions |
-| W057 | 7 | Deployment | CI native release/backup drill | M5 | M2 | P0 | Medium | 1.5 | W016,W053,W055 | Release candidate pipeline | Secret protected, Win/Mac jobs, restore evidence | Artifacts smoke/rollback rehearsal |
+| W054 | 7 | Buyer Desktop (kế hoạch) | Desktop completion và 5-user usability (web parity) | M3 | M5 | P0 | High | 4 | W046,W048,W043 | Desktop wrapper review (chưa triển khai) | US8/10, SC005:4/5 trong 3 phút | Windows purchase/a11y (khi có build) |
+| W055 | 7 | Buyer Desktop (kế hoạch) | Packaging/install contract và storefront parity | M4 | M5 | P0 | High | 4 | W047,W049 | Desktop packages + evidence (chưa triển khai) | US1/4–8 trên Windows (khi có build) | Install/login/place-order/cookie |
+| W056 | 7 | Testing | Full E2E matrix và triage | M5 | M3 | P0 | High | 2.5 | W050,W052,W054,W055 | Acceptance report + release blockers | SC001–009 measured or blocked explicitly | Cross-device/retry/permissions |
+| W057 | 7 | Deployment | CI release/backup drill | M5 | M2 | P0 | Medium | 1.5 | W016,W053,W055 | Release candidate pipeline | Secret protected, desktop job optional, restore evidence | Artifacts smoke/rollback rehearsal |
 | W058 | 8 | Documentation | Báo cáo SRS/use-case/architecture/security | M1 | M3 | P1 | Medium | 3 | W051,W056 | Final report chapters + diagrams | Tài liệu khớp code, nêu limitations | Peer consistency review |
 | W059 | 8 | Database Design | Release migrations/seed/schema handover | M2 | M1 | P0 | Medium | 2 | W053,W056 | Final deterministic seed + schema | Fresh demo khớp totals/stock, repeat safe | US1–9/seed twice |
 | W060 | 8 | Deployment | API release image và rollback support | M2 | M5 | P0 | Medium | 1 | W059,W057 | Versioned image/release notes | Pinned digest, health/readiness pass | Previous app/schema compatibility |
 | W061 | 8 | Demo & Presentation | Demo script/slides/video/user guide | M3 | M4 | P1 | Medium | 3 | W054,W056,W058 | 15-min demo + fallback video | Hai shop/payment branches/review | New-user dry run/quickstart |
-| W062 | 8 | Seller Desktop | Native artifacts verify + Seller/Admin guide | M4 | M3 | P0 | Medium | 3 | W055,W057,W056 | Win/Mac checksums + ops manual | Fresh target machine đúng quyền | Publish→stock→fulfill smoke |
+| W062 | 8 | Buyer Desktop (kế hoạch) | Desktop artifacts verify + Buyer guide | M4 | M3 | P0 | Medium | 3 | W055,W057,W056 | Win/Mac checksums + buyer desktop guide | Fresh target machine đúng quyền | Install→login→purchase smoke |
 | W063 | 8 | Deployment | HTTPS demo/env/secrets/backup/restore | M5 | M2 | P0 | High | 2 | W057,W059,W060 | Demo instance + deployment runbook | DB private, off-host backup, rollback tested | Health/persistence/restore |
 | W064 | 8 | Demo & Presentation | Final acceptance/clean setup/handover | M5 | M1 | P0 | Medium | 1.5 | W061,W062,W063 | Acceptance matrix + limitations | SC010 <=30 phút sau prerequisites, zero P0 | Full demo/clean clone |
 
@@ -116,8 +117,8 @@ Các nhãn chi tiết trong WBS có thể tách domain nhỏ hơn22 nhóm; mappi
 | 14 Buyer Web | W005, W013, W022, W030, W038, W046 |
 | 15 Seller Center | W006, W014, W023, W031, W039, W044, W047 |
 | 16 Admin Dashboard | W006, W014, W023, W042, W045, W047 |
-| 17 Buyer Mobile | W032, W046, W048–049, W054 |
-| 18 Seller Desktop | W008, W047, W049, W055, W057, W062 |
+| 17 Buyer Desktop (kế hoạch) | W032, W046, W048–049, W054 |
+| 18 Desktop packaging (kế hoạch) | W008, W047, W049, W055, W057, W062 |
 | 19 Testing | W007, W015, W025, W029, W033, W040, W049–057 |
 | 20 Deployment | W008, W016, W041, W057, W060, W063 |
 | 21 Documentation | W001–008, W051, W053, W058–059, W061–064 |

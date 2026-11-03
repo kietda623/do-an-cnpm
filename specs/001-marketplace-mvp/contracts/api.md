@@ -56,11 +56,11 @@ Web refresh cookie HttpOnly Secure SameSite=Lax path `/api/v1/auth`; body respon
 không chứa refresh token. `/auth/csrf` cấp token gắn session/pre-session; web gửi
 `X-CSRF-Token` và Origin hợp lệ khi login/register/refresh/logout hay cookie mutation.
 API nghiệp vụ dùng Bearer token, không tự dùng cookie như danh tính nghiệp vụ.
-Native gửi refresh token chỉ ở endpoint refresh/logout, lưu trong Expo SecureStore (Mobile)
-hoặc Tauri Stronghold mã hóa, mở khóa bằng mật khẩu riêng do người dùng nhập (Desktop).
-Không hardcode khóa Stronghold, không localStorage, không log token. Quên mật khẩu vault
-thì xóa vault cục bộ và đăng nhập lại, không ảnh hưởng giao dịch phía server.
-Native token response là ngoại lệ có chủ đích của quy tắc không lộ dữ liệu nhạy cảm.
+Desktop buyer là Tauri webview quanh storefront nên dùng đúng cookie HttpOnly + CSRF
+như web; không có native refresh token, SecureStore hay Stronghold trong baseline.
+Không localStorage, không log token. Access token chỉ giữ trong bộ nhớ.
+Nếu sau này có client native thật, refresh token chỉ được gửi ở endpoint refresh/logout
+và phải có ADR bảo mật riêng trước khi triển khai.
 Refresh cũ tái sử dụng thu hồi family, 401 `SESSION_REVOKED`; refresh không hợp lệ hoặc hết hạn trả 401 `INVALID_REFRESH`; logout lặp 204.
 
 ## DTO dictionary
@@ -310,7 +310,7 @@ endpoint, DTO, auth and error shapes, with commerce examples at
 `packages/contracts/examples/commerce.json`. Runtime controllers and NestJS Swagger output are
 implemented incrementally and must conform to this contract; contract tests compare route,
 security, DTO and header shapes. Generated TypeScript clients/types live in `packages/api-client`;
-avoid hand-maintained duplicate DTOs across web/mobile/desktop. Breaking contract changes require
+avoid hand-maintained duplicate DTOs across web/desktop. Breaking contract changes require
 review/versioned migration.
 
 Mock fixtures from contract examples: Guest, BuyerA/B, SellerA/B, Admin; two active shops,

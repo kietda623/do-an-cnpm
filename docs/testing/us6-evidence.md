@@ -82,7 +82,7 @@ Môi trường: Windows, Node.js 24.21.0, pnpm 12.14.0 qua Corepack; PostgreSQL 
 ### Giới hạn
 
 - T099 (trạng thái UI payment/cancel) vẫn mở theo phạm vi frontend. T091–T098 đã được đối chiếu và tick ở mục "Đối chiếu T091–T098 (2026-11-03)" bên dưới.
-- T152 (release CI/native artifacts) vẫn mở; batch này chỉ bổ sung contract/E2E vào CI kiểm thử.
+- T152 (release CI/desktop artifacts) vẫn mở; batch này chỉ bổ sung contract/E2E vào CI kiểm thử. Desktop buyer chưa có build nên chưa thể đưa artifact vào CI.
 
 ## Review remediation (2026-11-03): I3 shape contract và I5 replay sau mất quyền
 

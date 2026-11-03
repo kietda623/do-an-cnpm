@@ -1,4 +1,4 @@
-# Frontend / Mobile / Desktop Design and Delivery Plan
+# Frontend / Desktop Design and Delivery Plan
 
 Thiết kế theo spec platform matrix; chưa có màn hình được lập trình.
 API paths dưới rút gọn prefix `/api/v1`; `{s}` shopId, `{p}` productId, `{o}` Order,
@@ -20,7 +20,7 @@ State pack bắt buộc cho từng hàng bên dưới:
 - S=success có dữ liệu mới đã lưu; unauthorized→login/forbidden rõ, không lộ data.
 Mỗi AC dưới bao gồm đủ L/E/X/S và kiểm quyền, không chỉ happy path.
 Accessibility: nhãn form, focus sau lỗi, keyboard Web/Desktop, không chỉ màu biểu thị status.
-Buyer 360/1280 hiển thị đủ nút; native có safe-area/back navigation phù hợp, không copy Desktop layout.
+Buyer 360/1280 hiển thị đủ nút; desktop buyer dùng cùng breakpoint responsive, không cần layout thứ hai.
 
 ## Buyer Web — Owner M3, reviewer theo WBS
 
@@ -68,37 +68,16 @@ Buyer 360/1280 hiển thị đủ nút; native có safe-area/back navigation ph�
 | A06 Product Moderation S6 | ProductSearch/Preview/HideReason | admin/products GET; hide POST | reason/version, no direct transaction edit | Hide không xóa snapshot, actor audit |
 | A07 Order Inquiry S6 | OrderSearch, parts/payment/timeline/audit | admin/orders GET/detail; admin/audit; recovery actions | read-only final, recovery action guard reason/key | Xem mọi đơn, không sửa final; failed return-confirmation hoàn đúng1lần |
 
-## Buyer Mobile — M5 core S6, M3 completion S7
+## Buyer Desktop — Tauri wrapper, kế hoạch (chưa triển khai)
 
-Từng B01–B13 đều bắt buộc trên Android/iOS, không chỉ6 route mẫu của prompt planning.
-Reuse generated api-client/DTO/validation/tokens, không reuse DOM/ui-web.
-B02 refresh Expo SecureStore; B08/B10 giữ key retry trên phiên ý định, app resume refetch;
-không chạy cron hết hạn trong client, server deadline là authority.
+Buyer desktop dùng lại nguyên bộ B01–B13 của web storefront trong một cửa sổ Tauri; không có slice UI riêng.
+Điều kiện khi triển khai:
 
-| Mobile slice | Components/native adaptation | API/state/validation | Sprint/task | Nghiệm thu |
-| --- | --- | --- | --- | --- |
-| B02 + B01/03 spike | Native forms, navigation, FlatList | Cùng DTO B02, secure adapter, account cache | S4 W032 / T130 | Android và iOS login→list smoke; không plain token |
-| B01/03/04/05/06 | Native search/filter modal, gallery, variant sheet | API/validation như bảng Buyer, abort stale search | S6 W048 — mở rộng app đã thử S4 | US4 thật, safe-area/back, correct min-price/filter |
-| B07/08/09/10 | Cart sections, address/payment sheet, order timeline | Cart/quote/orders/payments; retry keys/poll on foreground | S6 W048 + M3 support W046 | US5–7; split, cancel/refund, network recovery |
-| B11/12 | Native profile/address forms/photo picker | Own-user endpoints, secure password flow/image checks | S6 W048 — mở rộng app đã thử S4 | US1, default address/snapshot đúng |
-| B13 + rating views | Native rating/comment + review list | reviews completed-item constraint | S7 W054 | One review/item, async errors/unauthorized |
-| All B01–13 | Touch targets, accessibility labels, offline error views | Device/session switching cache clear | S7 W054/056 | SC009 hai OS, evidence flow không chỉ build |
-
-## Seller Desktop — M4, M5 reviewer/build hỗ trợ
-
-Tauri2 + React/Vite bundles local. S01–S11 đầy đủ tương ứng Seller Web, gồm đăng ký/approval,
-profile/assets và reviews, không chỉ order table. Reuse client-only views/components,
-platform adapter thay auth transport/navigation/file selection.
-CSP/permissions hạn chế, không unrestricted shell/filesystem hoặc remote content có IPC.
-Refresh Stronghold vault khóa bằng mật khẩu người dùng nhập; không hardcode master password;
-access memory, logout revoke/xóa secret. Thiếu vault/unlock phải login lại, không fallback plaintext.
-
-| Slice | Sprint/task | State/validation/API | Acceptance |
-| --- | --- | --- | --- |
-| Design/static sharing/login spike | ADR S1; smoke foundation S2; shell S6 W047 | Same auth contract, HTTPS origin allowlist, native adapter | Không import Next server APIs; Windows smoke/Mac build access kiểm sớm |
-| S01–S06/S10 | S7 W055 | Shop/catalog/assets/inventory; shared form validation/version conflict | Đăng/duyệt shop, tạo/edit variant, stock không lost-update trên Windows/macOS |
-| S03/S07–S09/S11 | S7 W055 | Stats/order/shipping/reviews endpoints same as Seller | US7/8, chỉ shop mình, COD correct, mô phỏng rõ |
-| Packaging/install/run | S7 W057/S8 W062 | OS runner Rust/MSVC/WebView2 hoặc macOS/Xcode | Artifacts checksum/version, fresh target launch + login/logout/stock/fulfill; build không thay run evidence |
+- Tauri2 mở đúng storefront URL đã cấu hình; CSP/allow-list tối thiểu, không shell/filesystem IPC tùy ý.
+- Cùng auth contract: refresh cookie HttpOnly + CSRF của webview; không có token store native; access token chỉ trong memory.
+- B02 đăng nhập qua webview; B08/B10 giữ retry key theo phiên ý định và refetch khi cửa sổ focus lại.
+- Acceptance: chạy đủ B01–B13 trên OS mục tiêu, gồm reload/session restore; ghi OS/toolchain và app/API SHA.
+- Không có client mobile; B01–B13 trên web là nguồn hành vi duy nhất.
 
 ## Integration contract và exit gates
 
@@ -109,6 +88,6 @@ nghiệp vụ phải đối chiếu record/response từ API thật. Test từng
 server release và commands. Polishing không vượt gate correctness/security.
 
 
-## Dependency và ngân sách Mobile
+## Dependency và ngân sách desktop
 
-T130 (S4/W032/2 PD) chỉ dùng foundation, identity và discovery; không chờ Admin, checkout hoặc review. Core login/SecureStore/list được giữ và mở rộng cho S6. Test matrix đầy đủ và acceptance đa nền tảng vẫn ở S6–7; không coi smoke S4 là hoàn thành Buyer Mobile.
+Desktop buyer **không nằm trong baseline MVP hiện tại**: không có task S4/S6/S7, không cấp PD cho mobile (T130 đã de-scoped). Khi triển khai wrapper, dùng lại toàn bộ B01–B13 và chỉ thêm cấu hình Tauri cùng evidence build/launch trên OS mục tiêu; không coi web pass là desktop pass.

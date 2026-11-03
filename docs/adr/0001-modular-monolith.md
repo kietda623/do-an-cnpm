@@ -8,7 +8,7 @@
 
 Backend chạy NestJS Modular Monolith, một API triển khai cùng PostgreSQL và S3-compatible object storage. Domain được chia module theo năng lực: Identity, Shop, Catalog/Media, Inventory, Cart, Orders, Payments, Shipping, Reviews, Admin, Audit. Nest module export public service/port có kiểu rõ; module tiêu thụ chỉ gọi API đó và không import repository, entity hoặc file nội bộ của module khác. `packages/contracts` là transport contract dùng chung client/server, không phải nơi chứa domain persistence hay logic backend.
 
-Seller Center Web là ứng dụng client gốc dùng lại trong Tauri Desktop qua WebView; Desktop không nhân đôi UI hoặc business logic. Platform-specific secure storage/session adapter được cô lập, còn mọi quyền Seller vẫn do API backend áp dụng.
+Phần desktop của quyết định này được [ADR-0004](0004-buyer-desktop-webview-wrapper.md) thay thế: desktop chỉ dành cho buyer và bọc storefront web, không nhân đôi UI hoặc business logic; seller/admin chỉ dùng web.
 
 Order coordinator sở hữu orchestration checkout/cancel/order transition. Nó truyền transaction context cho các public port cần cập nhật cùng PostgreSQL transaction. Payment không callback ngược vào Order; coordinator gọi payment port. Admin chỉ phát lệnh nghiệp vụ được module sở hữu cung cấp, không sửa bảng hoặc snapshot trực tiếp.
 
@@ -17,7 +17,7 @@ Order coordinator sở hữu orchestration checkout/cancel/order transition. Nó
 - Mọi input và identity từ client đều không tin cậy. Backend xác thực access JWT ngắn hạn, kiểm tra session còn hiệu lực và tạo AccessContext bất biến cho request.
 - Authentication xác nhận user/session; authorization kiểm tra system role cùng ownership/membership và phạm vi shop ở backend cho từng resource/action. Ẩn nút ở client không cấp quyền.
 - Seller access yêu cầu ShopMember ACTIVE và role phù hợp cho đúng `shopId`; không suy ra quyền từ ID do client gửi.
-- Web dùng cookie refresh an toàn theo contract, mobile/desktop dùng secure storage nền tảng; access token chỉ giữ trong memory client. Token, password, raw provider payload và PII thừa không ghi log.
+- Web dùng refresh cookie HttpOnly theo contract; desktop buyer dùng lại cookie đó trong webview storefront; access token chỉ giữ trong memory client. Token, password, raw provider payload và PII thừa không ghi log.
 - Web state-changing requests bảo vệ CSRF theo contract; CORS theo allowlist. Upload dùng Asset UUID, ownership và content verification; client không chọn object key public.
 - Job/callback chỉ được tin cậy sau xác minh adapter/provider và idempotency; mọi hiệu ứng kinh tế được áp dụng trong transaction, callback muộn được bù trừ theo policy.
 
