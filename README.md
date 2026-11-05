@@ -4,6 +4,18 @@ Nền tảng thương mại điện tử đa người bán cho thị trường V
 
 Giao diện tiếng Việt, tiền tệ VND, múi giờ Asia/Saigon.
 
+## Phạm vi chức năng
+
+- **Buyer (storefront):** discovery theo danh mục và từ khóa, chi tiết sản phẩm, giỏ hàng, checkout một đơn nhiều shop, theo dõi đơn, xác nhận đã nhận hàng và gửi đánh giá.
+- **Seller (seller-center):** onboarding và cập nhật cửa hàng, quản lý catalog gồm biến thể và ảnh, điều chỉnh tồn kho, xử lý đơn, xem doanh thu, đọc đánh giá và cấu hình cửa hàng. Danh sách sản phẩm hỗ trợ tìm kiếm theo tên, lọc theo trạng thái bán và trạng thái bị quản trị ẩn, phân trang dựa trên `meta.total` trả về từ server.
+- **Admin (admin-panel):** duyệt/từ chối/tạm ngưng cửa hàng, duyệt hoặc ẩn sản phẩm, quản lý danh mục, khóa/mở khóa tài khoản kèm lý do, theo dõi đơn và vận chuyển, xử lý yêu cầu hoàn trả tại `/orders/returns`, tra cứu audit log.
+
+### Giới hạn đã biết
+
+- Thanh toán chỉ có `COD` và `MOCK`; giao dịch MOCK được đánh dấu `simulated: true` và không gọi cổng thanh toán thật.
+- Chưa có voucher/promotion engine, báo cáo GMV theo tháng hay phân bố điểm đánh giá.
+- Không có app mobile; buyer desktop mới ở mức kế hoạch ([ADR-0004](docs/adr/0004-buyer-desktop-webview-wrapper.md)).
+
 ## Nền tảng
 
 | Đối tượng | Bề mặt | Trạng thái |
@@ -31,7 +43,7 @@ Không có app mobile (Android/iOS); `apps/mobile` đã được gỡ khỏi wor
 | `apps/api` | API NestJS (admin, cart, catalog, identity, inventory, order, payment, review, shipping, shop), Prisma schema/migrations/seed |
 | `apps/storefront` | Web cho buyer: discovery, giỏ hàng, checkout, đơn hàng, đánh giá |
 | `apps/seller-center` | Web cho seller: onboarding shop, catalog, tồn kho, đơn, doanh thu |
-| `apps/admin-panel` | Web cho admin: duyệt shop/sản phẩm, người dùng, đơn, hoàn trả, audit |
+| `apps/admin-panel` | Web cho admin: duyệt shop/sản phẩm, người dùng, danh mục, đơn, hoàn trả, audit |
 | `packages/api-client` | Transport gọi API, quản lý token/session, type sinh từ OpenAPI |
 | `packages/contracts` | `openapi.yaml` và ví dụ request/response |
 | `packages/ui-web` | Component dùng chung cho ba web app |
@@ -147,12 +159,13 @@ Integration test và `prisma:schema:check` chỉ chấp nhận database disposab
 
 Không bao giờ chạy `prisma migrate reset`, `docker compose down -v` hay xóa volume trên database không phải disposable.
 
-CI tại `.github/workflows/ci.yml` chạy trên PostgreSQL 17 tạm: lint, typecheck, kiểm tra generated OpenAPI type không lệch, unit, contract, build, integration, concurrency, checkout E2E và fulfillment E2E; artifact Playwright được upload khi thất bại và schema được đối chiếu lần cuối.
+CI tại `.github/workflows/ci.yml` chạy trên PostgreSQL 17 tạm với các bước: lint toàn workspace, typecheck, sinh lại type OpenAPI rồi kiểm tra `git diff --exit-code`, unit, contract, build, integration, concurrency, checkout E2E, fulfillment E2E, và đối chiếu migration/schema lần cuối. Artifact Playwright được upload khi thất bại.
 
 ## Quy ước phát triển
 
 - **Hợp đồng trước:** sửa `packages/contracts/openapi.yaml`, sau đó chạy `pnpm --filter @marketplace/api-client generate:types`. Không sửa tay `packages/api-client/src/generated/index.ts`.
 - **Envelope API:** response có dạng `{ data, meta? }`. Dùng `request()` khi chỉ cần `data`; dùng `requestEnvelope()` khi cần `meta` (ví dụ phân trang).
+- **Danh sách có phân trang:** tham số query chuẩn là `page`, `pageSize` (tối đa 100) và trả `meta { page, pageSize, total }`. Bộ lọc riêng đặt theo tên miền, ví dụ `GET /shops/{shopId}/management/products?q=&selling=&adminHidden=` dùng chung envelope này.
 - **Ghi dữ liệu:** dùng `Idempotency-Key` và `expectedVersion`; nhận `409` thì tải lại trước khi thử tiếp.
 - **Bí mật:** chỉ đặt trong `.env`/secret store. Không đặt token, mật khẩu database hay access key vào biến `NEXT_PUBLIC_*`.
 - **UI:** giữ copy tiếng Việt thống nhất với các Playwright spec (spec chọn theo accessible name).

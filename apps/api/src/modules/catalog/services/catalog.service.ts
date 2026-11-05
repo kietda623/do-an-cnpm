@@ -535,17 +535,46 @@ export class CatalogService {
     if (!member) throw new NotFoundException();
     return member;
   }
-  async listManagement(userId: string, shopId: string) {
+  async listManagement(
+    userId: string,
+    shopId: string,
+    query: {
+      q?: string;
+      selling?: boolean;
+      adminHidden?: boolean;
+      page?: number;
+      pageSize?: number;
+    } = {},
+  ) {
     await this.requireShop(this.db.prisma, userId, shopId);
-    const rows = await this.db.prisma.product.findMany({
-      where: { shopId },
-      include: {
-        images: { include: { asset: true }, orderBy: { position: "asc" } },
-        variants: { include: { inventory: true }, orderBy: { skuNormalized: "asc" } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-    return rows.map((p) => this.productProjection(p));
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const q = query.q?.trim();
+    const where: Prisma.ProductWhereInput = {
+      shopId,
+      ...(query.selling !== undefined
+        ? { saleStatus: query.selling ? "ACTIVE" : { not: "ACTIVE" } }
+        : {}),
+      ...(query.adminHidden !== undefined ? { adminHidden: query.adminHidden } : {}),
+      ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
+    };
+    const [rows, total] = await Promise.all([
+      this.db.prisma.product.findMany({
+        where,
+        include: {
+          images: { include: { asset: true }, orderBy: { position: "asc" } },
+          variants: { include: { inventory: true }, orderBy: { skuNormalized: "asc" } },
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.db.prisma.product.count({ where }),
+    ]);
+    return {
+      data: rows.map((p) => this.productProjection(p)),
+      meta: { page, pageSize, total },
+    };
   }
   async getManagement(userId: string, shopId: string, id: string) {
     await this.requireShop(this.db.prisma, userId, shopId);

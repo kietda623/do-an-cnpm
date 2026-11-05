@@ -8,6 +8,7 @@ export default defineConfig({
     "seller-shell.spec.ts",
     "seller-dashboard.spec.ts",
     "seller-orders-split.spec.ts",
+    "seller-product-filters.spec.ts",
   ],
   fullyParallel: false,
   timeout: 60_000,
