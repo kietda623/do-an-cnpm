@@ -24,12 +24,13 @@ import {
   IsString,
   IsUUID,
   Matches,
+  Max,
   MaxLength,
   Min,
   MinLength,
   ValidateNested,
 } from "class-validator";
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import type { ApiRequest } from "../../../common/http/request.types.js";
 import type { AccessContext } from "../../../common/auth/access-context.js";
 import { AccessGuard, currentAccessContext } from "../../identity/access.guard.js";
@@ -90,6 +91,19 @@ class VariantPatchDto {
   @IsOptional() @IsBoolean() selling?: boolean;
   @IsInt() @Min(0) expectedVersion!: number;
 }
+class ManagementProductListQuery {
+  @IsOptional() @IsString() @MaxLength(200) q?: string;
+  @IsOptional()
+  @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : value))
+  @IsBoolean()
+  selling?: boolean;
+  @IsOptional()
+  @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : value))
+  @IsBoolean()
+  adminHidden?: boolean;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize?: number;
+}
 @ApiTags("categories")
 @Controller("categories")
 export class PublicCategoriesController {
@@ -139,13 +153,16 @@ export class ManagementProductListController {
   constructor(private readonly catalog: CatalogService) {}
   @Get("management/products")
   @ApiOperation({ summary: "List shop products for management" })
-  async list(@Req() req: ApiRequest, @Param("shopId") shopId: string) {
-    return {
-      data: await this.catalog.listManagement(
-        currentAccessContext(req as ApiRequest & { accessContext?: AccessContext }).userId,
-        shopId,
-      ),
-    };
+  async list(
+    @Req() req: ApiRequest,
+    @Param("shopId") shopId: string,
+    @Query() query: ManagementProductListQuery,
+  ) {
+    return this.catalog.listManagement(
+      currentAccessContext(req as ApiRequest & { accessContext?: AccessContext }).userId,
+      shopId,
+      query,
+    );
   }
 }
 @ApiTags("products")
@@ -174,12 +191,10 @@ export class ProductManagementController {
     @Req() req: ApiRequest,
     @Param("shopId") shopId: string,
   ) {
-    return {
-      data: await this.catalog.listManagement(
-        currentAccessContext(req as ApiRequest & { accessContext?: AccessContext }).userId,
-        shopId,
-      ),
-    };
+    return this.catalog.listManagement(
+      currentAccessContext(req as ApiRequest & { accessContext?: AccessContext }).userId,
+      shopId,
+    );
   }
   @Get(":id/management") @ApiOperation({ summary: "Read management product" }) async get(
     @Req() req: ApiRequest,

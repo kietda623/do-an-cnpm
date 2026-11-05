@@ -211,7 +211,7 @@ test("admin creates a category and seller publishes two variants then handles a 
   await expect(page.getByText("Áo cotton cập nhật", { exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "Ảnh Áo cotton cập nhật" })).toBeVisible();
   await page.getByRole("button", { name: "Dừng bán" }).click();
-  await expect(page.getByText(/Đã dừng bán/)).toBeVisible();
+  await expect(page.getByText(/Đã dừng bán · 1 biến thể/)).toBeVisible();
   await page.getByLabel("Số lượng thay đổi").fill("1");
   await page.getByRole("button", { name: "Cập nhật kho" }).click();
   await expect(page.locator('p[role="alert"]')).toContainText("Tồn kho đã đổi");

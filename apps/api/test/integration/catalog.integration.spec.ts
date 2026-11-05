@@ -8,6 +8,7 @@ import type { Pool } from "pg";
 import { AppModule } from "../../src/app.module.js";
 import { ContractErrorFilter } from "../../src/common/http/error.filter.js";
 import { CsrfRequestMiddleware } from "../../src/common/http/csrf-request.middleware.js";
+import { createContractValidationPipe } from "../../src/common/http/validation.pipe.js";
 import { DatabaseService } from "../../src/database/prisma.service.js";
 import { createTestPool, resetAndDeployMigrations } from "../helpers/database.js";
 
@@ -34,6 +35,7 @@ describe("catalog and inventory PostgreSQL integration", () => {
     });
     const csrf = app.get(CsrfRequestMiddleware);
     app.use(csrf.use.bind(csrf));
+    app.useGlobalPipes(createContractValidationPipe());
     app.useGlobalFilters(new ContractErrorFilter());
     await app.init();
     db = app.get(DatabaseService);
@@ -348,5 +350,76 @@ describe("catalog and inventory PostgreSQL integration", () => {
       .set("Authorization", `Bearer ${shop.token}`);
     expect(managementRead.status).toBe(200);
     expect(await db.prisma.product.count({ where: { id: product.body.data.id } })).toBe(1);
+  });
+
+  it("filters and paginates the seller management product list", async () => {
+    const shop = await makeShop();
+    const category = await makeCategory();
+    const image = await makeImage(shop);
+    const created = await Promise.all([
+      createProduct(shop, category.id, [image.id]),
+      createProduct(shop, category.id, [image.id]),
+      createProduct(shop, category.id, [image.id]),
+    ]);
+    for (const response of created)
+      if (response.status !== 201) throw new Error(JSON.stringify(response.body));
+    const [hiddenId, activeId, stoppedId] = created.map(
+      (response) => response.body.data.id as string,
+    );
+    await db.prisma.product.update({
+      where: { id: hiddenId! },
+      data: { name: "Áo linen xanh", adminHidden: true, hiddenReason: "Policy check" },
+    });
+    await db.prisma.product.update({
+      where: { id: activeId! },
+      data: { name: "Quần cotton đen" },
+    });
+    await db.prisma.product.update({
+      where: { id: stoppedId! },
+      data: { name: "Áo khoác denim" },
+    });
+    const stop = await request(app.getHttpServer())
+      .patch(`/api/v1/shops/${shop.id}/products/${stoppedId}`)
+      .set("Authorization", `Bearer ${shop.token}`)
+      .send({ selling: false, expectedVersion: 0 });
+    expect(stop.status).toBe(200);
+
+    const list = (query = "") =>
+      request(app.getHttpServer())
+        .get(`/api/v1/shops/${shop.id}/management/products${query}`)
+        .set("Authorization", `Bearer ${shop.token}`);
+
+    const all = await list();
+    expect(all.status).toBe(200);
+    expect(all.body.data).toHaveLength(3);
+    expect(all.body.meta).toEqual({ page: 1, pageSize: 20, total: 3 });
+
+    const search = await list("?q=linen");
+    expect(search.body.data.map((product: { name: string }) => product.name)).toEqual([
+      "Áo linen xanh",
+    ]);
+    expect(search.body.meta).toEqual({ page: 1, pageSize: 20, total: 1 });
+
+    const selling = await list("?selling=true");
+    expect(
+      selling.body.data.map((product: { name: string }) => product.name).sort(),
+    ).toEqual(["Quần cotton đen", "Áo linen xanh"].sort());
+
+    const stopped = await list("?selling=false");
+    expect(stopped.body.data.map((product: { name: string }) => product.name)).toEqual([
+      "Áo khoác denim",
+    ]);
+
+    const hidden = await list("?adminHidden=true");
+    expect(hidden.body.data.map((product: { name: string }) => product.name)).toEqual([
+      "Áo linen xanh",
+    ]);
+
+    const secondPage = await list("?page=2&pageSize=2");
+    expect(secondPage.body.meta).toEqual({ page: 2, pageSize: 2, total: 3 });
+    expect(secondPage.body.data).toHaveLength(1);
+
+    expect((await list("?pageSize=101")).status).toBe(400);
+    expect((await list("?selling=maybe")).status).toBe(400);
   });
 });
