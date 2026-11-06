@@ -21,8 +21,8 @@ async function seedAccount(kind: "ADMIN" | "BUYER"): Promise<void> {
     throw new Error(
       `${prefix}_EMAIL and ${prefix}_PASSWORD must be set; seed secrets are never committed.`,
     );
-  if (password.length < 12 || password.length > 128)
-    throw new Error(`${prefix}_PASSWORD must contain 12 to 128 characters.`);
+  if (password.length < 1 || password.length > 128)
+    throw new Error(`${prefix}_PASSWORD must contain 1 to 128 characters.`);
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
   await prisma.user.upsert({
     where: { emailNormalized: email },

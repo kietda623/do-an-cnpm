@@ -8,6 +8,7 @@ import { LogOut, Menu, X } from "../icons";
 import { cx } from "../lib/cx";
 import { formatNumber } from "../lib/format";
 import { Avatar } from "../primitives/surface";
+import { ThemeToggle } from "../theme-toggle";
 
 export type ConsoleNavItem = {
   href: string;
@@ -209,6 +210,7 @@ export function ConsoleShell({
           </button>
           <div className="mp-console__topbar-content">{topbar}</div>
           <div className="mp-console__topbar-actions">
+            <ThemeToggle />
             {status === "loading" ? (
               <span className="mp-skeleton mp-skeleton--avatar" aria-label="Đang tải tài khoản" />
             ) : user ? (

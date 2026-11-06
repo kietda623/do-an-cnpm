@@ -24,6 +24,7 @@ import {
   formatVnd,
   shopStatuses,
   useApi,
+  usePolling,
   type DataTableColumn,
 } from "@marketplace/ui-web";
 import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
@@ -75,56 +76,81 @@ export default function AdminDashboardPage() {
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [auditLoading, setAuditLoading] = useState(true);
   const [auditError, setAuditError] = useState("");
+  const [rangeQuery] = useState(rangeParams);
+
+  const loadStats = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (status !== "authenticated") return;
+      const silent = options?.silent === true;
+      if (!silent) setStatsError("");
+      try {
+        setStats(await api.request<AdminStats>(`/admin/stats?${rangeQuery}` as ApiPath));
+      } catch (cause) {
+        if (!silent) setStatsError(normalizeFormError(cause));
+      }
+    },
+    [api, rangeQuery, status],
+  );
+
+  useEffect(() => {
+    void loadStats();
+  }, [loadStats]);
+
+  const loadShops = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
+      if (!silent) {
+        setShopsLoading(true);
+        setShopsError("");
+      }
+      try {
+        const result = await api.request<PendingShop[]>(
+          "/admin/shops?status=PENDING&page=1&pageSize=5" as ApiPath,
+        );
+        setShops(result);
+      } catch (cause) {
+        if (!silent) setShopsError(normalizeFormError(cause));
+      } finally {
+        if (!silent) setShopsLoading(false);
+      }
+    },
+    [api],
+  );
+
+  const loadAudit = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
+      if (!silent) {
+        setAuditLoading(true);
+        setAuditError("");
+      }
+      try {
+        setAudit(await api.request<AuditRow[]>("/admin/audit?pageSize=8" as ApiPath));
+      } catch (cause) {
+        if (!silent) setAuditError(normalizeFormError(cause));
+      } finally {
+        if (!silent) setAuditLoading(false);
+      }
+    },
+    [api],
+  );
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    let live = true;
-    setStatsError("");
-    void api
-      .request<AdminStats>(`/admin/stats?${rangeParams()}` as ApiPath)
-      .then((value) => {
-        if (live) setStats(value);
-      })
-      .catch((cause: unknown) => {
-        if (live) setStatsError(normalizeFormError(cause));
-      });
-    return () => {
-      live = false;
-    };
-  }, [api, status]);
-
-  const loadShops = useCallback(async () => {
-    setShopsLoading(true);
-    setShopsError("");
-    try {
-      const result = await api.request<PendingShop[]>(
-        "/admin/shops?status=PENDING&page=1&pageSize=5" as ApiPath,
-      );
-      setShops(result);
-    } catch (cause) {
-      setShopsError(normalizeFormError(cause));
-    } finally {
-      setShopsLoading(false);
-    }
-  }, [api]);
-
-  const loadAudit = useCallback(async () => {
-    setAuditLoading(true);
-    setAuditError("");
-    try {
-      setAudit(await api.request<AuditRow[]>("/admin/audit?pageSize=8" as ApiPath));
-    } catch (cause) {
-      setAuditError(normalizeFormError(cause));
-    } finally {
-      setAuditLoading(false);
-    }
-  }, [api]);
-
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    void loadShops();
-    void loadAudit();
+    void Promise.all([loadShops(), loadAudit()]);
   }, [loadAudit, loadShops, status]);
+
+  const refreshDashboard = useCallback(
+    async (options?: { silent?: boolean }) => {
+      await Promise.all([loadStats(options), loadShops(options), loadAudit(options)]);
+    },
+    [loadAudit, loadShops, loadStats],
+  );
+
+  usePolling(refreshDashboard, {
+    intervalMs: 60_000,
+    enabled: status === "authenticated",
+  });
 
   const shopColumns: DataTableColumn<PendingShop>[] = [
     {
@@ -202,7 +228,7 @@ export default function AdminDashboardPage() {
         </div>
       ) : (
         <>
-          <section aria-label="Thống kê nền tảng" className="mp-kpi-grid">
+          <section aria-label="Thống kê nền tảng" className="mp-kpi-grid mp-stagger">
             <StatCard
               label="Người dùng"
               value={formatNumber(stats.userCount)}
@@ -246,6 +272,7 @@ export default function AdminDashboardPage() {
 
       <div className="mp-dashboard-grid">
         <Panel
+          className="mp-reveal"
           title="Phân bố trạng thái"
           description="Số lượng bản ghi theo từng trạng thái trong toàn hệ thống."
           actions={<BarChart3 size={18} aria-hidden="true" />}
@@ -295,6 +322,7 @@ export default function AdminDashboardPage() {
         </Panel>
 
         <Panel
+          className="mp-reveal"
           title="Cửa hàng chờ duyệt"
           description="Hồ sơ mới nhất cần quyết định."
           actions={
@@ -327,6 +355,7 @@ export default function AdminDashboardPage() {
       </div>
 
       <Panel
+        className="mp-reveal"
         title="Hoạt động gần đây"
         description="8 bản ghi nhật ký quản trị mới nhất."
         actions={

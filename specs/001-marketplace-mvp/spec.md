@@ -693,7 +693,7 @@ Admin có thể truy vấn đơn hàng để phục vụ quản trị và xử l
 ### Business Rules and Acceptance Boundaries
 
 - **BR-01 — Danh tính/quyền (FR-01–10, FR-47–48):** Email chuẩn hóa khoảng trắng/hoa thường và
-  duy nhất; mật khẩu tối thiểu 12 ký tự, chấp nhận khoảng trắng, không hiển thị mật khẩu.
+  duy nhất; mật khẩu từ 1 đến 128 ký tự, chấp nhận khoảng trắng, không hiển thị mật khẩu.
   Đổi mật khẩu yêu cầu mật khẩu hiện tại và vô hiệu hóa các phiên khác. Khóa tài khoản vô hiệu
   hóa các phiên và chặn đăng nhập; mở khóa không phục hồi phiên cũ. Admin không tự đăng ký công khai.
   Mỗi người chỉ xem/sửa hồ sơ, địa chỉ, đơn của mình; Seller chỉ quản lý shop có quyền.

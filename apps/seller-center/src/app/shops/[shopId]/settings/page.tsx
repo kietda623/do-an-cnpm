@@ -11,6 +11,7 @@ import {
   StatusMessage,
   Store,
   useApi,
+  usePolling,
 } from "@marketplace/ui-web";
 import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
 import type { Shop } from "../../../../lib/types";
@@ -26,25 +27,33 @@ export default function ShopSettingsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  const refresh = useCallback(async () => {
-    setShop(await api.request<Shop>(`/shops/${shopId}/management` as ApiPath));
-  }, [api, shopId]);
+  const refresh = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
+      try {
+        setShop(await api.request<Shop>(`/shops/${shopId}/management` as ApiPath));
+      } catch (cause) {
+        if (!silent) setError(normalizeFormError(cause));
+        throw cause;
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [api, shopId],
+  );
 
   useEffect(() => {
-    let live = true;
-    setLoading(true);
-    setError("");
-    void refresh()
-      .catch((cause: unknown) => {
-        if (live) setError(normalizeFormError(cause));
-      })
-      .finally(() => {
-        if (live) setLoading(false);
-      });
-    return () => {
-      live = false;
-    };
+    void refresh().catch(() => {});
   }, [refresh]);
+
+  usePolling(refresh, {
+    intervalMs: shop?.status === "PENDING" ? 30_000 : 60_000,
+    pauseWhile: busy,
+  });
 
   async function resubmit() {
     if (!shop) return;

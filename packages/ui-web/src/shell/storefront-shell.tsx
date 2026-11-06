@@ -22,6 +22,7 @@ import {
 import { cx } from "../lib/cx";
 import { formatNumber } from "../lib/format";
 import { Avatar } from "../primitives/surface";
+import { ThemeToggle } from "../theme-toggle";
 
 type CartResponse = {
   groups?: Array<{ items?: Array<{ quantity?: number }> }>;
@@ -169,6 +170,7 @@ export function StorefrontShell({ children }: { children: ReactNode }) {
           </form>
 
           <div className="mp-header__actions">
+            <ThemeToggle />
             <Link
               href="/cart"
               className="mp-icon-link"

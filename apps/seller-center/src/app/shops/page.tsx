@@ -9,6 +9,7 @@ import {
   Skeleton,
   Store,
   useApi,
+  usePolling,
 } from "@marketplace/ui-web";
 import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
 import type { Membership, Shop } from "../../lib/types";
@@ -32,6 +33,18 @@ export default function ShopsPage() {
     const selected = rows[0];
     setShop(selected ? await api.request<Shop>(`/shops/${selected.shopId}/management` as ApiPath) : null);
   }, [api]);
+
+  const shopId = shop?.id;
+  const pollShop = useCallback(async () => {
+    if (!shopId) return;
+    setShop(await api.request<Shop>(`/shops/${shopId}/management` as ApiPath));
+  }, [api, shopId]);
+
+  usePolling(pollShop, {
+    intervalMs: shop?.status === "PENDING" ? 30_000 : 60_000,
+    enabled: status === "authenticated" && shop !== null,
+    pauseWhile: busy || selecting,
+  });
 
   useEffect(() => {
     if (status !== "authenticated") return;

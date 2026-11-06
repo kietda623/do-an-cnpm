@@ -12,6 +12,9 @@ import {
   DataTable,
   formatNumber,
   formatVnd,
+  OrderRail,
+  orderRailCurrent,
+  orderRailSteps,
   PageHeader,
   Panel,
   ReceiptText,
@@ -21,6 +24,7 @@ import {
   sellerOrderStatuses,
   TrendingUp,
   useApi,
+  usePolling,
   Wallet,
   type DataTableColumn,
 } from "@marketplace/ui-web";
@@ -43,40 +47,61 @@ export default function DashboardPage() {
   const [recentError, setRecentError] = useState("");
   const revenue = useSellerRevenue({ api, shopId, range });
 
-  useEffect(() => {
-    if (!range) return;
-    let live = true;
-    setStats(null);
-    setStatsError("");
-    const params = new URLSearchParams(range);
-    void api
-      .request<SellerStats>(`/shops/${shopId}/stats?${params}` as ApiPath)
-      .then((value) => {
-        if (live) setStats(value);
-      })
-      .catch((cause: unknown) => {
-        if (live) setStatsError(normalizeFormError(cause));
-      });
-    return () => {
-      live = false;
-    };
-  }, [api, range, shopId]);
-
-  const loadRecent = useCallback(async () => {
-    setRecentLoading(true);
-    setRecentError("");
-    try {
-      setRecent(await api.request<SellerPart[]>(`/shops/${shopId}/orders?pageSize=5` as ApiPath));
-    } catch (cause) {
-      setRecentError(normalizeFormError(cause));
-    } finally {
-      setRecentLoading(false);
-    }
-  }, [api, shopId]);
+  const loadStats = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!range) return;
+      const silent = options?.silent === true;
+      if (!silent) {
+        setStats(null);
+        setStatsError("");
+      }
+      try {
+        const params = new URLSearchParams(range);
+        const value = await api.request<SellerStats>(`/shops/${shopId}/stats?${params}` as ApiPath);
+        setStats(value);
+      } catch (cause) {
+        if (!silent) setStatsError(normalizeFormError(cause));
+        throw cause;
+      }
+    },
+    [api, range, shopId],
+  );
 
   useEffect(() => {
-    void loadRecent();
+    void loadStats().catch(() => {});
+  }, [loadStats]);
+
+  const loadRecent = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
+      if (!silent) {
+        setRecentLoading(true);
+        setRecentError("");
+      }
+      try {
+        setRecent(await api.request<SellerPart[]>(`/shops/${shopId}/orders?pageSize=5` as ApiPath));
+      } catch (cause) {
+        if (!silent) setRecentError(normalizeFormError(cause));
+        throw cause;
+      } finally {
+        if (!silent) setRecentLoading(false);
+      }
+    },
+    [api, shopId],
+  );
+
+  useEffect(() => {
+    void loadRecent().catch(() => {});
   }, [loadRecent]);
+
+  const refreshDashboard = useCallback(
+    async (options?: { silent?: boolean }) => {
+      await Promise.all([loadStats(options), loadRecent(options)]);
+    },
+    [loadStats, loadRecent],
+  );
+
+  usePolling(refreshDashboard, { intervalMs: 60_000, enabled: range !== null });
 
   const columns: DataTableColumn<SellerPart>[] = [
     {
@@ -92,6 +117,18 @@ export default function DashboardPage() {
       key: "status",
       header: "Trạng thái",
       render: (row) => <StatusBadge status={row.status} map={sellerOrderStatuses} />,
+    },
+    {
+      key: "timeline",
+      header: "Tiến trình",
+      render: (row) => (
+        <OrderRail
+          className="mp-rail--compact"
+          label={`Tiến trình đơn ${row.id.slice(0, 8)}`}
+          steps={orderRailSteps(row.status, { compact: true })}
+          currentId={orderRailCurrent(row.status)}
+        />
+      ),
     },
     {
       key: "total",
@@ -138,7 +175,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          <section aria-label="Thống kê cửa hàng" className="mp-kpi-grid">
+          <section aria-label="Thống kê cửa hàng" className="mp-kpi-grid mp-stagger">
             <StatCard
               label="Sản phẩm"
               value={formatNumber(stats.productCount)}

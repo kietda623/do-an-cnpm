@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3101";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: [
@@ -9,6 +11,8 @@ export default defineConfig({
     "seller-dashboard.spec.ts",
     "seller-orders-split.spec.ts",
     "seller-product-filters.spec.ts",
+    "polling-seller.spec.ts",
+    "theme-seller.spec.ts",
   ],
   fullyParallel: false,
   timeout: 60_000,
@@ -16,14 +20,16 @@ export default defineConfig({
 
   use: {
     ...devices["Desktop Chrome"],
-    baseURL: "http://127.0.0.1:3101",
+    baseURL,
     trace: "retain-on-failure",
   },
-  webServer: {
-    command:
-      "corepack pnpm --filter @marketplace/seller-center exec next dev --hostname 127.0.0.1 --port 3101",
-    url: "http://127.0.0.1:3101",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : {
+        command:
+          "corepack pnpm --filter @marketplace/seller-center exec next dev --hostname 127.0.0.1 --port 3101",
+        url: "http://127.0.0.1:3101",
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
 });

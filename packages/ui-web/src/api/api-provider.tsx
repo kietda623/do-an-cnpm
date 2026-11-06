@@ -1,6 +1,11 @@
 "use client";
 
-import type { WebSession } from "@marketplace/api-client";
+import {
+  ApiClientError,
+  ApiConnectionError,
+  normalizeFormError,
+  type WebSession,
+} from "@marketplace/api-client";
 import {
   createContext,
   useCallback,
@@ -22,7 +27,11 @@ export interface ApiContextValue {
   status: AuthStatus;
   restoreError: string | null;
   login: (email: string, password: string) => Promise<SessionUser>;
-  register: (fullName: string, email: string, password: string) => Promise<SessionUser>;
+  register: (
+    fullName: string,
+    email: string,
+    password: string,
+  ) => Promise<SessionUser>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<SessionUser | null>;
   clear: () => Promise<void>;
@@ -42,24 +51,32 @@ export function ApiProvider({
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const started = useRef(false);
 
+  const restore = useCallback(async () => {
+    setRestoreError(null);
+    try {
+      const restored = await session.restore<SessionUser>();
+      setUser(restored);
+      setStatus("authenticated");
+      setRestoreError(null);
+    } catch (error) {
+      if (
+        error instanceof ApiConnectionError ||
+        (error instanceof ApiClientError &&
+          (error.status >= 500 || error.status === 429))
+      ) {
+        setRestoreError(normalizeFormError(error));
+        return;
+      }
+      setUser(null);
+      setStatus("anonymous");
+    }
+  }, [session, setUser]);
+
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    void (async () => {
-      try {
-        const restored = await session.restore<SessionUser>();
-        setUser(restored);
-        setStatus("authenticated");
-        setRestoreError(null);
-      } catch (error) {
-        setUser(null);
-        setStatus("anonymous");
-        setRestoreError(
-          error instanceof Error ? error.message : "Không thể khôi phục phiên đăng nhập.",
-        );
-      }
-    })();
-  }, [session, setUser]);
+    void restore();
+  }, [restore]);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -74,7 +91,11 @@ export function ApiProvider({
 
   const register = useCallback(
     async (fullName: string, email: string, password: string) => {
-      const nextUser = await session.register<SessionUser>(fullName, email, password);
+      const nextUser = await session.register<SessionUser>(
+        fullName,
+        email,
+        password,
+      );
       setUser(nextUser);
       setStatus("authenticated");
       setRestoreError(null);
@@ -99,7 +120,9 @@ export function ApiProvider({
       setUser(nextUser);
       setStatus("authenticated");
       return nextUser;
-    } catch {
+    } catch (error) {
+      if (!(error instanceof ApiClientError) || error.status !== 401)
+        throw error;
       await session.clear();
       setUser(null);
       setStatus("anonymous");
@@ -126,10 +149,36 @@ export function ApiProvider({
       refreshUser,
       clear,
     }),
-    [session, user, status, restoreError, login, register, logout, refreshUser, clear],
+    [
+      session,
+      user,
+      status,
+      restoreError,
+      login,
+      register,
+      logout,
+      refreshUser,
+      clear,
+    ],
   );
 
-  return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;
+  return (
+    <ApiContext.Provider value={value}>
+      {status === "loading" && restoreError && (
+        <div className="mp-alert-inline" role="alert">
+          {restoreError}{" "}
+          <button
+            className="mp-link"
+            type="button"
+            onClick={() => void restore()}
+          >
+            Thử lại khôi phục phiên
+          </button>
+        </div>
+      )}
+      {children}
+    </ApiContext.Provider>
+  );
 }
 
 export function useApi(): ApiContextValue {

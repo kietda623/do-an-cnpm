@@ -10,39 +10,39 @@ import { fileTypeFromBuffer } from "file-type";
 import sharp from "sharp";
 import type { OutputInfo } from "sharp";
 import { randomUUID } from "node:crypto";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import { DatabaseService } from "../../../database/prisma.service.js";
+import { resolveAssetStorage, type AssetStorage } from "./asset-storage.js";
 
 const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
+type AssetPurpose = "AVATAR" | "SHOP_LOGO" | "SHOP_BANNER" | "PRODUCT_IMAGE";
 
 @Injectable()
 export class AssetService {
-  private readonly client: S3Client;
-  private readonly bucket: string;
-  private readonly publicBase: string;
+  private readonly storage: AssetStorage;
+  private readonly client?: S3Client;
 
   constructor(
     private readonly db: DatabaseService,
     config: ConfigService,
   ) {
-    this.bucket = config.get<string>("S3_BUCKET") ?? "";
-    this.publicBase = (
-      config.get<string>("ASSET_PUBLIC_READ_BASE") ??
-      config.get<string>("S3_PUBLIC_READ_BASE") ??
-      ""
-    ).replace(/\/$/, "");
-    this.client = new S3Client({
-      region: config.get<string>("S3_REGION")?.trim() || "ap-southeast-1",
-      ...(config.get<string>("S3_ENDPOINT")
-        ? { endpoint: config.get<string>("S3_ENDPOINT"), forcePathStyle: true }
-        : {}),
-      credentials:
-        config.get<string>("S3_ACCESS_KEY_ID") && config.get<string>("S3_SECRET_ACCESS_KEY")
-          ? {
-              accessKeyId: config.get<string>("S3_ACCESS_KEY_ID")!,
-              secretAccessKey: config.get<string>("S3_SECRET_ACCESS_KEY")!,
-            }
-          : undefined,
-    });
+    this.storage = resolveAssetStorage(config);
+    if (this.storage.mode === "s3") {
+      this.client = new S3Client({
+        region: config.get<string>("S3_REGION")?.trim() || "ap-southeast-1",
+        ...(config.get<string>("S3_ENDPOINT")
+          ? { endpoint: config.get<string>("S3_ENDPOINT"), forcePathStyle: true }
+          : {}),
+        credentials:
+          config.get<string>("S3_ACCESS_KEY_ID") && config.get<string>("S3_SECRET_ACCESS_KEY")
+            ? {
+                accessKeyId: config.get<string>("S3_ACCESS_KEY_ID")!,
+                secretAccessKey: config.get<string>("S3_SECRET_ACCESS_KEY")!,
+              }
+            : undefined,
+      });
+    }
   }
 
   async upload(
@@ -105,39 +105,73 @@ export class AssetService {
           message: "The selected shop is unavailable.",
         });
     }
-    if (!this.bucket || !this.publicBase)
+    const storage = this.storage;
+    if (storage.mode === "unavailable")
       throw new ServiceUnavailableException({
         code: "MEDIA_STORAGE_UNAVAILABLE",
         message: "Media storage is not configured.",
       });
     const ext = detected.ext === "jpeg" ? "jpg" : detected.ext;
     const objectKey = `users/${userId}/assets/${randomUUID()}.${ext}`;
+    const assetPurpose = purpose as AssetPurpose;
+    const dimensions = { width: decoded.info.width, height: decoded.info.height };
+
+    if (storage.mode === "local") {
+      const filePath = resolve(storage.directory, objectKey);
+      await mkdir(dirname(filePath), { recursive: true });
+      await writeFile(filePath, file.buffer);
+      try {
+        const asset = await this.persist(
+          userId,
+          assetPurpose,
+          shopId,
+          objectKey,
+          detected.mime,
+          file.buffer.length,
+          dimensions,
+        );
+        return {
+          id: asset.id,
+          url: `${storage.publicBase}/${asset.id}`,
+          mimeType: asset.mimeType,
+          byteSize: asset.byteSize,
+          width: asset.width,
+          height: asset.height,
+        };
+      } catch (error) {
+        await unlink(filePath).catch(() => {});
+        throw error;
+      }
+    }
+
+    const client = this.client;
+    if (!client)
+      throw new ServiceUnavailableException({
+        code: "MEDIA_STORAGE_UNAVAILABLE",
+        message: "Media storage is not configured.",
+      });
     try {
-      await this.client.send(
+      await client.send(
         new PutObjectCommand({
-          Bucket: this.bucket,
+          Bucket: storage.bucket,
           Key: objectKey,
           Body: file.buffer,
           ContentType: detected.mime,
           ContentLength: file.buffer.length,
         }),
       );
-      const asset = await this.db.prisma.asset.create({
-        data: {
-          uploaderUserId: userId,
-          purpose: purpose as "AVATAR" | "SHOP_LOGO" | "SHOP_BANNER" | "PRODUCT_IMAGE",
-          ...(purpose === "PRODUCT_IMAGE" ? { shopId, attachedAt: new Date() } : {}),
-          objectKey,
-          mimeType: detected.mime,
-          byteSize: file.buffer.length,
-          width: decoded.info.width,
-          height: decoded.info.height,
-          status: "VERIFIED",
-        },
-      });
+      const asset = await this.persist(
+        userId,
+        assetPurpose,
+        shopId,
+        objectKey,
+        detected.mime,
+        file.buffer.length,
+        dimensions,
+      );
       return {
         id: asset.id,
-        url: `${this.publicBase}/${objectKey}`,
+        url: `${storage.publicBase}/${objectKey}`,
         mimeType: asset.mimeType,
         byteSize: asset.byteSize,
         width: asset.width,
@@ -145,11 +179,35 @@ export class AssetService {
       };
     } catch (error) {
       try {
-        await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: objectKey }));
+        await client.send(new DeleteObjectCommand({ Bucket: storage.bucket, Key: objectKey }));
       } catch {
         /* preserve the original failure; cleanup can be retried by lifecycle policy */
       }
       throw error;
     }
+  }
+
+  private persist(
+    userId: string,
+    purpose: AssetPurpose,
+    shopId: string | undefined,
+    objectKey: string,
+    mimeType: string,
+    byteSize: number,
+    dimensions: { width: number; height: number },
+  ) {
+    return this.db.prisma.asset.create({
+      data: {
+        uploaderUserId: userId,
+        purpose,
+        ...(purpose === "PRODUCT_IMAGE" ? { shopId, attachedAt: new Date() } : {}),
+        objectKey,
+        mimeType,
+        byteSize,
+        width: dimensions.width,
+        height: dimensions.height,
+        status: "VERIFIED",
+      },
+    });
   }
 }

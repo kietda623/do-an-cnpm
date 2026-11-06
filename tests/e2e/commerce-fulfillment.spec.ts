@@ -461,12 +461,14 @@ test("live two-shop commerce: MOCK, COD, cancellation, retry, return and restart
     await expect(
       buyerPage
         .getByRole("region", { name: "Live Shop A" })
-        .getByText("Hoàn tất", { exact: true }),
+        .locator(".mp-badge")
+        .filter({ hasText: "Hoàn tất" }),
     ).toBeVisible();
     await expect(
       buyerPage
         .getByRole("region", { name: "Live Shop B" })
-        .getByText("Đã hủy", { exact: true }),
+        .locator(".mp-badge")
+        .filter({ hasText: "Đã hủy" }),
     ).toBeVisible();
     await expect(
       adminPage.getByText("Đã xác nhận kiện hàng trả về", { exact: true }),

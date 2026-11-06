@@ -6,10 +6,17 @@ export type { SessionUser } from "./auth/session-provider";
 
 export { ApiProvider, useApi } from "./api/api-provider";
 export type { ApiContextValue, AuthStatus } from "./api/api-provider";
+export { usePolling } from "./api/use-polling";
+export type { PollingOptions, PollingRefresh } from "./api/use-polling";
+
+export * from "./theme";
+export * from "./theme-toggle";
+export * from "./route-transition";
 
 export * from "./lib/cx";
 export * from "./lib/format";
 export * from "./lib/status";
+export * from "./lib/order-timeline";
 
 export * from "./icons";
 
@@ -20,6 +27,7 @@ export * from "./primitives/surface";
 export * from "./primitives/data-table";
 export * from "./primitives/dialog";
 export * from "./primitives/toast";
+export * from "./primitives/order-rail";
 
 export * from "./charts/charts";
 export * from "./shell/storefront-shell";

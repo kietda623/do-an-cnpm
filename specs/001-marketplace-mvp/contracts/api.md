@@ -70,13 +70,13 @@ Read DTO có `id`, `createdAt`, `updatedAt` trừ projection/command ghi khác.
 
 | DTO | Fields / constraints |
 | --- | --- |
-| Register | email normalized trim/lowercase valid max254; password 12–128 chars including spaces; fullName trimmed 1–120; clientPlatform |
+| Register | email normalized trim/lowercase valid max254; password 1–128 chars including spaces; fullName trimmed 1–120; clientPlatform |
 | Login | email; password; clientPlatform |
 | Tokens | accessToken; expiresIn:600; user:User; sessionId; refreshToken optional native only |
 | Refresh | refreshToken optional native only; clientPlatform |
 | User | id; email; fullName; phone?; avatar:Asset?; roles:`BUYER|ADMIN`[]; status:`ACTIVE|LOCKED`; version (auth_version); timestamps |
 | ProfilePatch | fullName optional 1–120; phone optional 8–20; avatarAssetId optional UUID nullable |
-| PasswordChange | currentPassword; newPassword 12–128 |
+| PasswordChange | currentPassword; newPassword 1–128 |
 | AddressWrite | recipientName 1–120; phone 8–20; line1 1–250; ward 1–120; district 1–120; province 1–120; country:`VN`; isDefault boolean |
 | Address | AddressWrite + id,timestamps; ownership implicit in `/users/me` |
 | Asset | id; url; mimeType:`image/jpeg|image/png|image/webp`; byteSize <=5242880; width; height |

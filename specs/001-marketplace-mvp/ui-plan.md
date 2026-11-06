@@ -27,7 +27,7 @@ Buyer 360/1280 hiển thị đủ nút; desktop buyer dùng cùng breakpoint res
 | ID / màn hình / Sprint | Mục tiêu & components | API cần tích hợp | State/validation riêng | AC và kiểm thử chính |
 | --- | --- | --- | --- | --- |
 | B01 Home S3 | Khám phá: Header, SearchBox, CategoryNav, ProductGrid | GET categories; GET products | category/query/page; L/E/X/S | Guest xem hàng hợp lệ, click tới detail, không copy assets thương hiệu |
-| B02 Register/Login S2 | Form email/password/fullName, session controls | auth/csrf, auth/register, login/refresh/logout | Email valid/unique, password12–128, fullname1–120; memory token | US1 đúng/sai login, logout bị revoke, CSRF/429 rõ |
+| B02 Register/Login S2 | Form email/password/fullName, session controls | auth/csrf, auth/register, login/refresh/logout | Email valid/unique, password1–128, fullname1–120; memory token | US1 đúng/sai login, logout bị revoke, CSRF/429 rõ |
 | B03 Product List S3/4 | ProductCard/Grid/Pagination | GET products | page/filter/sort URL state, max pageSize100 | Chỉ hàng công khai, stable pagination, hết hàng có nhãn |
 | B04 Search & Filters S4 | SearchBox, category/price filters, SortSelect | GET products?q/categoryId/minPrice/maxPrice/sort | q<=200, min<=max, money nguyên VND | US4 đúng filters/sort, empty query result có reset |
 | B05 Product Detail S3 | Gallery, VariantPicker, StockLabel, AddToCart, Reviews | GET products/{p}; POST cart/items; GET products/{p}/reviews S6 | variantId/quantity positive, stock display không là authority | Chọn variant đổi giá/tồn, cannot buy stopped/out-of-stock; review list S6 |
@@ -91,3 +91,16 @@ server release và commands. Polishing không vượt gate correctness/security.
 ## Dependency và ngân sách desktop
 
 Desktop buyer **không nằm trong baseline MVP hiện tại**: không có task S4/S6/S7, không cấp PD cho mobile (T130 đã de-scoped). Khi triển khai wrapper, dùng lại toàn bộ B01–B13 và chỉ thêm cấu hình Tauri cùng evidence build/launch trên OS mục tiêu; không coi web pass là desktop pass.
+
+## Giao diện hiện tại — Signal Dispatch
+
+Ba web app đã được thiết kế lại theo hệ **Signal Dispatch** trong [DESIGN.md](../../DESIGN.md): nền giấy xám-lục, mực xanh-đen, accent teal, tín hiệu cam, chữ mono cho dữ liệu. Không thay đổi luồng dữ liệu, contract API, polling hay copy tiếng Việt.
+
+- **Theme**: `data-theme` (light/dark đã resolve) + `data-theme-mode` (system/light/dark), mặc định theo hệ điều hành, lưu ở `localStorage["marketplace-theme"]`, chống FOUC bằng script inline trong `<head>`. Nút `ThemeToggle` nằm trong header storefront và topbar console; chuyển bằng view transition khi trình duyệt hỗ trợ, tức thời khi `prefers-reduced-motion`.
+- **Typography**: Space Grotesk (display), Be Vietnam Pro (body/UI), IBM Plex Mono (ID, SKU, tiền, nhãn rail), đều có subset tiếng Việt qua `next/font`.
+- **Order Rail**: primitive dùng chung ở hero storefront, chi tiết đơn buyer/admin, dashboard và queue seller, aside đăng nhập. Bước hiện tại lấy từ trạng thái API thật (`PENDING → CONFIRMED → SHIPPING → COMPLETED`, `CANCELLED` là trạng thái cuối); có biến thể compact cho bảng.
+- **Shell**: storefront max 1320px, header 72px; console sidebar 264px/topbar 64px, content max 1480px; dưới 760px search storefront xuống hàng để không tràn ngang.
+- **Motion**: reveal theo viewport, route enter, stagger, spring hover, theme sweep; tất cả tắt theo `prefers-reduced-motion` và không replay khi polling im lặng.
+- **Giữ nguyên hook e2e**: `mp-account`, `mp-badge`, `mp-chart`, `mp-console__context-name`, `mp-menu__panel`, `mp-mobile-menu__panel`, `mp-note`, `mp-panel`, `mp-skeleton--block`, `mp-stat`, `[aria-busy="true"]` chỉ dùng cho tải thật.
+
+Kiểm chứng: unit `@marketplace/ui-web` (gồm theme resolver), typecheck/lint 3 app, build production 3 app, cùng các spec `theme-storefront`, `theme-seller`, `theme-admin` và toàn bộ suite buyer/seller/admin hiện có.

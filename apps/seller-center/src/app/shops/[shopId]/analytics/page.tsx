@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   Badge,
@@ -13,6 +13,7 @@ import {
   formatNumber,
   formatVnd,
   useApi,
+  usePolling,
 } from "@marketplace/ui-web";
 import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
 import type { SellerStats } from "../../../../lib/types";
@@ -29,24 +30,31 @@ export default function AnalyticsPage() {
   const [statsError, setStatsError] = useState("");
   const revenue = useSellerRevenue({ api, shopId, range, initialGroupBy: "MONTH" });
 
+  const loadStats = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!range) return;
+      const silent = options?.silent === true;
+      if (!silent) {
+        setStats(null);
+        setStatsError("");
+      }
+      try {
+        const params = new URLSearchParams(range);
+        const value = await api.request<SellerStats>(`/shops/${shopId}/stats?${params}` as ApiPath);
+        setStats(value);
+      } catch (cause) {
+        if (!silent) setStatsError(normalizeFormError(cause));
+        throw cause;
+      }
+    },
+    [api, range, shopId],
+  );
+
   useEffect(() => {
-    if (!range) return;
-    let live = true;
-    setStats(null);
-    setStatsError("");
-    const params = new URLSearchParams(range);
-    void api
-      .request<SellerStats>(`/shops/${shopId}/stats?${params}` as ApiPath)
-      .then((value) => {
-        if (live) setStats(value);
-      })
-      .catch((cause: unknown) => {
-        if (live) setStatsError(normalizeFormError(cause));
-      });
-    return () => {
-      live = false;
-    };
-  }, [api, range, shopId]);
+    void loadStats().catch(() => {});
+  }, [loadStats]);
+
+  usePolling(loadStats, { intervalMs: 60_000, enabled: range !== null });
 
   return (
     <div className="mp-page">

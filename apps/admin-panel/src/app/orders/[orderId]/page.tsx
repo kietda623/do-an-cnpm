@@ -7,6 +7,9 @@ import {
   Button,
   DataTable,
   Dialog,
+  OrderRail,
+  orderRailCurrent,
+  orderRailSteps,
   PageHeader,
   Panel,
   StatusBadge,
@@ -16,6 +19,7 @@ import {
   sellerOrderStatuses,
   shipmentStatuses,
   useApi,
+  usePolling,
   formatDateTime,
   formatVnd,
   type DataTableColumn,
@@ -105,6 +109,11 @@ export default function AdminOrderDetailPage() {
     if (!orderId) return;
     void refresh().catch((cause: unknown) => setError(normalizeFormError(cause)));
   }, [orderId, refresh]);
+
+  usePolling(refresh, {
+    intervalMs: 30_000,
+    pauseWhile: busy || pendingRecovery !== null,
+  });
 
   async function recover() {
     if (!pendingRecovery) return;
@@ -245,6 +254,11 @@ export default function AdminOrderDetailPage() {
                     Shop {part.shopId} · SellerOrder {part.id} · version {part.version} ·{" "}
                     {formatVnd(part.originalTotal)}
                   </p>
+                  <OrderRail
+                    label={`Tiến trình ${part.shopNameSnapshot}`}
+                    steps={orderRailSteps(part.status)}
+                    currentId={orderRailCurrent(part.status)}
+                  />
                   <DataTable
                     columns={itemColumns}
                     rows={part.items}

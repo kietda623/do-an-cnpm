@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   MapPin,
+  OrderRail,
+  orderRailCurrent,
+  orderRailSteps,
   PageHeader,
   Panel,
   StatusBadge,
@@ -16,6 +19,7 @@ import {
   paymentMethods,
   paymentStatuses,
   useApi,
+  usePolling,
 } from "@marketplace/ui-web";
 import { ApiClientError, normalizeFormError, type ApiPath } from "@marketplace/api-client";
 import { webSession } from "../../../lib/session";
@@ -80,6 +84,41 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const alive = useRef(true);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
+  const loadOrder = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
+      try {
+        const value = await webSession.api.request<Order>(`/orders/${orderId}` as ApiPath);
+        if (alive.current) setOrder(value);
+        return value;
+      } catch (cause) {
+        if (!silent && alive.current) {
+          if (cause instanceof ApiClientError && cause.status === 401) {
+            router.replace("/login?returnTo=%2Forders");
+            return undefined;
+          }
+          setError(normalizeFormError(cause));
+        }
+        throw cause;
+      } finally {
+        if (!silent && alive.current) setLoading(false);
+      }
+    },
+    [orderId, router],
+  );
 
   useEffect(() => {
     if (status === "loading") return;
@@ -87,34 +126,22 @@ export default function OrderDetailPage() {
       router.replace("/login?returnTo=%2Forders");
       return;
     }
-    let active = true;
-    setLoading(true);
-    setError("");
-    void webSession.api
-      .request<Order>(`/orders/${orderId}` as ApiPath)
-      .then((value) => {
-        if (active) setOrder(value);
-      })
-      .catch((cause) => {
-        if (!active) return;
-        if (cause instanceof ApiClientError && cause.status === 401) {
-          router.replace("/login?returnTo=%2Forders");
-          return;
-        }
-        setError(normalizeFormError(cause));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [orderId, router, status]);
+    void loadOrder().catch(() => {});
+  }, [loadOrder, router, status]);
 
-  async function refreshOrder() {
-    const value = await webSession.api.request<Order>(`/orders/${orderId}` as ApiPath);
-    setOrder(value);
-  }
+  const refreshOrder = useCallback(async () => {
+    await loadOrder({ silent: true });
+  }, [loadOrder]);
+
+  usePolling(loadOrder, {
+    intervalMs: 30_000,
+    enabled:
+      status === "authenticated" &&
+      order !== null &&
+      order.status !== "COMPLETED" &&
+      order.status !== "CANCELLED",
+    pauseWhile: loading,
+  });
 
   if (loading)
     return (
@@ -181,6 +208,11 @@ export default function OrderDetailPage() {
             title={seller.shopNameSnapshot}
             actions={<StatusBadge status={seller.status} map={marketplaceOrderStatuses} />}
           >
+            <OrderRail
+              label={`Trạng thái đơn của ${seller.shopNameSnapshot}`}
+              steps={orderRailSteps(seller.status)}
+              currentId={orderRailCurrent(seller.status)}
+            />
             <ul className="mp-order-items">
               {seller.items.map((item, index) => (
                 <li key={`${item.productId}-${index}`}>

@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { type ApiPath } from "@marketplace/api-client";
-import { EmptyState, StatusMessage, Store, useApi } from "@marketplace/ui-web";
+import {
+  ApiClientError,
+  normalizeFormError,
+  type ApiPath,
+} from "@marketplace/api-client";
+import { StatusMessage, Store, useApi } from "@marketplace/ui-web";
 import { ProductGrid } from "../../../features/discovery/product-grid";
 
 type Shop = {
@@ -21,22 +25,29 @@ export default function PublicShopPage() {
   const { api, status } = useApi();
   const [shop, setShop] = useState<Shop | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (status === "loading") return;
     let live = true;
+    setLoading(true);
+    setError("");
     setLoading(true);
     void api
       .request<Shop>(`/shops/${shopId}` as ApiPath)
       .then((value) => {
         if (live) {
           setShop(value);
-          setError(false);
         }
       })
-      .catch(() => {
-        if (live) setError(true);
+      .catch((cause: unknown) => {
+        if (live)
+          setError(
+            cause instanceof ApiClientError && cause.status === 404
+              ? "Cửa hàng không tồn tại hoặc chưa mở bán."
+              : normalizeFormError(cause),
+          );
       })
       .finally(() => {
         if (live) setLoading(false);
@@ -44,7 +55,7 @@ export default function PublicShopPage() {
     return () => {
       live = false;
     };
-  }, [api, shopId, status]);
+  }, [api, attempt, shopId, status]);
 
   if (loading)
     return (
@@ -60,16 +71,18 @@ export default function PublicShopPage() {
     return (
       <div className="mp-container">
         <StatusMessage tone="error" title="Không mở được cửa hàng">
-          Cửa hàng không tồn tại hoặc chưa mở bán.{" "}
+          {error}{" "}
+          <button
+            type="button"
+            className="mp-link"
+            onClick={() => setAttempt((value) => value + 1)}
+          >
+            Thử lại
+          </button>{" "}
           <Link className="mp-link" href="/products">
             Khám phá sản phẩm
           </Link>
         </StatusMessage>
-        <EmptyState
-          icon={<Store size={22} />}
-          title="Cửa hàng chưa sẵn sàng"
-          description="Anh có thể tiếp tục xem các sản phẩm khác trên sàn."
-        />
       </div>
     );
 
@@ -80,14 +93,20 @@ export default function PublicShopPage() {
           {shop.banner ? (
             <img src={shop.banner.url} alt="" />
           ) : (
-            <span className="mp-shop-hero__banner-placeholder" aria-hidden="true" />
+            <span
+              className="mp-shop-hero__banner-placeholder"
+              aria-hidden="true"
+            />
           )}
         </div>
         <div className="mp-shop-hero__identity">
           {shop.logo ? (
             <img className="mp-shop-hero__logo" src={shop.logo.url} alt="" />
           ) : (
-            <span className="mp-shop-hero__logo mp-shop-hero__logo--placeholder" aria-hidden="true">
+            <span
+              className="mp-shop-hero__logo mp-shop-hero__logo--placeholder"
+              aria-hidden="true"
+            >
               <Store size={22} />
             </span>
           )}
