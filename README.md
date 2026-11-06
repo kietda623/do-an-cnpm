@@ -131,6 +131,22 @@ corepack pnpm --filter @marketplace/api seed:reviews-statistics
 
 Chỉ chạy seed trên database local disposable. Các seed fixture kiểm tra `TEST_DATABASE_URL` có hậu tố `_test`/`_disposable` và yêu cầu `TEST_DATABASE_NAME_CONFIRMATION` trùng chính xác tên database; xem [fixture design](docs/testing/fixture-design.md).
 
+`seed:demo` chạy độc lập, không cần gọi `seed:identity`; lệnh chỉ đọc `TEST_DATABASE_URL`, yêu cầu PostgreSQL và tên database kết thúc bằng `_test` hoặc `_disposable`, xác nhận chính xác qua `TEST_DATABASE_NAME_CONFIRMATION`, và không fallback sang `DATABASE_URL`, reset, migrate hay xóa dữ liệu. Database phải được migrate riêng trước khi chạy; wrapper `prisma:migrate:deploy` đọc `DATABASE_URL`, nên khi chuẩn bị DB mới hãy bảo đảm biến đó trỏ đúng cùng database disposable.
+
+Thêm các giá trị dưới đây vào `.env.test` đã bị Git bỏ qua (không commit mật khẩu), rồi chạy lệnh riêng. Ba mật khẩu phải dài 12–128 ký tự:
+
+```bash
+TEST_DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@127.0.0.1:5432/marketplace_demo_disposable
+TEST_DATABASE_NAME_CONFIRMATION=marketplace_demo_disposable
+DEMO_SELLER_PASSWORD=<mật-khẩu-demo-người-bán>
+DEMO_BUYER_PASSWORD=<mật-khẩu-demo-người-mua>
+DEMO_LOCKED_BUYER_PASSWORD=<mật-khẩu-demo-tài-khoản-bị-khóa>
+
+corepack pnpm --filter @marketplace/api seed:demo
+```
+
+Seed demo tạo 10 shop, 1.000 sản phẩm và bốn order/payment/shipment fixture theo stable IDs; ảnh chỉ là metadata placeholder, không có file ảnh thật. Xem [demo seed evidence](docs/testing/demo-seed-evidence.md).
+
 ## Kiểm thử
 
 ```bash
