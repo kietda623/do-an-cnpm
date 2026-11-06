@@ -7,6 +7,9 @@ import {
   EmptyState,
   formatVnd,
   Inbox,
+  OrderRail,
+  orderRailCurrent,
+  orderRailSteps,
   PageHeader,
   Package,
   Panel,
@@ -18,6 +21,7 @@ import {
   Tabs,
   Truck,
   useApi,
+  usePolling,
 } from "@marketplace/ui-web";
 import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
 import type { SellerPart } from "../../../../lib/types";
@@ -50,22 +54,31 @@ export default function SellerOrdersPage() {
   const [status, setStatus] = useState("ALL");
   const [reason, setReason] = useState("");
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const query = status === "ALL" ? "" : `?status=${status}`;
-      setRows(await api.request<SellerPart[]>(`/shops/${shopId}/orders${query}` as ApiPath));
-    } catch (cause) {
-      setError(normalizeFormError(cause));
-    } finally {
-      setLoading(false);
-    }
-  }, [api, shopId, status]);
+  const refresh = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
+      try {
+        const query = status === "ALL" ? "" : `?status=${status}`;
+        setRows(await api.request<SellerPart[]>(`/shops/${shopId}/orders${query}` as ApiPath));
+      } catch (cause) {
+        if (!silent) setError(normalizeFormError(cause));
+        throw cause;
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [api, shopId, status],
+  );
 
   useEffect(() => {
-    void refresh();
+    void refresh().catch(() => {});
   }, [refresh]);
+
+  usePolling(refresh, { intervalMs: 30_000, pauseWhile: busy });
 
   async function action(path: string, body: Record<string, unknown>) {
     setBusy(true);
@@ -150,12 +163,18 @@ export default function SellerOrdersPage() {
           {rows.map((part) => (
             <Panel
               key={part.id}
+              className="mp-reveal"
               title={`Đơn ${part.id}`}
               description={`Tổng ${formatVnd(part.originalTotal)} · Còn phải thu ${formatVnd(
                 part.outstandingAmount,
               )}`}
               actions={<StatusBadge status={part.status} map={sellerOrderStatuses} />}
             >
+              <OrderRail
+                label={`Tiến trình đơn ${part.id}`}
+                steps={orderRailSteps(part.status)}
+                currentId={orderRailCurrent(part.status)}
+              />
               <div className="mp-order-part">
                 <ul className="mp-order-part__items">
                   {part.items.map((item) => (

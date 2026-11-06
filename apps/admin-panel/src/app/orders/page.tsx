@@ -7,6 +7,9 @@ import {
   Button,
   DataTable,
   EmptyState,
+  OrderRail,
+  orderRailCurrent,
+  orderRailSteps,
   PageHeader,
   Pagination,
   Panel,
@@ -16,6 +19,7 @@ import {
   paymentStatuses,
   sellerOrderStatuses,
   useApi,
+  usePolling,
   formatDateTime,
   formatVnd,
   type DataTableColumn,
@@ -46,30 +50,40 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    for (const [key, value] of Object.entries(applied)) {
-      if (!value.trim()) continue;
-      params.set(
-        key,
-        key === "from" || key === "to" ? new Date(value).toISOString() : value.trim(),
-      );
-    }
-    try {
-      setOrders(await api.request<OrderSummary[]>(`/admin/orders?${params}` as ApiPath));
-    } catch (cause) {
-      setOrders([]);
-      setError(normalizeFormError(cause));
-    } finally {
-      setLoading(false);
-    }
-  }, [api, applied, page]);
+  const refresh = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      for (const [key, value] of Object.entries(applied)) {
+        if (!value.trim()) continue;
+        params.set(
+          key,
+          key === "from" || key === "to" ? new Date(value).toISOString() : value.trim(),
+        );
+      }
+      try {
+        setOrders(await api.request<OrderSummary[]>(`/admin/orders?${params}` as ApiPath));
+      } catch (cause) {
+        if (!silent) {
+          setOrders([]);
+          setError(normalizeFormError(cause));
+        }
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [api, applied, page],
+  );
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  usePolling(refresh, { intervalMs: 30_000, pauseWhile: loading });
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,6 +114,18 @@ export default function AdminOrdersPage() {
             <Badge tone="warning">Hủy một phần</Badge>
           ) : null}
         </div>
+      ),
+    },
+    {
+      key: "timeline",
+      header: "Tiến trình",
+      render: (row) => (
+        <OrderRail
+          className="mp-rail--compact"
+          label={`Tiến trình đơn ${row.orderNumber}`}
+          steps={orderRailSteps(row.status, { compact: true })}
+          currentId={orderRailCurrent(row.status)}
+        />
       ),
     },
     {

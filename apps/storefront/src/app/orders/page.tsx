@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   EmptyState,
   Package,
@@ -14,6 +14,7 @@ import {
   marketplaceOrderStatuses,
   paymentStatuses,
   useApi,
+  usePolling,
 } from "@marketplace/ui-web";
 import { normalizeFormError } from "@marketplace/api-client";
 import { webSession } from "../../lib/session";
@@ -32,6 +33,31 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const alive = useRef(true);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
+  const loadOrders = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
+    try {
+      const response = await webSession.api.request<Order[]>("/orders");
+      if (alive.current) setOrders(response);
+    } catch (cause) {
+      if (!silent && alive.current) setError(normalizeFormError(cause));
+      throw cause;
+    } finally {
+      if (!silent && alive.current) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -39,24 +65,14 @@ export default function OrdersPage() {
       router.replace("/login?returnTo=%2Forders");
       return;
     }
-    let active = true;
-    setLoading(true);
-    setError("");
-    void webSession.api
-      .request<Order[]>("/orders")
-      .then((response) => {
-        if (active) setOrders(response);
-      })
-      .catch((cause) => {
-        if (active) setError(normalizeFormError(cause));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [router, status]);
+    void loadOrders().catch(() => {});
+  }, [loadOrders, router, status]);
+
+  usePolling(loadOrders, {
+    intervalMs: 30_000,
+    enabled: status === "authenticated",
+    pauseWhile: loading,
+  });
 
   return (
     <div className="mp-container mp-orders">
@@ -89,9 +105,9 @@ export default function OrdersPage() {
           }
         />
       ) : (
-        <ul className="mp-orders__list">
-          {orders.map((order) => (
-            <li key={order.id}>
+        <ul className="mp-orders__list mp-stagger">
+          {orders.map((order, index) => (
+            <li key={order.id} style={{ "--i": index } as CSSProperties}>
               <Link className="mp-order-card" href={`/orders/${order.id}`}>
                 <div className="mp-order-card__top">
                   <div>

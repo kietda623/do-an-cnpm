@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { normalizeFormError } from "@marketplace/api-client";
 import {
   ChartLine,
   ConsoleShell,
@@ -27,35 +28,40 @@ export function SellerShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { api, status } = useApi();
   const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [membershipError, setMembershipError] = useState("");
+  const [attempt, setAttempt] = useState(0);
 
-  const isLoginPage = pathname === "/login";
+  const isAuthPage = pathname === "/login" || pathname === "/register";
 
   useEffect(() => {
-    if (status !== "authenticated" || isLoginPage) return;
+    if (status !== "authenticated" || isAuthPage) return;
     let live = true;
+    setMembershipError("");
     void api
       .request<Membership[]>("/users/me/shops")
       .then((rows) => {
         if (live) setMemberships(rows);
       })
-      .catch(() => {
-        if (live) setMemberships([]);
+      .catch((cause: unknown) => {
+        if (live) setMembershipError(normalizeFormError(cause));
       });
     return () => {
       live = false;
     };
-  }, [api, isLoginPage, status]);
+  }, [api, attempt, isAuthPage, status]);
 
   useEffect(() => {
-    if (status === "anonymous" && !isLoginPage) router.replace("/login");
-  }, [isLoginPage, router, status]);
+    if (status === "anonymous" && !isAuthPage) router.replace("/login");
+  }, [isAuthPage, router, status]);
 
-  if (isLoginPage) return <>{children}</>;
+  if (isAuthPage) return <>{children}</>;
 
   if (status === "loading" || status === "anonymous") {
     return (
       <main className="mp-console-boot" role="status">
-        <span className="mp-visually-hidden">Đang khôi phục phiên đăng nhập…</span>
+        <span className="mp-visually-hidden">
+          Đang khôi phục phiên đăng nhập…
+        </span>
         <Skeleton className="mp-skeleton--cell" />
         <Skeleton className="mp-skeleton--block" />
       </main>
@@ -84,12 +90,36 @@ export function SellerShell({ children }: { children: ReactNode }) {
     navGroups.push({
       label: activeShop?.shopName ?? "Quản lý",
       items: [
-        { href: `${base}/dashboard`, label: "Tổng quan", icon: <LayoutDashboard size={18} /> },
-        { href: `${base}/orders`, label: "Đơn hàng", icon: <ReceiptText size={18} /> },
-        { href: `${base}/products`, label: "Sản phẩm", icon: <Package size={18} /> },
-        { href: `${base}/analytics`, label: "Doanh thu", icon: <ChartLine size={18} /> },
-        { href: `${base}/reviews`, label: "Đánh giá", icon: <Star size={18} /> },
-        { href: `${base}/settings`, label: "Cài đặt cửa hàng", icon: <Settings size={18} /> },
+        {
+          href: `${base}/dashboard`,
+          label: "Tổng quan",
+          icon: <LayoutDashboard size={18} />,
+        },
+        {
+          href: `${base}/orders`,
+          label: "Đơn hàng",
+          icon: <ReceiptText size={18} />,
+        },
+        {
+          href: `${base}/products`,
+          label: "Sản phẩm",
+          icon: <Package size={18} />,
+        },
+        {
+          href: `${base}/analytics`,
+          label: "Doanh thu",
+          icon: <ChartLine size={18} />,
+        },
+        {
+          href: `${base}/reviews`,
+          label: "Đánh giá",
+          icon: <Star size={18} />,
+        },
+        {
+          href: `${base}/settings`,
+          label: "Cài đặt cửa hàng",
+          icon: <Settings size={18} />,
+        },
       ],
     });
   }
@@ -132,6 +162,18 @@ export function SellerShell({ children }: { children: ReactNode }) {
         </div>
       }
     >
+      {membershipError && (
+        <p className="mp-alert-inline" role="alert">
+          Không tải được danh sách cửa hàng. {membershipError}{" "}
+          <button
+            type="button"
+            className="mp-link"
+            onClick={() => setAttempt((value) => value + 1)}
+          >
+            Thử lại
+          </button>
+        </p>
+      )}
       {children}
     </ConsoleShell>
   );

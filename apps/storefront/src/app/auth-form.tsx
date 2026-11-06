@@ -3,8 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Button, TextField, useApi } from "@marketplace/ui-web";
+import { Button, OrderRail, TextField, useApi } from "@marketplace/ui-web";
 import { normalizeFormError } from "@marketplace/api-client";
+
+const journey = [
+  { id: "cart", label: "Gom nhiều cửa hàng vào một giỏ", meta: "Một lần đặt", tone: "done" as const },
+  { id: "track", label: "Theo dõi từng kiện hàng", meta: "Cập nhật tự động", tone: "active" as const },
+  { id: "review", label: "Đánh giá sau khi nhận", meta: "Khi đơn hoàn tất", tone: "neutral" as const },
+];
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
@@ -56,6 +62,14 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             ? "Theo dõi đơn theo từng cửa hàng và nhận hàng đúng hẹn."
             : "Tiếp tục mua sắm, theo dõi vận chuyển và đánh giá sản phẩm."}
         </p>
+        <div className="mp-auth__journey">
+          <p className="mp-eyebrow">Sau khi đăng nhập</p>
+          <OrderRail
+            label="Các bước mua hàng sau khi đăng nhập"
+            steps={journey}
+            orientation="vertical"
+          />
+        </div>
       </div>
       <form className="mp-auth__card" onSubmit={submit}>
         <div className="mp-auth__card-head">
@@ -83,10 +97,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             name="password"
             type="password"
             autoComplete={mode === "register" ? "new-password" : "current-password"}
-            minLength={12}
             maxLength={128}
             required
-            hint={mode === "register" ? "Tối thiểu 12 ký tự." : undefined}
           />
         </div>
         {error && (

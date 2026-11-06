@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button, Store, TextField, useApi } from "@marketplace/ui-web";
@@ -45,7 +46,7 @@ export default function SellerLoginPage() {
       <section className="mp-auth__card" aria-labelledby="seller-login-title">
         <header className="mp-auth__card-head">
           <h2 id="seller-login-title">Đăng nhập người bán</h2>
-          <p>Dùng tài khoản đã được cấp quyền cửa hàng.</p>
+          <p>Dùng tài khoản Marketplace để đăng ký hoặc quản lý cửa hàng.</p>
         </header>
         <form onSubmit={submit} className="mp-auth__fields">
           <TextField
@@ -72,7 +73,7 @@ export default function SellerLoginPage() {
           </Button>
         </form>
         <p className="mp-auth__switch">
-          Cần quyền cửa hàng? Liên hệ quản trị viên Marketplace.
+          Chưa có tài khoản? <Link href="/register">Đăng ký tài khoản</Link>
         </p>
       </section>
     </main>

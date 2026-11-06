@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
 import {
   Button,
   EmptyState,
@@ -14,6 +15,7 @@ import {
   TextField,
   SelectField,
   formatVnd,
+  useApi,
 } from "@marketplace/ui-web";
 
 type Asset = { url: string; mimeType: string };
@@ -28,22 +30,22 @@ type Product = {
   ratingCount: number;
 };
 type Category = { id: string; name: string; children?: Category[] };
-type Result = { data: Product[]; meta: { page: number; pageSize: number; total: number } };
-const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1").replace(
-  /\/+$/,
-  "",
-);
+type Result = {
+  data: Product[];
+  meta: { page: number; pageSize: number; total: number };
+};
 const flatten = (items: Category[]): Category[] =>
   items.flatMap((item) => [item, ...flatten(item.children ?? [])]);
 
 export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
+  const { api } = useApi();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
   const [result, setResult] = useState<Result | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -60,25 +62,24 @@ export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
   useEffect(() => {
     let current = true;
     setLoading(true);
-    setError(false);
+    setError("");
     const suffix = params.toString();
-    const get = async <T,>(path: string): Promise<T> => {
-      const response = await fetch(`${apiBase}${path}`, { credentials: "include" });
-      if (!response.ok) throw new Error(`Request failed (${response.status})`);
-      const envelope = (await response.json()) as { data: T; meta?: unknown };
-      return (envelope.meta ? { data: envelope.data, meta: envelope.meta } : envelope.data) as T;
-    };
     void Promise.all([
-      get<Result>(`${endpoint}${suffix ? `?${suffix}` : ""}`),
-      get<Category[]>("/categories"),
+      api.requestEnvelope<Product[]>(
+        `${endpoint}${suffix ? `?${suffix}` : ""}` as ApiPath,
+      ),
+      api.request<Category[]>("/categories"),
     ])
       .then(([products, categoriesResponse]) => {
         if (!current) return;
-        setResult(products);
+        const { page, pageSize, total } = products.meta ?? {};
+        if (page === undefined || pageSize === undefined || total === undefined)
+          throw new Error("Máy chủ chưa trả thông tin phân trang sản phẩm.");
+        setResult({ data: products.data, meta: { page, pageSize, total } });
         setCategories(flatten(categoriesResponse));
       })
-      .catch(() => {
-        if (current) setError(true);
+      .catch((cause: unknown) => {
+        if (current) setError(normalizeFormError(cause));
       })
       .finally(() => {
         if (current) setLoading(false);
@@ -86,7 +87,7 @@ export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
     return () => {
       current = false;
     };
-  }, [endpoint, params, retryKey]);
+  }, [api, endpoint, params, retryKey]);
 
   function update(key: string, value: string) {
     const next = new URLSearchParams(search);
@@ -96,7 +97,9 @@ export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
   }
 
-  const pageCount = result ? Math.max(1, Math.ceil(result.meta.total / result.meta.pageSize)) : 1;
+  const pageCount = result
+    ? Math.max(1, Math.ceil(result.meta.total / result.meta.pageSize))
+    : 1;
 
   return (
     <section aria-label="Danh sách sản phẩm" className="mp-catalog__body">
@@ -152,14 +155,18 @@ export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
           label="Giá từ"
           inputMode="numeric"
           value={minPrice}
-          onChange={(event) => setMinPrice(event.target.value.replace(/\D/g, ""))}
+          onChange={(event) =>
+            setMinPrice(event.target.value.replace(/\D/g, ""))
+          }
           placeholder="0"
         />
         <TextField
           label="Giá đến"
           inputMode="numeric"
           value={maxPrice}
-          onChange={(event) => setMaxPrice(event.target.value.replace(/\D/g, ""))}
+          onChange={(event) =>
+            setMaxPrice(event.target.value.replace(/\D/g, ""))
+          }
           placeholder="Không giới hạn"
         />
         <div className="mp-filter__submit">
@@ -188,7 +195,7 @@ export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
 
       {error && !loading && (
         <StatusMessage tone="error" title="Không tải được sản phẩm.">
-          Kiểm tra kết nối rồi thử lại.{" "}
+          {error}{" "}
           <button
             type="button"
             className="mp-link"
@@ -220,20 +227,33 @@ export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
           <p className="mp-catalog__count" aria-live="polite">
             {result.meta.total} sản phẩm
           </p>
-          <div className="mp-product-grid">
-            {result.data.map((product) => (
-              <article key={product.id} className="mp-product-card">
-                <Link href={`/products/${product.id}`} className="mp-product-card__media">
+          <div className="mp-product-grid mp-stagger">
+            {result.data.map((product, index) => (
+              <article
+                key={product.id}
+                className="mp-product-card"
+                style={{ "--i": index } as CSSProperties}
+              >
+                <Link
+                  href={`/products/${product.id}`}
+                  className="mp-product-card__media"
+                >
                   {product.image ? (
                     <img src={product.image.url} alt="" loading="lazy" />
                   ) : (
-                    <span className="mp-product-card__placeholder" aria-hidden="true">
+                    <span
+                      className="mp-product-card__placeholder"
+                      aria-hidden="true"
+                    >
                       <ImageOff size={26} />
                     </span>
                   )}
                 </Link>
                 <div className="mp-product-card__body">
-                  <Link href={`/products/${product.id}`} className="mp-product-card__name">
+                  <Link
+                    href={`/products/${product.id}`}
+                    className="mp-product-card__name"
+                  >
                     {product.name}
                   </Link>
                   <p className="mp-product-card__price" data-numeric>
@@ -256,7 +276,10 @@ export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
                       </span>
                     ) : null}
                   </div>
-                  <Link href={`/shops/${product.shopId}`} className="mp-product-card__shop">
+                  <Link
+                    href={`/shops/${product.shopId}`}
+                    className="mp-product-card__shop"
+                  >
                     {product.shopName}
                   </Link>
                 </div>

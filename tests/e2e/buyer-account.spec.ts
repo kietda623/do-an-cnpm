@@ -104,7 +104,7 @@ async function mockAccountApi(
 async function fillRegisterForm(page: Page) {
   await page.getByLabel(/full name|họ và tên/i).fill("E2E Buyer");
   await page.getByLabel(/email/i).fill("buyer@example.test");
-  await page.getByLabel(/password/i).fill("Correct horse battery staple 9!");
+  await page.getByLabel(/password/i).fill("Test123");
 }
 
 test("L: register disables duplicate submit while the server is responding", async ({ page }) => {
@@ -200,7 +200,7 @@ test("S: register, update profile/address/password, upload avatar, and log out",
   await page
     .getByLabel(/current password|mật khẩu hiện tại/i)
     .fill("Correct horse battery staple 9!");
-  await page.getByLabel(/new password|mật khẩu mới/i).fill("New correct horse battery staple 10!");
+  await page.getByLabel(/new password|mật khẩu mới/i).fill("Moi123");
   await page.getByRole("button", { name: /update password|cập nhật mật khẩu/i }).click();
   await expect(page.getByRole("status")).toContainText(
     /password.*updated|đổi mật khẩu thành công/i,

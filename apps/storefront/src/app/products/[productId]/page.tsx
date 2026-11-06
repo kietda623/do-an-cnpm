@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
+import {
+  ApiClientError,
+  normalizeFormError,
+  type ApiPath,
+} from "@marketplace/api-client";
 import {
   Button,
   ImageOff,
@@ -40,13 +44,16 @@ export default function ProductDetailPage() {
   const [variantId, setVariantId] = useState("");
   const [imageIndex, setImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
   const [cartError, setCartError] = useState("");
   const [added, setAdded] = useState(false);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     let live = true;
+    setLoading(true);
+    setError("");
     void api
       .request<Product>(`/products/${productId}` as ApiPath)
       .then((value) => {
@@ -54,8 +61,13 @@ export default function ProductDetailPage() {
         setProduct(value);
         setVariantId(value.variants[0]?.id ?? "");
       })
-      .catch(() => {
-        if (live) setError(true);
+      .catch((cause: unknown) => {
+        if (live)
+          setError(
+            cause instanceof ApiClientError && cause.status === 404
+              ? "Sản phẩm không tồn tại hoặc hiện không được bán công khai."
+              : normalizeFormError(cause),
+          );
       })
       .finally(() => {
         if (live) setLoading(false);
@@ -63,7 +75,7 @@ export default function ProductDetailPage() {
     return () => {
       live = false;
     };
-  }, [api, productId]);
+  }, [api, attempt, productId]);
 
   if (loading)
     return (
@@ -83,8 +95,15 @@ export default function ProductDetailPage() {
   if (error || !product)
     return (
       <div className="mp-container mp-detail__error">
-        <StatusMessage tone="error" title="Không tìm thấy sản phẩm">
-          Sản phẩm không tồn tại hoặc hiện không được bán công khai.{" "}
+        <StatusMessage tone="error" title="Không tải được sản phẩm">
+          {error}{" "}
+          <button
+            type="button"
+            className="mp-link"
+            onClick={() => setAttempt((value) => value + 1)}
+          >
+            Thử lại
+          </button>{" "}
           <Link className="mp-link" href="/products">
             Quay lại danh sách
           </Link>
@@ -93,12 +112,16 @@ export default function ProductDetailPage() {
     );
 
   const selected =
-    product.variants.find((variant) => variant.id === variantId) ?? product.variants[0];
+    product.variants.find((variant) => variant.id === variantId) ??
+    product.variants[0];
   const image = product.images[imageIndex];
 
   return (
     <div className="mp-container mp-detail">
-      <section aria-label="Thư viện ảnh sản phẩm" className="mp-detail__gallery">
+      <section
+        aria-label="Thư viện ảnh sản phẩm"
+        className="mp-detail__gallery mp-reveal"
+      >
         <div className="mp-detail__image">
           {image ? (
             <img src={image.url} alt={product.name} />
@@ -127,89 +150,101 @@ export default function ProductDetailPage() {
         )}
       </section>
 
-      <section className="mp-detail__info">
+      <section className="mp-detail__info mp-reveal">
         <Link className="mp-detail__shop" href={`/shops/${product.shop.id}`}>
           {product.shop.name}
         </Link>
         <h1 className="mp-detail__name">{product.name}</h1>
-        <p className="mp-detail__price" data-numeric>
-          {formatVnd(selected?.price ?? product.minimumPrice)}
-        </p>
 
-        {product.variants.length > 0 && (
-          <SelectField
-            label="Phân loại"
-            aria-label="Phân loại sản phẩm"
-            value={variantId}
-            onChange={(event) => {
-              setVariantId(event.target.value);
-              setAdded(false);
-            }}
-          >
-            {product.variants.map((variant) => (
-              <option key={variant.id} value={variant.id}>
-                {Object.values(variant.attributes).join(" / ") || variant.sku} ·{" "}
-                {formatVnd(variant.price)}
-              </option>
-            ))}
-          </SelectField>
-        )}
+        <div className="mp-detail__buy">
+          <p className="mp-detail__price" data-numeric>
+            {formatVnd(selected?.price ?? product.minimumPrice)}
+          </p>
 
-        <p className="mp-detail__stock" aria-live="polite">
-          {selected?.availableQuantity
-            ? `Còn ${selected.availableQuantity} sản phẩm`
-            : "Tạm hết hàng"}
-        </p>
-
-        {status === "loading" ? (
-          <span className="mp-skeleton mp-detail__cta-skeleton" aria-hidden="true" />
-        ) : user ? (
-          <div className="mp-detail__cta">
-            <Button
-              size="lg"
-              fullWidth
-              loading={adding}
-              disabled={!selected?.availableQuantity}
-              onClick={() => {
-                if (!selected) return;
-                setAdding(true);
-                setCartError("");
+          {product.variants.length > 0 && (
+            <SelectField
+              label="Phân loại"
+              aria-label="Phân loại sản phẩm"
+              value={variantId}
+              onChange={(event) => {
+                setVariantId(event.target.value);
                 setAdded(false);
-                void api
-                  .request("/cart/items", {
-                    method: "POST",
-                    body: JSON.stringify({ variantId: selected.id, quantity: 1 }),
-                  })
-                  .then(async () => {
-                    if (user) await queryClient.invalidateQueries({ queryKey: ["cart", user.id] });
-                    window.dispatchEvent(new Event("marketplace:cart-changed"));
-                    setAdded(true);
-                  })
-                  .catch((cause) => setCartError(normalizeFormError(cause)))
-                  .finally(() => setAdding(false));
               }}
             >
-              {added ? "Đã thêm vào giỏ" : "Thêm vào giỏ hàng"}
-            </Button>
-            {cartError && (
-              <p role="alert" className="mp-detail__error-text">
-                {cartError}
-              </p>
-            )}
-            {added && (
-              <Link href="/cart" className="mp-link">
-                Xem giỏ hàng
-              </Link>
-            )}
-          </div>
-        ) : (
-          <Link
-            href={`/login?returnTo=${encodeURIComponent(`/products/${product.id}`)}`}
-            className="mp-button mp-button--primary mp-button--lg mp-button--block"
-          >
-            Đăng nhập để mua
-          </Link>
-        )}
+              {product.variants.map((variant) => (
+                <option key={variant.id} value={variant.id}>
+                  {Object.values(variant.attributes).join(" / ") || variant.sku} ·{" "}
+                  {formatVnd(variant.price)}
+                </option>
+              ))}
+            </SelectField>
+          )}
+
+          <p className="mp-detail__stock" aria-live="polite">
+            {selected?.availableQuantity
+              ? `Còn ${selected.availableQuantity} sản phẩm`
+              : "Tạm hết hàng"}
+          </p>
+
+          {status === "loading" ? (
+            <span
+              className="mp-skeleton mp-detail__cta-skeleton"
+              aria-hidden="true"
+            />
+          ) : user ? (
+            <div className="mp-detail__cta">
+              <Button
+                size="lg"
+                fullWidth
+                loading={adding}
+                disabled={!selected?.availableQuantity}
+                onClick={() => {
+                  if (!selected) return;
+                  setAdding(true);
+                  setCartError("");
+                  setAdded(false);
+                  void api
+                    .request("/cart/items", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        variantId: selected.id,
+                        quantity: 1,
+                      }),
+                    })
+                    .then(async () => {
+                      if (user)
+                        await queryClient.invalidateQueries({
+                          queryKey: ["cart", user.id],
+                        });
+                      window.dispatchEvent(new Event("marketplace:cart-changed"));
+                      setAdded(true);
+                    })
+                    .catch((cause) => setCartError(normalizeFormError(cause)))
+                    .finally(() => setAdding(false));
+                }}
+              >
+                {added ? "Đã thêm vào giỏ" : "Thêm vào giỏ hàng"}
+              </Button>
+              {cartError && (
+                <p role="alert" className="mp-detail__error-text">
+                  {cartError}
+                </p>
+              )}
+              {added && (
+                <Link href="/cart" className="mp-link">
+                  Xem giỏ hàng
+                </Link>
+              )}
+            </div>
+          ) : (
+            <Link
+              href={`/login?returnTo=${encodeURIComponent(`/products/${product.id}`)}`}
+              className="mp-button mp-button--primary mp-button--lg mp-button--block"
+            >
+              Đăng nhập để mua
+            </Link>
+          )}
+        </div>
 
         <section className="mp-detail__description">
           <h2>Mô tả</h2>

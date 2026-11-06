@@ -22,7 +22,7 @@ import {
   useSession,
   type SessionUser,
 } from "@marketplace/ui-web";
-import { ApiClientError, normalizeFormError } from "@marketplace/api-client";
+import { ApiClientError, ApiConnectionError, normalizeFormError } from "@marketplace/api-client";
 
 type Address = {
   id: string;
@@ -97,7 +97,11 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
       setUser(updated);
       setStatusMessage("Đã lưu thay đổi.");
     } catch (cause) {
-      setError(normalizeFormError(cause));
+      setError(
+        cause instanceof ApiConnectionError
+          ? "Không thể kết nối để lưu hồ sơ. Vui lòng kiểm tra kết nối và thử lại."
+          : normalizeFormError(cause),
+      );
     } finally {
       setPending(false);
     }
@@ -375,8 +379,7 @@ export function AccountView({ view }: { view: "profile" | "addresses" }) {
                         name="newPassword"
                         type="password"
                         autoComplete="new-password"
-                        minLength={12}
-                        hint="Tối thiểu 12 ký tự."
+                        maxLength={128}
                         required
                       />
                     </div>

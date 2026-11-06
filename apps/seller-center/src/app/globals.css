@@ -15,10 +15,15 @@
   --color-marketplace-foreground: var(--color-foreground);
   --color-marketplace-info: var(--color-info);
   --color-marketplace-info-soft: var(--color-info-soft);
+  --color-marketplace-ink: var(--color-ink);
+  --color-marketplace-ink-muted: var(--color-ink-muted);
   --color-marketplace-line: var(--color-line);
   --color-marketplace-muted: var(--color-muted);
   --color-marketplace-muted-foreground: var(--color-muted-foreground);
+  --color-marketplace-raised: var(--color-raised);
   --color-marketplace-ring: var(--color-ring);
+  --color-marketplace-signal: var(--color-signal);
+  --color-marketplace-signal-soft: var(--color-signal-soft);
   --color-marketplace-success: var(--color-success);
   --color-marketplace-success-soft: var(--color-success-soft);
   --color-marketplace-surface: var(--color-surface);
@@ -28,6 +33,7 @@
   --radius-marketplace-panel: var(--radius-panel);
   --radius-marketplace-pill: var(--radius-pill);
   --shadow-marketplace-card: var(--shadow-card);
+  --shadow-marketplace-raised: var(--shadow-raised);
   --shadow-marketplace-popover: var(--shadow-popover);
   --spacing-control-gap: 0.5rem;
   --text-marketplace-xs: var(--text-xs);
@@ -37,5 +43,9 @@
   --text-marketplace-xl: var(--text-xl);
   --text-marketplace-2xl: var(--text-2xl);
   --text-marketplace-3xl: var(--text-3xl);
-  --font-sans: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-be-vietnam-pro), "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    var(--font-space-grotesk), "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    var(--font-ibm-plex-mono), "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }

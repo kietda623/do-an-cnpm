@@ -53,7 +53,7 @@ async function mockDashboard(page: Page) {
     }
     if (path === "/admin/shops")
       return route.fulfill({
-        json: { data: { data: [pendingShop], meta: { page: 1, pageSize: 5, total: 1 } } },
+        json: { data: [pendingShop], meta: { page: 1, pageSize: 5, total: 1 } },
       });
     if (path === "/admin/audit")
       return route.fulfill({

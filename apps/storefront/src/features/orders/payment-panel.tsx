@@ -11,6 +11,7 @@ import {
   paymentAttemptStatuses,
   paymentMethods,
   paymentStatuses,
+  usePolling,
 } from "@marketplace/ui-web";
 import { normalizeFormError } from "@marketplace/api-client";
 import type { ApiPath } from "@marketplace/api-client";
@@ -65,6 +66,16 @@ export function PaymentPanel({
   useEffect(() => {
     void reload().catch((cause) => setError(normalizeFormError(cause)));
   }, [reload]);
+
+  usePolling(reload, {
+    intervalMs: 10_000,
+    enabled:
+      method === "MOCK" &&
+      status !== "CANCELLED" &&
+      paymentStatus !== "PAID" &&
+      paymentStatus !== "REFUNDED",
+    pauseWhile: busy,
+  });
 
   async function mockPay(outcome: "SUCCEEDED" | "FAILED") {
     setBusy(true);

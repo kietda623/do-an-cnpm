@@ -13,6 +13,7 @@ import {
   TextField,
   ScrollText,
   useApi,
+  usePolling,
   formatDateTime,
   type DataTableColumn,
 } from "@marketplace/ui-web";
@@ -43,30 +44,40 @@ export default function AdminAuditPage() {
   const [error, setError] = useState("");
   const [inspect, setInspect] = useState<Audit | null>(null);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    for (const [key, value] of Object.entries(applied)) {
-      if (!value.trim()) continue;
-      params.set(
-        key,
-        key === "from" || key === "to" ? new Date(value).toISOString() : value.trim(),
-      );
-    }
-    try {
-      setRows(await api.request<Audit[]>(`/admin/audit?${params}` as ApiPath));
-    } catch (cause) {
-      setRows([]);
-      setError(normalizeFormError(cause));
-    } finally {
-      setLoading(false);
-    }
-  }, [api, applied, page]);
+  const refresh = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      for (const [key, value] of Object.entries(applied)) {
+        if (!value.trim()) continue;
+        params.set(
+          key,
+          key === "from" || key === "to" ? new Date(value).toISOString() : value.trim(),
+        );
+      }
+      try {
+        setRows(await api.request<Audit[]>(`/admin/audit?${params}` as ApiPath));
+      } catch (cause) {
+        if (!silent) {
+          setRows([]);
+          setError(normalizeFormError(cause));
+        }
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [api, applied, page],
+  );
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  usePolling(refresh, { intervalMs: 60_000, pauseWhile: inspect !== null });
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -133,7 +144,7 @@ export default function AdminAuditPage() {
         description="Nhật ký bất biến. Metadata chỉ được xem trong hộp thoại chi tiết."
       />
 
-      <Panel title="Bộ lọc" description="Lọc theo tài nguyên, actor hoặc thời gian.">
+      <Panel className="mp-reveal" title="Bộ lọc" description="Lọc theo tài nguyên, actor hoặc thời gian.">
         <form className="mp-form" onSubmit={submit}>
           <div className="mp-form-grid">
             <TextField
@@ -194,6 +205,7 @@ export default function AdminAuditPage() {
       </Panel>
 
       <Panel
+        className="mp-reveal"
         title="Bản ghi nhật ký"
         description={loading ? undefined : `${rows.length} bản ghi trên trang này`}
         flush

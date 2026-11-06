@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   BarChart,
   DataTable,
@@ -10,6 +10,7 @@ import {
   Panel,
   SelectField,
   Skeleton,
+  usePolling,
   type DataTableColumn,
 } from "@marketplace/ui-web";
 import { normalizeFormError, type ApiPath, type ApiTransport } from "@marketplace/api-client";
@@ -34,27 +35,33 @@ export function useSellerRevenue({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const load = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!range) return;
+      const silent = options?.silent === true;
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
+      try {
+        const params = new URLSearchParams({ ...range, groupBy });
+        const value = await api.request<RevenueSeries>(`/shops/${shopId}/revenue?${params}` as ApiPath);
+        setSeries(value);
+      } catch (cause) {
+        if (!silent) setError(normalizeFormError(cause));
+        throw cause;
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [api, groupBy, range, shopId],
+  );
+
   useEffect(() => {
-    if (!range) return;
-    let live = true;
-    setLoading(true);
-    setError("");
-    const params = new URLSearchParams({ ...range, groupBy });
-    void api
-      .request<RevenueSeries>(`/shops/${shopId}/revenue?${params}` as ApiPath)
-      .then((value) => {
-        if (live) setSeries(value);
-      })
-      .catch((cause: unknown) => {
-        if (live) setError(normalizeFormError(cause));
-      })
-      .finally(() => {
-        if (live) setLoading(false);
-      });
-    return () => {
-      live = false;
-    };
-  }, [api, groupBy, range, shopId]);
+    void load().catch(() => {});
+  }, [load]);
+
+  usePolling(load, { intervalMs: 60_000, enabled: range !== null });
 
   return { groupBy, setGroupBy, series, loading, error };
 }

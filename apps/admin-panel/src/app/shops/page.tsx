@@ -16,6 +16,7 @@ import {
   TextareaField,
   shopStatuses,
   useApi,
+  usePolling,
   formatDateTime,
   type DataTableColumn,
 } from "@marketplace/ui-web";
@@ -63,29 +64,42 @@ export default function ShopQueuePage() {
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState<{ shop: Shop; action: ShopAction } | null>(null);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    if (status) params.set("status", status);
-    try {
-      const { data, meta } = await api.requestEnvelope<Shop[]>(
-        `/admin/shops?${params}` as ApiPath,
-      );
-      setShops(data);
-      setTotal(meta?.total ?? null);
-    } catch (cause) {
-      setShops([]);
-      setTotal(null);
-      setError(normalizeFormError(cause));
-    } finally {
-      setLoading(false);
-    }
-  }, [api, page, status]);
+  const refresh = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (status) params.set("status", status);
+      try {
+        const { data, meta } = await api.requestEnvelope<Shop[]>(
+          `/admin/shops?${params}` as ApiPath,
+        );
+        setShops(data);
+        setTotal(meta?.total ?? null);
+      } catch (cause) {
+        if (!silent) {
+          setShops([]);
+          setTotal(null);
+          setError(normalizeFormError(cause));
+        }
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [api, page, status],
+  );
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  usePolling(refresh, {
+    intervalMs: 30_000,
+    pauseWhile: busy || pending !== null,
+  });
 
   async function run(shop: Shop, action: ShopAction) {
     setBusy(true);
@@ -232,6 +246,7 @@ export default function ShopQueuePage() {
       />
 
       <Panel
+        className="mp-reveal"
         title="Hồ sơ cửa hàng"
         description={
           loading ? undefined : `${total ?? shops.length} hồ sơ trong bộ lọc hiện tại`

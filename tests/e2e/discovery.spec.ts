@@ -93,8 +93,13 @@ test("guest can search, page and open an out-of-stock item", async ({ page }) =>
   await expect(page.getByRole("heading", { name: "Khám phá sản phẩm" })).toBeVisible();
   await expect(page.getByRole("link", { name: /áo linen xanh/i })).toBeVisible();
   await page.getByLabel("Tìm sản phẩm").fill("linen");
+  const search = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === "/api/v1/products" && url.searchParams.get("q") === "linen";
+  });
   await page.getByRole("button", { name: "Tìm kiếm" }).click();
   await expect(page).toHaveURL(/q=linen/);
+  await search;
   await page.getByRole("link", { name: /áo linen xanh/i }).click();
   await expect(page.getByRole("heading", { name: "Áo linen xanh" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Đăng nhập để mua" })).toHaveAttribute(
