@@ -260,12 +260,22 @@ function buildOrders(): DemoOrderFixture[] {
       sellerOrderId: demoStableId("seller-order", key),
       orderItemId: demoStableId("order-item", key),
       orderEventId: demoStableId("order-event", `${key}:status`),
-      paymentAttemptId: fixture.hasAttempt ? demoStableId("payment-attempt", key) : null,
-      paymentEventId: fixture.hasPaymentEvent ? demoStableId("payment-event", key) : null,
-      allocationId: fixture.hasAllocation ? demoStableId("payment-allocation", key) : null,
-      refundId: fixture.hasRefund ? demoStableId("simulated-refund", key) : null,
+      paymentAttemptId: fixture.hasAttempt
+        ? demoStableId("payment-attempt", key)
+        : null,
+      paymentEventId: fixture.hasPaymentEvent
+        ? demoStableId("payment-event", key)
+        : null,
+      allocationId: fixture.hasAllocation
+        ? demoStableId("payment-allocation", key)
+        : null,
+      refundId: fixture.hasRefund
+        ? demoStableId("simulated-refund", key)
+        : null,
       shipmentId: fixture.hasShipment ? demoStableId("shipment", key) : null,
-      shipmentEventId: fixture.hasShipment ? demoStableId("shipment-event", key) : null,
+      shipmentEventId: fixture.hasShipment
+        ? demoStableId("shipment-event", key)
+        : null,
     };
   });
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
-import { readDemoSeedConfig } from "../prisma/seed/demo-seed-config.ts";
+import { readDemoSeedConfig } from "../prisma/seed/demo-seed-config.js";
 
 const credentials = {
   DEMO_SELLER_PASSWORD: "seller-bootstrap-password-01",
@@ -9,7 +9,8 @@ const credentials = {
 
 function validEnv(): Record<string, string | undefined> {
   return {
-    TEST_DATABASE_URL: "postgresql://demo:local@127.0.0.1:55439/marketplace_demo_disposable",
+    TEST_DATABASE_URL:
+      "postgresql://demo:local@127.0.0.1:55439/marketplace_demo_disposable",
     TEST_DATABASE_NAME_CONFIRMATION: "marketplace_demo_disposable",
     ...credentials,
   };
@@ -39,18 +40,33 @@ describe("demo seed configuration", () => {
 
   it.each([
     ["malformed URL", "not-a-url", "marketplace_demo_disposable"],
-    ["non-PostgreSQL URL", "mysql://demo:local@localhost/marketplace_demo_disposable", "marketplace_demo_disposable"],
-    ["unsafe database suffix", "postgresql://demo:local@localhost/marketplace", "marketplace"],
-    ["mismatched confirmation", "postgresql://demo:local@localhost/marketplace_demo_disposable", "different_name"],
-  ])("rejects %s before returning seed configuration", (_label, url, confirmation) => {
-    const env = {
-      ...validEnv(),
-      TEST_DATABASE_URL: url,
-      TEST_DATABASE_NAME_CONFIRMATION: confirmation,
-    };
+    [
+      "non-PostgreSQL URL",
+      "mysql://demo:local@localhost/marketplace_demo_disposable",
+      "marketplace_demo_disposable",
+    ],
+    [
+      "unsafe database suffix",
+      "postgresql://demo:local@localhost/marketplace",
+      "marketplace",
+    ],
+    [
+      "mismatched confirmation",
+      "postgresql://demo:local@localhost/marketplace_demo_disposable",
+      "different_name",
+    ],
+  ])(
+    "rejects %s before returning seed configuration",
+    (_label, url, confirmation) => {
+      const env = {
+        ...validEnv(),
+        TEST_DATABASE_URL: url,
+        TEST_DATABASE_NAME_CONFIRMATION: confirmation,
+      };
 
-    expect(() => readDemoSeedConfig(env)).toThrow();
-  });
+      expect(() => readDemoSeedConfig(env)).toThrow();
+    },
+  );
 
   it.each([
     "DEMO_SELLER_PASSWORD",

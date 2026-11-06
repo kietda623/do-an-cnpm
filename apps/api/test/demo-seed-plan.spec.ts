@@ -2,7 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import {
   buildDemoFixturePlan,
   demoStableId,
-} from "../prisma/seed/demo-fixtures.ts";
+} from "../prisma/seed/demo-fixtures.js";
 
 describe("demo seed fixture plan", () => {
   it("defines exactly ten shops, ten visible categories and 1,000 products at 100 per shop", () => {
@@ -11,12 +11,18 @@ describe("demo seed fixture plan", () => {
     expect(plan.shops).toHaveLength(10);
     expect(new Set(plan.shops.map((shop) => shop.slug)).size).toBe(10);
     expect(plan.categories).toHaveLength(10);
-    expect(new Set(plan.categories.map((category) => category.slug)).size).toBe(10);
-    expect(plan.categories.every((category) => category.status === "VISIBLE")).toBe(true);
+    expect(new Set(plan.categories.map((category) => category.slug)).size).toBe(
+      10,
+    );
+    expect(
+      plan.categories.every((category) => category.status === "VISIBLE"),
+    ).toBe(true);
     expect(plan.products).toHaveLength(1_000);
     expect(
-      plan.shops.map((shop) =>
-        plan.products.filter((product) => product.shopKey === shop.key).length,
+      plan.shops.map(
+        (shop) =>
+          plan.products.filter((product) => product.shopKey === shop.key)
+            .length,
       ),
     ).toEqual(Array.from({ length: 10 }, () => 100));
   });
@@ -24,14 +30,18 @@ describe("demo seed fixture plan", () => {
   it("includes one hidden product and decimal-string VND prices", () => {
     const plan = buildDemoFixturePlan();
 
-    expect(plan.products.filter((product) => product.adminHidden)).toHaveLength(1);
+    expect(plan.products.filter((product) => product.adminHidden)).toHaveLength(
+      1,
+    );
     expect(
       plan.products.every(
         (product) => /^\d+$/.test(product.price) && BigInt(product.price) > 0n,
       ),
     ).toBe(true);
     expect(plan.products.map((product) => product.price)).toEqual(
-      Array.from({ length: 1_000 }, (_, index) => String(10_000 + index * 1_000)),
+      Array.from({ length: 1_000 }, (_, index) =>
+        String(10_000 + index * 1_000),
+      ),
     );
   });
 
