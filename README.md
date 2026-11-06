@@ -111,7 +111,7 @@ corepack pnpm --filter @marketplace/seller-center exec next dev --hostname 0.0.0
 corepack pnpm --filter @marketplace/admin-panel exec next dev --hostname 0.0.0.0 --port 3002
 ```
 
-Trên PowerShell, thay dòng `export` bằng `$env:NEXT_PUBLIC_API_URL="http://localhost:4000/api/v1"`. Root có script `pnpm dev` chạy song song ba app, nhưng nên dùng lệnh riêng ở trên khi cần port ổn định.
+Trên PowerShell, thay dòng `export` bằng `$env:NEXT_PUBLIC_API_URL="http://localhost:4000/api/v1"`. Có thể mở cả ba app bằng `localhost` hoặc `127.0.0.1` trên các cổng này. API client tự khớp hostname local và thêm `/api/v1` nếu URL API chỉ có host và cổng. Khi sửa biến môi trường, khởi động lại tiến trình tương ứng. Root có script `pnpm dev` chạy song song ba app, nhưng nên dùng lệnh riêng ở trên khi cần port ổn định.
 
 ## Database và dữ liệu mẫu
 

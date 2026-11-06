@@ -8080,7 +8080,7 @@ components:
           format: email
         password:
           type: string
-          minLength: 12
+          minLength: 1
           maxLength: 128
         fullName:
           type: string
@@ -8246,7 +8246,7 @@ components:
           maxLength: 128
         newPassword:
           type: string
-          minLength: 12
+          minLength: 1
           maxLength: 128
       additionalProperties: false
       required:

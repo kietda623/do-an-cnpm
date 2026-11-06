@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { allowedBrowserOrigins } from "./allowed-origins.js";
 import type { ApiRequest, ApiResponse, Next } from "./request.types.js";
 
 const safeMethods = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -19,12 +20,7 @@ export class CsrfRequestMiddleware {
     this.signingSecret =
       config.get<string>("JWT_SIGNING_SECRET")?.trim() ||
       "local-csrf-secret-at-least-32-characters";
-    this.allowedOrigins = new Set(
-      (config.get<string>("CORS_ORIGINS") ?? "")
-        .split(",")
-        .map((origin) => origin.trim())
-        .filter(Boolean),
-    );
+    this.allowedOrigins = allowedBrowserOrigins(config);
   }
 
   use(request: ApiRequest, _response: ApiResponse, next: Next): void {
@@ -35,10 +31,11 @@ export class CsrfRequestMiddleware {
 
     const pathname = (request.originalUrl ?? request.path ?? "").split("?", 1)[0];
     const origin = firstHeader(request.headers.origin);
-    const hasCookie = Boolean(firstHeader(request.headers.cookie));
-    const browserAuthRequest = browserAuthMutation.test(pathname) && origin !== undefined;
 
-    if (!hasCookie && !browserAuthRequest) {
+    // Only cookie-authenticated endpoints (refresh/logout) are CSRF-able. Every other write
+    // authenticates with a Bearer token that JavaScript attaches, which a cross-site form
+    // cannot reproduce, so unrelated or stale cookies must not block those requests.
+    if (!(browserAuthMutation.test(pathname) && origin !== undefined)) {
       next();
       return;
     }

@@ -13,7 +13,7 @@ Workspace đã có manifests/lockfile, TypeScript config, lint/format, `.env.exa
 | Git | Bản hỗ trợ nhánh feature và pull request |
 | Docker Engine + Compose plugin | Cần cho PostgreSQL và service containers khi Compose được thêm |
 | PostgreSQL | 17 theo plan; dev/test database phải tách biệt |
-| S3-compatible storage | Chỉ cần cho upload E2E; bucket và credentials phải scoped, không giả định MinIO |
+| S3-compatible storage | Chỉ cần cho upload E2E khi có bucket; để trống S3 thì dev ghi file vào `ASSET_LOCAL_DIR` (mặc định `apps/api/uploads/`) và phục vụ qua `PUBLIC_API_URL/api/v1/assets`, production vẫn bắt buộc S3 |
 
 Kiểm tra phiên bản bằng `node --version` và `pnpm --version`. `pnpm install --frozen-lockfile` chỉ dùng với pnpm 12 và sau khi package build-script policy của workspace được chấp thuận. Không thay đổi package manager toàn máy để chạy repo.
 

@@ -29,13 +29,14 @@ import {
 } from "class-validator";
 import type { ApiRequest, ApiResponse } from "../../common/http/request.types.js";
 import type { AccessContext } from "../../common/auth/access-context.js";
+import { allowedBrowserOrigins } from "../../common/http/allowed-origins.js";
 import { AccessGuard, currentAccessContext } from "./access.guard.js";
 import { AuthService } from "./identity.service.js";
 import { AssetService } from "../catalog/media/asset.service.js";
 
 class RegisterDto {
   @IsEmail() email!: string;
-  @IsString() @MinLength(12) @MaxLength(128) password!: string;
+  @IsString() @MinLength(1) @MaxLength(128) password!: string;
   @IsString() @MinLength(1) @MaxLength(120) fullName!: string;
   @IsIn(["WEB", "ANDROID", "IOS", "WINDOWS", "MACOS"]) clientPlatform!:
     "WEB" | "ANDROID" | "IOS" | "WINDOWS" | "MACOS";
@@ -64,7 +65,7 @@ class ProfileDto {
 }
 class PasswordDto {
   @IsString() currentPassword!: string;
-  @IsString() @MinLength(12) @MaxLength(128) newPassword!: string;
+  @IsString() @MinLength(1) @MaxLength(128) newPassword!: string;
 }
 class AddressDto {
   @IsString() @MinLength(1) @MaxLength(120) recipientName!: string;
@@ -101,8 +102,8 @@ export class AuthController {
   @ApiOperation({ summary: "Issue a browser CSRF token" })
   csrf(@Req() req: ApiRequest, @Res({ passthrough: true }) res: ApiResponse) {
     const origin = req.headers.origin;
-    const allow = (this.config.get<string>("CORS_ORIGINS") ?? "").split(",").map((x) => x.trim());
-    if (origin && !allow.includes(Array.isArray(origin) ? origin[0] : origin))
+    const allow = allowedBrowserOrigins(this.config);
+    if (origin && !allow.has(Array.isArray(origin) ? origin[0]! : origin))
       throw new ForbiddenException({ code: "ORIGIN_REJECTED", message: "Origin is not allowed." });
     return this.auth.csrf().then(({ csrfToken, cookie }) => {
       res.setHeader("Set-Cookie", `csrf=${cookie}; Path=/api/v1/auth; Secure; SameSite=Lax;`);

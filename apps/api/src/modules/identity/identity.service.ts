@@ -54,10 +54,10 @@ export class AuthService {
   }) {
     this.rateLimit(`register:${input.email.toLowerCase()}`, 5);
     const email = input.email.trim().toLowerCase();
-    if (input.password.length < 12 || input.password.length > 128) {
+    if (input.password.length < 1 || input.password.length > 128) {
       throw new UnprocessableEntityException({
         code: "INVALID_PASSWORD",
-        message: "Password must contain 12 to 128 characters.",
+        message: "Password must contain 1 to 128 characters.",
       });
     }
     const passwordHash = await argon2.hash(input.password, { type: argon2.argon2id });
@@ -256,10 +256,10 @@ export class AuthService {
         code: "CURRENT_PASSWORD_INCORRECT",
         message: "Current password is incorrect.",
       });
-    if (input.newPassword.length < 12 || input.newPassword.length > 128)
+    if (input.newPassword.length < 1 || input.newPassword.length > 128)
       throw new UnprocessableEntityException({
         code: "INVALID_PASSWORD",
-        message: "Password must contain 12 to 128 characters.",
+        message: "Password must contain 1 to 128 characters.",
       });
     const passwordHash = await argon2.hash(input.newPassword, { type: argon2.argon2id });
     await this.db.prisma.$transaction(async (tx) => {
