@@ -33,7 +33,7 @@ Make registration, login, and refresh throttling bounded and consistent across A
 2. **Enforce limits only at an edge proxy.** Useful as an outer guard, but this project has no managed gateway configuration and an IP-only rule cannot enforce account/session buckets.
 3. **Add a Redis-backed limiter in the API.** Shared state and atomic windows without coupling domain logic to an external gateway. **Selected by the user.**
 
-## Proposed policy
+## Approved policy
 
 Use fixed 60-second windows with atomic Redis operations and expiration. Preserve the current per-identity allowances and add coarse IP budgets:
 
@@ -43,7 +43,7 @@ Use fixed 60-second windows with atomic Redis operations and expiration. Preserv
 | Login | 10 requests/minute per normalized email | 180 requests/minute |
 | Refresh | 30 requests/minute per session family | 300 requests/minute |
 
-These are proposed defaults for review. The higher IP budgets reduce false positives for users behind a shared campus or company network; per-email and per-session limits remain the tighter controls. Thresholds remain configurable, but production must not disable the limiter. Count every request, including successful requests, to bound expensive authentication work consistently.
+The user approved these defaults: register 5 per normalized email and 60 per IP; login 10 per normalized email and 180 per IP; refresh 30 per session family and 300 per IP, each in a fixed 60-second window. Thresholds remain configurable, but production must not disable the limiter. Count requests consistently so successful authentication requests consume the same allowance as failed requests.
 
 ## Design
 
