@@ -14,6 +14,15 @@ describe("refresh error codes over native and browser transports", () => {
   const origin = "http://localhost:3000";
   const password = "Correct horse battery staple 9!";
   const email = () => `refresh-${randomUUID()}@example.test`;
+  const setCookieHeaders = (result: { headers: Record<string, unknown> }) => {
+    const value = result.headers["set-cookie"];
+    if (Array.isArray(value)) {
+      return value.filter(
+        (cookie): cookie is string => typeof cookie === "string",
+      );
+    }
+    return typeof value === "string" ? [value] : [];
+  };
   beforeAll(async () => {
     process.env.CORS_ORIGINS = origin;
     await resetAndDeployMigrations();
@@ -156,7 +165,7 @@ describe("refresh error codes over native and browser transports", () => {
     expect(registered.status).toBe(201);
     expect(registered.body.data.refreshToken).toBeNull();
 
-    const setCookies = registered.headers["set-cookie"] as string[];
+    const setCookies = setCookieHeaders(registered);
     const refreshCookie = setCookies.find((value) =>
       value.startsWith("refresh_token="),
     )!;
@@ -174,7 +183,7 @@ describe("refresh error codes over native and browser transports", () => {
       .set("Authorization", `Bearer ${registered.body.data.accessToken}`)
       .send({ clientPlatform: "WEB" });
     expect(logout.status).toBe(204);
-    const clearedRefreshCookie = logout.headers["set-cookie"]?.find(
+    const clearedRefreshCookie = setCookieHeaders(logout).find(
       (value: string) => value.startsWith("refresh_token=;"),
     );
     expect(clearedRefreshCookie).toContain("Path=/api/v1/auth");
