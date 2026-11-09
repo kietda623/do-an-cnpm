@@ -1,6 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createConfigOverride, validateStorefrontUrl } from "./run-tauri.mjs";
+import * as runTauri from "./run-tauri.mjs";
+
+const { createConfigOverride, validateStorefrontUrl } = runTauri;
+
+test("selects the MSI bundle on Windows and the DMG bundle on macOS", () => {
+  assert.equal(typeof runTauri.bundleArgumentsForPlatform, "function");
+  assert.deepEqual(runTauri.bundleArgumentsForPlatform("win32"), [
+    "--bundles",
+    "msi",
+  ]);
+  assert.deepEqual(runTauri.bundleArgumentsForPlatform("darwin"), [
+    "--bundles",
+    "dmg",
+  ]);
+  assert.throws(
+    () => runTauri.bundleArgumentsForPlatform("linux"),
+    /Windows and macOS/,
+  );
+});
 
 test("accepts an HTTPS storefront URL and preserves its path", () => {
   assert.equal(

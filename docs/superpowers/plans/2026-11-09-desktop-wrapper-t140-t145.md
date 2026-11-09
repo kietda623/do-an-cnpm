@@ -206,12 +206,14 @@
 - The package exposes desktop:build, not build. Artifacts are a Windows MSI and macOS DMG with a SHA256SUMS file.
 - Upload results as workflow artifacts only. Do not create tags, releases, or publish jobs. Do not pass signing secrets to pull-request jobs.
 
-- [ ] Add a checksum script test with a known fixture so the same SHA-256 format is produced on Windows and macOS.
-- [ ] Configure exact Tauri 2 CLI/Rust crate versions and lockfiles. Add the selected Windows and macOS bundle targets and app identifier. Reuse the original icon source and generated platform icons created in T140. Keep the minimum OS values from the Global Constraints.
-- [ ] Add the optional workflow with the repository's pinned-action policy, Node 24, pnpm 12.14.0, Rust toolchain, and target platform dependencies.
+- [x] Add a checksum script test with a known fixture so the same SHA-256 format is produced on Windows and macOS.
+- [x] Configure exact Tauri 2 CLI/Rust crate versions and lockfiles. Add the selected Windows and macOS bundle targets and app identifier. Reuse the original icon source and generated platform icons created in T140. Keep the minimum OS values from the Global Constraints. No lockfile update was needed because this task adds no dependency.
+- [x] Add the optional workflow with the repository's pinned-action policy, Node 24, pnpm 12.14.0, Rust toolchain, and target platform dependencies.
 - [ ] Build on both runners with pnpm --filter @marketplace/desktop desktop:build. Generate checksums, verify every uploaded artifact has a matching checksum, and confirm the workflow never writes a release.
 - [ ] Install each artifact on its matching OS and record installer result, runtime version, and checksum in docs/testing/desktop-evidence.md. macOS artifacts are internal acceptance builds; do not describe unsigned builds as ready for public distribution.
-- [ ] Commit this task on the same feature branch with message: ci(desktop): build platform test artifacts.
+- [x] Commit this task on the same feature branch with message: ci(desktop): build platform test artifacts.
+
+**Evidence update 2026-11-09:** The Windows x64 MSI build and SHA-256 manifest succeeded locally. MSI installation returned 1603 / Windows Installer error 1925 because the session lacks administrator privileges. No macOS runner or production HTTPS URL is available here, so the cross-platform build/install matrix and T145 acceptance remain gated. See [desktop-evidence.md](../../testing/desktop-evidence.md).
 
 **Expected result:** Both OS artifacts build and install for acceptance, with reproducible checksums and no publishing permissions.
 

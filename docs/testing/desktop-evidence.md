@@ -62,6 +62,23 @@ The discovery run exposed a development-only CSP mismatch: the API client normal
 
 The fulfillment run initially stopped at API readiness because the local process lacked `RATE_LIMIT_KEY_SECRET` and `RATE_LIMIT_KEY_PREFIX`. Supplying the disposable test values resolved readiness; the rerun passed. The runs logged non-fatal Next.js view-transition `AbortError: Transition was skipped` warnings.
 
+## T144 Windows release artifact
+
+| Item                 | Observed value                                                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Build command        | `corepack pnpm --filter @marketplace/desktop desktop:build` — exit 0                                                                                                                       |
+| Build storefront URL | `https://desktop-acceptance.invalid` — synthetic test-only URL; not a production or reachable origin                                                                                       |
+| OS / architecture    | Windows 11 Home Single Language, build 26200, x64                                                                                                                                          |
+| Runtime              | WebView2 `157.0.4341.42`; Node.js `v24.21.0`; pnpm `12.14.0`; Rust/Cargo `1.94.1`                                                                                                          |
+| Tauri                | CLI `2.12.4`; Rust crate `2.12.5`                                                                                                                                                          |
+| Artifact             | `Marketplace_0.1.0_x64_en-US.msi`, 2.75 MiB                                                                                                                                                |
+| SHA-256              | `c8da368959a04c49e8f2aa48abc8b318086967ffbeb21652ec8478e4b64dcc99`                                                                                                                         |
+| Checksum command     | `node scripts/write-checksums.mjs src-tauri/target/release/bundle/msi` — exit 0; manifest has the MSI                                                                                      |
+| Installer result     | Not installed. `msiexec /i ... /qn /norestart` returned 1603; verbose log reported MSI error 1925 because this session lacks administrator privileges for `C:\Program Files\Marketplace\`. |
+| Desktop tests        | `corepack pnpm --filter @marketplace/desktop desktop:test` — 8 Node tests and 3 Rust tests passed                                                                                          |
+
+The MSI build and checksum are verified, but installation and launch are not. No macOS build, install, or checksum was performed because this environment has no macOS host. The repository variable `DESKTOP_STOREFRONT_URL` is absent; the launcher checks URL format and HTTPS policy, but does not probe network reachability. The workflow fails before native build when the variable is absent or invalid. A reachable production HTTPS origin still needs to be supplied and verified during T145; the synthetic `.invalid` URL is not production evidence. T144/T145 therefore remain incomplete, and SC-009 desktop remains BLOCKED.
+
 ## Release evidence still required
 
-Production HTTPS storefront/API origins are not configured in this environment, and no macOS runner or packaged macOS app was available. T145 production and macOS checks remain gated; this document records Windows development evidence only.
+Production HTTPS storefront/API origins are not configured in this environment, and no macOS runner or packaged macOS app was available. T145 production and macOS checks remain gated; this document records Windows development and unsigned MSI build evidence only.

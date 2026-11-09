@@ -17,6 +17,12 @@ The launcher rejects a missing URL, non-local HTTP URLs, nonstandard ports, URL 
 - Keep the storefront and API on the same site (the same registrable domain) so the existing `SameSite=Lax` refresh cookie works for credentialed API requests. The refresh cookie remains `HttpOnly`, `Secure`, and `SameSite=Lax`; desktop uses its own webview cookie jar and can sign in to the same account.
 - Keep signing keys and API credentials on the API server. `DESKTOP_STOREFRONT_URL`, `CORS_ORIGINS`, and other public URL settings are not secrets.
 
+## Acceptance builds
+
+Set `DESKTOP_STOREFRONT_URL` to the reachable HTTPS storefront before a release build. Run `pnpm --filter @marketplace/desktop desktop:build` on the target OS: Windows creates an MSI, and macOS creates a DMG. The workflow's unsigned artifacts are for internal acceptance only; this project does not sign, publish, or create releases.
+
+The initial support floor is Windows 10 version 1803 with WebView2 and macOS 10.15. The macOS bundle declares its minimum system version as 10.15. Acceptance artifacts currently target Windows x64 and macOS ARM64; do not infer support for other architectures.
+
 ## Native prerequisites
 
 - Windows: Rust's MSVC toolchain and the Microsoft C++ Build Tools, plus the WebView2 Runtime.

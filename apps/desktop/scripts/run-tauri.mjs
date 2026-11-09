@@ -91,6 +91,12 @@ export function createConfigOverride(mode, storefrontUrl) {
   };
 }
 
+export function bundleArgumentsForPlatform(platform) {
+  if (platform === "win32") return ["--bundles", "msi"];
+  if (platform === "darwin") return ["--bundles", "dmg"];
+  throw new Error("Desktop release bundles are supported on Windows and macOS");
+}
+
 function runTauri(mode, storefrontUrl) {
   if (mode !== "dev" && mode !== "build") {
     throw new Error("Usage: node scripts/run-tauri.mjs <dev|build>");
@@ -105,15 +111,16 @@ function runTauri(mode, storefrontUrl) {
 
   try {
     const cliPath = require.resolve("@tauri-apps/cli/tauri.js");
-    const result = spawnSync(
-      process.execPath,
-      [cliPath, mode, "--config", configPath],
-      {
-        cwd: appRoot,
-        env: { ...process.env, DESKTOP_STOREFRONT_URL: storefrontUrl },
-        stdio: "inherit",
-      },
-    );
+    const args = [cliPath, mode];
+    if (mode === "build") {
+      args.push(...bundleArgumentsForPlatform(process.platform));
+    }
+    args.push("--config", configPath);
+    const result = spawnSync(process.execPath, args, {
+      cwd: appRoot,
+      env: { ...process.env, DESKTOP_STOREFRONT_URL: storefrontUrl },
+      stdio: "inherit",
+    });
     if (result.error) throw result.error;
     return result.status ?? 1;
   } finally {
