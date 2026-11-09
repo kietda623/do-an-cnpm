@@ -155,13 +155,13 @@ export default function AdminOrdersPage() {
   const pageCount = page + (hasNext ? 1 : 0);
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-admin-page">
       <PageHeader
         title="Tra cứu đơn hàng"
         description="Chế độ chỉ đọc. Mở chi tiết để xem thanh toán, vận chuyển và thực hiện recovery khi cần."
       />
 
-      <Panel title="Bộ lọc" description="Lọc theo mã đơn, người mua, cửa hàng, trạng thái hoặc thời gian.">
+      <Panel className="mp-admin-filters" title="Bộ lọc" description="Lọc theo mã đơn, người mua, cửa hàng, trạng thái hoặc thời gian.">
         <form className="mp-form" onSubmit={submit}>
           <div className="mp-form-grid">
             <TextField

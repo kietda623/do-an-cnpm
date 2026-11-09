@@ -1,3 +1,5 @@
+/* Hallmark · Cyan Marketplace · shape: app screen · redesign: full */
+/* Critique: task-led operations, quiet data surfaces and a readable seller identity. */
 @import "tailwindcss";
 
 @source "../../../../packages/ui-web/src";
@@ -49,3 +51,6 @@
   --font-mono:
     var(--font-ibm-plex-mono), "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+html, body { overflow-x: clip; }
+:focus-visible { outline: 3px solid var(--color-ring); outline-offset: 3px; }

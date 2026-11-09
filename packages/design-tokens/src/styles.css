@@ -1,25 +1,38 @@
+/* Hallmark · Cyan Marketplace · tokens: approved commerce design · shape: app screen */
+/* Critique: semantic roles are shared by every marketplace surface and theme. */
 :root {
+  --color-brand: oklch(0.5 0.12 230);
+  --color-masthead: oklch(0.5 0.12 230);
+  --color-brand-foreground: oklch(0.99 0.002 230);
+  --color-commerce-tint: oklch(0.955 0.025 230);
+  --color-price: oklch(0.44 0.1 230);
+  --color-on-solid: #ffffff;
+  --color-shadow-ink: oklch(0.24 0.02 230);
+  --color-danger-strong: #8f211b;
+  --color-danger-ink: #2a0d0b;
+  --color-backdrop: rgb(15 26 23 / 55%);
   color-scheme: light;
 
-  /* Signal Dispatch palette — light */
-  --color-canvas: #edf1ef;
-  --color-surface: #fbfcfb;
-  --color-raised: #ffffff;
-  --color-background: #ffffff;
-  --color-ink: #0f1a17;
-  --color-foreground: #0f1a17;
-  --color-ink-muted: #52625c;
-  --color-muted-foreground: #52625c;
-  --color-muted: #e5ebe8;
-  --color-line: #d5ded9;
-  --color-border: #b9c7c1;
-  --color-accent: #0d7a63;
-  --color-accent-foreground: #f7fffc;
-  --color-accent-strong: #09604e;
-  --color-accent-soft: #d9f2ea;
-  --color-signal: #c2410c;
-  --color-signal-soft: #fde8de;
+  /* Cyan Marketplace palette — light */
+  --color-canvas: oklch(0.97 0.006 230);
+  --color-surface: oklch(0.995 0.001 230);
+  --color-raised: oklch(0.995 0.001 230);
+  --color-background: oklch(0.995 0.001 230);
+  --color-ink: oklch(0.24 0.02 230);
+  --color-foreground: oklch(0.24 0.02 230);
+  --color-ink-muted: oklch(0.47 0.02 230);
+  --color-muted-foreground: oklch(0.47 0.02 230);
+  --color-muted: oklch(0.95 0.008 230);
+  --color-line: oklch(0.88 0.012 230);
+  --color-border: oklch(0.6 0.025 230);
+  --color-accent: oklch(0.5 0.12 230);
+  --color-accent-foreground: oklch(0.99 0.002 230);
+  --color-accent-strong: oklch(0.44 0.1 230);
+  --color-accent-soft: oklch(0.955 0.025 230);
+  --color-signal: oklch(0.5 0.12 230);
+  --color-signal-soft: oklch(0.955 0.025 230);
   --color-danger: #b3261e;
+  --color-danger-foreground: #ffffff;
   --color-danger-soft: #fbe7e5;
   --color-info: #135f9e;
   --color-info-soft: #e2effa;
@@ -27,25 +40,25 @@
   --color-success-soft: #dff3e8;
   --color-warning: #8a5300;
   --color-warning-soft: #fdf0d4;
-  --color-ring: #0d7a63;
+  --color-ring: oklch(0.5 0.12 230);
 
   /* Typography */
-  --font-display:
-    var(--font-space-grotesk), "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-sans:
-    var(--font-be-vietnam-pro), "Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
+    var(--font-be-vietnam-pro), "Be Vietnam Pro", ui-sans-serif, system-ui,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono:
-    var(--font-ibm-plex-mono), "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    var(--font-ibm-plex-mono), "IBM Plex Mono", ui-monospace, SFMono-Regular,
+    Menlo, monospace;
 
   /* Shape */
   --radius-control: 0.625rem;
-  --radius-panel: 1rem;
+  --radius-panel: 0.875rem;
   --radius-pill: 999px;
 
   /* Depth */
-  --shadow-card: 0 1px 2px rgb(15 26 23 / 5%), 0 10px 30px rgb(15 26 23 / 6%);
-  --shadow-raised: 0 2px 4px rgb(15 26 23 / 6%), 0 18px 42px rgb(15 26 23 / 10%);
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 4%);
+  --shadow-raised: 0 4px 16px rgb(0 0 0 / 8%);
   --shadow-popover: 0 18px 48px rgb(15 26 23 / 16%);
 
   /* Motion */
@@ -104,26 +117,30 @@
 }
 
 html[data-theme="dark"] {
+  --color-commerce-tint: oklch(0.29 0.04 230);
+  --color-price: oklch(0.79 0.12 230);
   color-scheme: dark;
 
-  --color-canvas: #0a100e;
-  --color-surface: #101815;
-  --color-raised: #16211d;
-  --color-background: #16211d;
-  --color-ink: #e9f1ed;
-  --color-foreground: #e9f1ed;
-  --color-ink-muted: #9db0a9;
-  --color-muted-foreground: #9db0a9;
-  --color-muted: #1b2621;
-  --color-line: #26332e;
-  --color-border: #35473f;
-  --color-accent: #4fd6b3;
-  --color-accent-foreground: #04211a;
-  --color-accent-strong: #7ce7ca;
-  --color-accent-soft: #123a31;
-  --color-signal: #ff8a5c;
-  --color-signal-soft: #3a1d12;
+  --color-canvas: oklch(0.17 0.015 230);
+  --color-surface: oklch(0.205 0.018 230);
+  --color-raised: oklch(0.24 0.018 230);
+  --color-background: oklch(0.24 0.018 230);
+  --color-ink: oklch(0.95 0.008 230);
+  --color-foreground: oklch(0.95 0.008 230);
+  --color-ink-muted: oklch(0.75 0.02 230);
+  --color-muted-foreground: oklch(0.75 0.02 230);
+  --color-muted: oklch(0.27 0.018 230);
+  --color-line: oklch(0.33 0.02 230);
+  --color-border: oklch(0.56 0.025 230);
+  --color-accent: oklch(0.79 0.12 230);
+  --color-accent-foreground: oklch(0.19 0.025 230);
+  --color-accent-strong: oklch(0.85 0.1 230);
+  --color-accent-soft: oklch(0.29 0.04 230);
+  --color-signal: oklch(0.79 0.12 230);
+  --color-signal-soft: oklch(0.29 0.04 230);
   --color-danger: #ff8a80;
+  --color-danger-foreground: #2a0d0b;
+  --color-danger-strong: #ffb0a8;
   --color-danger-soft: #331413;
   --color-info: #7cc4ff;
   --color-info-soft: #102334;
@@ -131,7 +148,7 @@ html[data-theme="dark"] {
   --color-success-soft: #10291f;
   --color-warning: #f2c46b;
   --color-warning-soft: #2e2412;
-  --color-ring: #4fd6b3;
+  --color-ring: oklch(0.79 0.12 230);
 
   --shadow-card: 0 1px 2px rgb(0 0 0 / 40%), 0 12px 32px rgb(0 0 0 / 32%);
   --shadow-raised: 0 2px 4px rgb(0 0 0 / 45%), 0 20px 46px rgb(0 0 0 / 42%);
@@ -142,24 +159,26 @@ html[data-theme="dark"] {
   html:not([data-theme]) {
     color-scheme: dark;
 
-    --color-canvas: #0a100e;
-    --color-surface: #101815;
-    --color-raised: #16211d;
-    --color-background: #16211d;
-    --color-ink: #e9f1ed;
-    --color-foreground: #e9f1ed;
-    --color-ink-muted: #9db0a9;
-    --color-muted-foreground: #9db0a9;
-    --color-muted: #1b2621;
-    --color-line: #26332e;
-    --color-border: #35473f;
-    --color-accent: #4fd6b3;
-    --color-accent-foreground: #04211a;
-    --color-accent-strong: #7ce7ca;
-    --color-accent-soft: #123a31;
-    --color-signal: #ff8a5c;
-    --color-signal-soft: #3a1d12;
+    --color-canvas: oklch(0.17 0.015 230);
+    --color-surface: oklch(0.205 0.018 230);
+    --color-raised: oklch(0.24 0.018 230);
+    --color-background: oklch(0.24 0.018 230);
+    --color-ink: oklch(0.95 0.008 230);
+    --color-foreground: oklch(0.95 0.008 230);
+    --color-ink-muted: oklch(0.75 0.02 230);
+    --color-muted-foreground: oklch(0.75 0.02 230);
+    --color-muted: oklch(0.27 0.018 230);
+    --color-line: oklch(0.33 0.02 230);
+    --color-border: oklch(0.56 0.025 230);
+    --color-accent: oklch(0.79 0.12 230);
+    --color-accent-foreground: oklch(0.19 0.025 230);
+    --color-accent-strong: oklch(0.85 0.1 230);
+    --color-accent-soft: oklch(0.29 0.04 230);
+    --color-signal: oklch(0.79 0.12 230);
+    --color-signal-soft: oklch(0.29 0.04 230);
     --color-danger: #ff8a80;
+    --color-danger-foreground: #2a0d0b;
+    --color-danger-strong: #ffb0a8;
     --color-danger-soft: #331413;
     --color-info: #7cc4ff;
     --color-info-soft: #102334;
@@ -167,12 +186,17 @@ html[data-theme="dark"] {
     --color-success-soft: #10291f;
     --color-warning: #f2c46b;
     --color-warning-soft: #2e2412;
-    --color-ring: #4fd6b3;
+    --color-ring: oklch(0.79 0.12 230);
   }
 }
 
 * {
   box-sizing: border-box;
+}
+
+html,
+body {
+  overflow-x: clip;
 }
 
 html {
@@ -196,6 +220,8 @@ h3,
 h4 {
   font-family: var(--font-display);
   text-wrap: balance;
+  overflow-wrap: break-word;
+  min-width: 0;
 }
 
 ::selection {

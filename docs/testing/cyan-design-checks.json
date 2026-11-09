@@ -1,0 +1,395 @@
+{
+  "baselineCommit": "7a6e473",
+  "direction": "Approved light neutral + cyan; current data, no seed/reset",
+  "generatedAt": "2026-11-09T16:40:57.802Z",
+  "apps": {
+    "buyer": {
+      "hallmark": {
+        "before": {
+          "fails": 8,
+          "reflex": 0,
+          "warns": 0,
+          "waived": 0,
+          "rejected": 0,
+          "answered": 0,
+          "dismissed": 0,
+          "notes": 0,
+          "files": 56,
+          "render": "ran",
+          "before": "before: recorded 28 links, 18 fields, 70 handlers, 0 test hooks, 0 script hooks and 1 rendered page(s) in .hallmark\\before.json; --kept checks a redesign against it"
+        },
+        "after": {
+          "fails": 2,
+          "reflex": 0,
+          "warns": 0,
+          "waived": 0,
+          "rejected": 0,
+          "answered": 0,
+          "dismissed": 0,
+          "notes": 0,
+          "files": 56,
+          "render": "ran",
+          "kept": "kept: links 28/28, fields 18/18, handlers 70/70, headings 1/1; before 8 FAIL, 0 REFLEX, now 2 FAIL, 0 REFLEX"
+        },
+        "findings": [
+          {
+            "gate": "19",
+            "grade": "FAIL",
+            "tier": "floor",
+            "file": "src\\app\\checkout\\page.tsx",
+            "line": 273,
+            "evidence": "dash \"—\" in copy",
+            "fix": "A comma, a colon, a full stop or parentheses; never a dash"
+          },
+          {
+            "gate": "56",
+            "grade": "FAIL",
+            "tier": "floor",
+            "file": "C:\\Users\\admin\\Desktop\\cnpm\\packages\\ui-web\\src\\base.css",
+            "line": 1828,
+            "evidence": "two sticky top:0 elements: .mp-header + .mp-console__topbar",
+            "fix": "Offset the second sticky by banner height"
+          }
+        ]
+      },
+      "impeccable": {
+        "findings": []
+      },
+      "taste": {
+        "counts": {
+          "FAIL": 35,
+          "WARN": 22
+        },
+        "checks": [
+          "hero-fill",
+          "flush",
+          "text-only",
+          "button-styles",
+          "cta",
+          "copy-fact",
+          "field-label",
+          "focus-visible",
+          "assets",
+          "nav",
+          "copy-headline",
+          "copy-buttons",
+          "copy-actions",
+          "moment-none",
+          "skip-link",
+          "share-meta",
+          "form-fields",
+          "hero-screen",
+          "section-height",
+          "one-section",
+          "container-edges",
+          "row-lines",
+          "split-pair",
+          "menu-toggle",
+          "off-grid",
+          "nav-family",
+          "no-visual",
+          "tap-size"
+        ],
+        "notChecked": [
+          "scroll-linked (stepping)",
+          "scroll-reveal (the reveal walk; IntersectionObserver reveals are read)",
+          "hover-spill",
+          "hidden-visual",
+          "loop-pause",
+          "forms",
+          "reduced-motion",
+          "the dead-IntersectionObserver walk (hidden content is read with scripts off and under reduced motion)",
+          "hover-move"
+        ]
+      },
+      "realScreenshots": {
+        "count": 27,
+        "overflow": [],
+        "pageErrors": [],
+        "serverErrors": [],
+        "files": [
+          "buyer-login-1440.png",
+          "buyer-login-768.png",
+          "buyer-login-390.png",
+          "buyer-register-1440.png",
+          "buyer-register-768.png",
+          "buyer-register-390.png",
+          "buyer-home-1440.png",
+          "buyer-home-768.png",
+          "buyer-home-390.png",
+          "buyer-catalog-1440.png",
+          "buyer-catalog-768.png",
+          "buyer-catalog-390.png",
+          "buyer-profile-1440.png",
+          "buyer-profile-768.png",
+          "buyer-profile-390.png",
+          "buyer-addresses-1440.png",
+          "buyer-addresses-768.png",
+          "buyer-addresses-390.png",
+          "buyer-cart-1440.png",
+          "buyer-cart-768.png",
+          "buyer-cart-390.png",
+          "buyer-checkout-1440.png",
+          "buyer-checkout-768.png",
+          "buyer-checkout-390.png",
+          "buyer-orders-1440.png",
+          "buyer-orders-768.png",
+          "buyer-orders-390.png"
+        ]
+      }
+    },
+    "seller": {
+      "hallmark": {
+        "before": {
+          "fails": 3,
+          "reflex": 0,
+          "warns": 0,
+          "waived": 0,
+          "rejected": 0,
+          "answered": 0,
+          "dismissed": 0,
+          "notes": 0,
+          "files": 51,
+          "render": "ran",
+          "before": "before: recorded 25 links, 19 fields, 66 handlers, 0 test hooks, 0 script hooks and 1 rendered page(s) in .hallmark\\before.json; --kept checks a redesign against it"
+        },
+        "after": {
+          "fails": 1,
+          "reflex": 0,
+          "warns": 0,
+          "waived": 0,
+          "rejected": 0,
+          "answered": 0,
+          "dismissed": 0,
+          "notes": 0,
+          "files": 51,
+          "render": "ran",
+          "kept": "kept: links 25/25, fields 19/19, handlers 66/66, headings 2/2; before 3 FAIL, 0 REFLEX, now 1 FAIL, 0 REFLEX"
+        },
+        "findings": [
+          {
+            "gate": "56",
+            "grade": "FAIL",
+            "tier": "floor",
+            "file": "C:\\Users\\admin\\Desktop\\cnpm\\packages\\ui-web\\src\\base.css",
+            "line": 1828,
+            "evidence": "two sticky top:0 elements: .mp-header + .mp-console__topbar",
+            "fix": "Offset the second sticky by banner height"
+          }
+        ]
+      },
+      "impeccable": {
+        "findings": []
+      },
+      "taste": {
+        "counts": {
+          "FAIL": 30,
+          "WARN": 8
+        },
+        "checks": [
+          "hero-fill",
+          "flush",
+          "cta",
+          "copy-fact",
+          "focus-visible",
+          "assets",
+          "copy-headline",
+          "copy-buttons",
+          "section-gaps",
+          "moment-none",
+          "skip-link",
+          "share-meta",
+          "form-fields",
+          "hero-screen",
+          "section-height",
+          "one-section",
+          "one-heading",
+          "container-edges",
+          "text-only"
+        ],
+        "notChecked": [
+          "scroll-linked (stepping)",
+          "scroll-reveal (the reveal walk; IntersectionObserver reveals are read)",
+          "hover-spill",
+          "hidden-visual",
+          "loop-pause",
+          "forms",
+          "reduced-motion",
+          "the dead-IntersectionObserver walk (hidden content is read with scripts off and under reduced motion)",
+          "hover-move"
+        ]
+      },
+      "realScreenshots": {
+        "count": 27,
+        "overflow": [],
+        "pageErrors": [],
+        "serverErrors": [],
+        "files": [
+          "seller-login-1440.png",
+          "seller-login-768.png",
+          "seller-login-390.png",
+          "seller-register-1440.png",
+          "seller-register-768.png",
+          "seller-register-390.png",
+          "seller-shops-1440.png",
+          "seller-shops-768.png",
+          "seller-shops-390.png",
+          "seller-dashboard-1440.png",
+          "seller-dashboard-768.png",
+          "seller-dashboard-390.png",
+          "seller-products-1440.png",
+          "seller-products-768.png",
+          "seller-products-390.png",
+          "seller-orders-1440.png",
+          "seller-orders-768.png",
+          "seller-orders-390.png",
+          "seller-analytics-1440.png",
+          "seller-analytics-768.png",
+          "seller-analytics-390.png",
+          "seller-reviews-1440.png",
+          "seller-reviews-768.png",
+          "seller-reviews-390.png",
+          "seller-settings-1440.png",
+          "seller-settings-768.png",
+          "seller-settings-390.png"
+        ]
+      }
+    },
+    "admin": {
+      "hallmark": {
+        "before": {
+          "fails": 5,
+          "reflex": 0,
+          "warns": 0,
+          "waived": 0,
+          "rejected": 0,
+          "answered": 0,
+          "dismissed": 0,
+          "notes": 0,
+          "files": 46,
+          "render": "ran",
+          "before": "before: recorded 19 links, 19 fields, 75 handlers, 0 test hooks, 0 script hooks and 1 rendered page(s) in .hallmark\\before.json; --kept checks a redesign against it"
+        },
+        "after": {
+          "fails": 3,
+          "reflex": 0,
+          "warns": 0,
+          "waived": 0,
+          "rejected": 0,
+          "answered": 0,
+          "dismissed": 0,
+          "notes": 0,
+          "files": 46,
+          "render": "ran",
+          "kept": "kept: links 19/19, fields 19/19, handlers 75/75, headings 2/2; before 5 FAIL, 0 REFLEX, now 3 FAIL, 0 REFLEX"
+        },
+        "findings": [
+          {
+            "gate": "19",
+            "grade": "FAIL",
+            "tier": "floor",
+            "file": "src\\app\\users\\page.tsx",
+            "line": 133,
+            "evidence": "dash \"—\" in copy",
+            "fix": "A comma, a colon, a full stop or parentheses; never a dash"
+          },
+          {
+            "gate": "56",
+            "grade": "FAIL",
+            "tier": "floor",
+            "file": "C:\\Users\\admin\\Desktop\\cnpm\\packages\\ui-web\\src\\base.css",
+            "line": 1828,
+            "evidence": "two sticky top:0 elements: .mp-header + .mp-console__topbar",
+            "fix": "Offset the second sticky by banner height"
+          },
+          {
+            "gate": "63",
+            "grade": "FAIL",
+            "tier": "floor",
+            "file": "src\\app\\orders\\[orderId]\\page.tsx",
+            "line": 253,
+            "evidence": "middle-dot meta string \"Shop · SellerOrder · version ·\"",
+            "fix": "Line breaks, columns or hairlines; one dot in a byline at most"
+          }
+        ]
+      },
+      "impeccable": {
+        "findings": []
+      },
+      "taste": {
+        "counts": {
+          "FAIL": 35,
+          "WARN": 8
+        },
+        "checks": [
+          "hero-fill",
+          "flush",
+          "cta",
+          "copy-fact",
+          "focus-visible",
+          "assets",
+          "copy-headline",
+          "copy-buttons",
+          "section-gaps",
+          "moment-none",
+          "skip-link",
+          "share-meta",
+          "form-fields",
+          "hero-screen",
+          "section-height",
+          "one-section",
+          "one-heading",
+          "container-edges",
+          "row-lines",
+          "text-only"
+        ],
+        "notChecked": [
+          "scroll-linked (stepping)",
+          "scroll-reveal (the reveal walk; IntersectionObserver reveals are read)",
+          "hover-spill",
+          "hidden-visual",
+          "loop-pause",
+          "forms",
+          "reduced-motion",
+          "the dead-IntersectionObserver walk (hidden content is read with scripts off and under reduced motion)",
+          "hover-move"
+        ]
+      },
+      "realScreenshots": {
+        "count": 27,
+        "overflow": [],
+        "pageErrors": [],
+        "serverErrors": [],
+        "files": [
+          "admin-login-1440.png",
+          "admin-login-768.png",
+          "admin-login-390.png",
+          "admin-dashboard-1440.png",
+          "admin-dashboard-768.png",
+          "admin-dashboard-390.png",
+          "admin-shops-1440.png",
+          "admin-shops-768.png",
+          "admin-shops-390.png",
+          "admin-products-1440.png",
+          "admin-products-768.png",
+          "admin-products-390.png",
+          "admin-users-1440.png",
+          "admin-users-768.png",
+          "admin-users-390.png",
+          "admin-orders-1440.png",
+          "admin-orders-768.png",
+          "admin-orders-390.png",
+          "admin-returns-1440.png",
+          "admin-returns-768.png",
+          "admin-returns-390.png",
+          "admin-audit-1440.png",
+          "admin-audit-768.png",
+          "admin-audit-390.png",
+          "admin-categories-1440.png",
+          "admin-categories-768.png",
+          "admin-categories-390.png"
+        ]
+      }
+    }
+  }
+}

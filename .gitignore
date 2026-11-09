@@ -52,3 +52,9 @@ uploads/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Downloaded Impeccable engine cache (launcher verifies and restores it)
+.agents/skills/impeccable/scripts/bin/
+
+# Local design detector inventories and browser captures
+**/.hallmark/

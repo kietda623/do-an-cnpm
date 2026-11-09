@@ -75,7 +75,7 @@ export default function ShopSettingsPage() {
   }
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-seller-page">
       <PageHeader
         title="Cài đặt cửa hàng"
         description="Hồ sơ công khai, ảnh thương hiệu và trạng thái duyệt của gian hàng."

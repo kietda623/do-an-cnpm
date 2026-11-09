@@ -50,19 +50,25 @@ export function CategoryStrip() {
   if (categories.length === 0) return null;
 
   return (
-    <nav className="mp-chips" aria-label="Danh mục sản phẩm">
-      <Link className="mp-chip" href="/products">
-        Tất cả sản phẩm
-      </Link>
-      {categories.map((category) => (
-        <Link
-          key={category.id}
-          className="mp-chip"
-          href={`/products?categoryId=${encodeURIComponent(category.id)}`}
-        >
-          {category.name}
+    <section
+      className="mp-market-categories"
+      aria-labelledby="market-categories-heading"
+    >
+      <h2 id="market-categories-heading">Danh mục</h2>
+      <nav className="mp-chips" aria-label="Danh mục sản phẩm">
+        <Link className="mp-chip" href="/products">
+          Tất cả sản phẩm
         </Link>
-      ))}
-    </nav>
+        {categories.map((category) => (
+          <Link
+            key={category.id}
+            className="mp-chip"
+            href={`/products?categoryId=${encodeURIComponent(category.id)}`}
+          >
+            {category.name}
+          </Link>
+        ))}
+      </nav>
+    </section>
   );
 }

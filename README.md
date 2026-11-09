@@ -1,8 +1,10 @@
-# Marketplace MVP
+# sopi
 
 Nền tảng thương mại điện tử đa người bán cho thị trường Việt Nam. Người mua tìm kiếm sản phẩm từ nhiều cửa hàng, đặt một đơn gồm nhiều shop, thanh toán COD hoặc MOCK, theo dõi và xác nhận nhận hàng; người bán quản lý cửa hàng, catalog, tồn kho và xử lý đơn; quản trị viên duyệt cửa hàng/sản phẩm, khóa tài khoản, xử lý hoàn trả và tra cứu audit log.
 
 Giao diện tiếng Việt, tiền tệ VND, múi giờ Asia/Saigon.
+
+Giao diện Buyer, Seller và Admin dùng chung hệ thiết kế sáng trung tính + cyan, hỗ trợ theme tối/sáng. Quy tắc màu, font, layout và chuyển động nằm trong [DESIGN.md](DESIGN.md); token dùng chung nằm tại `packages/design-tokens/src/styles.css`. Dữ liệu rỗng được hiển thị đúng trạng thái, không tự tạo sản phẩm hoặc số liệu mẫu.
 
 ## Phạm vi chức năng
 
@@ -102,7 +104,7 @@ corepack pnpm --filter @marketplace/api build
 corepack pnpm --filter @marketplace/api start
 ```
 
-Chạy từng web app với port cố định để khớp `CORS_ORIGINS` mặc định (`3000,3001,3002`):
+Mở ba terminal riêng, đặt `NEXT_PUBLIC_API_URL` trong mỗi terminal rồi chạy một web app với port cố định để khớp `CORS_ORIGINS` mặc định (`3000,3001,3002`):
 
 ```bash
 export NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
@@ -112,6 +114,16 @@ corepack pnpm --filter @marketplace/admin-panel exec next dev --hostname 0.0.0.0
 ```
 
 Trên PowerShell, thay dòng `export` bằng `$env:NEXT_PUBLIC_API_URL="http://localhost:4000/api/v1"`. Có thể mở cả ba app bằng `localhost` hoặc `127.0.0.1` trên các cổng này. API client tự khớp hostname local và thêm `/api/v1` nếu URL API chỉ có host và cổng. Khi sửa biến môi trường, khởi động lại tiến trình tương ứng. Root có script `pnpm dev` chạy song song ba app, nhưng nên dùng lệnh riêng ở trên khi cần port ổn định.
+
+| App | Địa chỉ local |
+| --- | --- |
+| Buyer | [localhost:3000](http://localhost:3000) |
+| Seller Center | [localhost:3001](http://localhost:3001) |
+| Admin | [localhost:3002](http://localhost:3002) |
+
+Theme được đổi bằng nút trên header. Chuyển động tôn trọng thiết lập giảm chuyển động của hệ điều hành. Khi kiểm tra giao diện với dữ liệu hiện tại, không cần chạy seed hoặc reset database. Kết quả kiểm chứng bản redesign nằm trong [cyan-redesign-verification.md](docs/testing/cyan-redesign-verification.md).
+
+Khi cả ba web app đang chạy ở các cổng trên, chạy bộ hồi quy giao diện gồm 57 ca có sẵn bằng `pnpm exec playwright test --config=playwright.presentation.config.ts`. Bộ này dùng API giả lập trong test, không tạo đơn hay duyệt hồ sơ trên database hiện tại. Kiểm tra giao diện với API thật và dữ liệu hiện có dùng `node scripts/capture-cyan-real.mjs buyer` (hoặc `seller`, `admin`); script đọc tài khoản local từ `.env` và lưu ảnh trong `%TEMP%/cnpm-cyan-after`.
 
 ## Database và dữ liệu mẫu
 

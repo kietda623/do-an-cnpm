@@ -32,7 +32,7 @@ export default function SellerRegisterPage() {
     } catch (cause) {
       setError(
         cause instanceof ApiClientError && cause.status === 409
-          ? "Email đã có tài khoản Marketplace. Anh có thể dùng tài khoản đó để đăng nhập."
+          ? "Email đã có tài khoản sopi. Anh có thể dùng tài khoản đó để đăng nhập."
           : normalizeFormError(cause),
       );
     } finally {
@@ -43,10 +43,10 @@ export default function SellerRegisterPage() {
   return (
     <main className="mp-auth mp-auth--console">
       <section className="mp-auth__intro">
-        <span className="mp-auth__eyebrow">
-          <Store size={16} aria-hidden="true" /> Seller Center
+        <h1 className="mp-auth__title">Bắt đầu bán hàng trên sopi.</h1>
+        <span className="mp-seller-auth__identity">
+          <Store size={16} aria-hidden="true" /> sopi Seller Center
         </span>
-        <h1 className="mp-auth__title">Bắt đầu bán hàng trên Marketplace.</h1>
         <p className="mp-auth__description">
           Tạo tài khoản, gửi hồ sơ cửa hàng và theo dõi kết quả duyệt.
         </p>
@@ -54,7 +54,7 @@ export default function SellerRegisterPage() {
       <section className="mp-auth__card" aria-labelledby="seller-register-title">
         <header className="mp-auth__card-head">
           <h2 id="seller-register-title">Đăng ký tài khoản</h2>
-          <p>Nếu đã có tài khoản Marketplace, anh có thể dùng tài khoản đó.</p>
+          <p>Nếu đã có tài khoản sopi, anh có thể dùng tài khoản đó.</p>
         </header>
         <form onSubmit={submit} className="mp-auth__fields">
           <TextField label="Họ và tên" name="fullName" autoComplete="name" required maxLength={120} />

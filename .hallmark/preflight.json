@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-09",
+  "mode": "redesign",
+  "depth": "full",
+  "scope": "app",
+  "baseline": "e5f6d60",
+  "approvedSpec": "docs/superpowers/specs/2026-11-09-shopee-marketplace-redesign.md",
+  "system": "DESIGN.md",
+  "apps": [
+    "buyer",
+    "seller",
+    "admin"
+  ],
+  "routeCount": 33,
+  "keep": [
+    "routes",
+    "API contracts",
+    "permissions",
+    "handlers",
+    "forms",
+    "theme preference"
+  ],
+  "introduced": [
+    "commerce palette and density",
+    "product-led Buyer composition",
+    "operational console hierarchy",
+    "owned CSS imports"
+  ],
+  "material": {
+    "localPublicCatalog": "empty (HTTP 200)",
+    "populatedVisuals": "explicit test fixtures, no database writes"
+  },
+  "before": "test-results/shopee-redesign/before",
+  "after": "test-results/shopee-redesign/after"
+}

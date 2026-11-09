@@ -1,0 +1,1688 @@
+{
+  "apps/admin-panel/src/app/admin-shell.tsx": {
+    "logic": "13e15d8e4ec7a70c5a0d47b8b68871cef996e100a8010999fdecc4cdade3541a",
+    "bindings": [],
+    "expressions": [
+      "children",
+      "children"
+    ]
+  },
+  "apps/admin-panel/src/app/audit/page.tsx": {
+    "logic": "31a61c59b82aabd4a04c6144f9b3ee888d5b854c0709a67498395bc05c0b19e6",
+    "bindings": [
+      "name=\"actorId\"",
+      "name=\"from\"",
+      "name=\"resourceId\"",
+      "name=\"resourceType\"",
+      "name=\"to\"",
+      "onChange={(event) => setFilters({ ...filters, actorId: event.target.value })}",
+      "onChange={(event) => setFilters({ ...filters, from: event.target.value })}",
+      "onChange={(event) => setFilters({ ...filters, resourceId: event.target.value })}",
+      "onChange={(event) => setFilters({ ...filters, resourceType: event.target.value })}",
+      "onChange={(event) => setFilters({ ...filters, to: event.target.value })}",
+      "onClick={() => setInspect(null)}",
+      "onClick={() => setInspect(row)}",
+      "onClick={() => {\n        setFilters(emptyFilters);\n        setApplied(emptyFilters);\n        setPage(1);\n    }}",
+      "onClose={() => setInspect(null)}",
+      "onPageChange={setPage}",
+      "onRetry={() => void refresh()}",
+      "onSubmit={submit}",
+      "type=\"button\"",
+      "type=\"datetime-local\"",
+      "type=\"datetime-local\"",
+      "type=\"submit\"",
+      "value={filters.actorId}",
+      "value={filters.from}",
+      "value={filters.resourceId}",
+      "value={filters.resourceType}",
+      "value={filters.to}"
+    ],
+    "expressions": [
+      "JSON.stringify(inspect.metadata, null, 2)",
+      "`${inspect.reason ?? \"Không có lý do\"} · Request ${inspect.requestId}`",
+      "`${row.reason ?? \"Không có lý do\"} · ${formatDateTime(row.createdAt)}`",
+      "formatDateTime(inspect.createdAt)",
+      "inspect ? (PRESENTATION) : null",
+      "inspect.actorId ?? \"system\"",
+      "row.action",
+      "row.actorId ?? \"system\"",
+      "row.requestId.slice(0, 8)",
+      "row.resourceId",
+      "row.resourceType"
+    ]
+  },
+  "apps/admin-panel/src/app/categories/page.tsx": {
+    "logic": "941951a982e3630d4e06853c3c536c83fb2f8547dfd3c9e2a1233bd422be2cdf",
+    "bindings": [
+      "onSave={save}"
+    ],
+    "expressions": [
+      "error",
+      "error ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/admin-panel/src/app/error.tsx": {
+    "logic": "589c049f256962e4f066c1140e24d8443be82680333767f97f03f85a13c58072",
+    "bindings": [
+      "onClick={reset}"
+    ],
+    "expressions": []
+  },
+  "apps/admin-panel/src/app/layout.tsx": {
+    "logic": "b946ebed66002285a42a920d88e00cd6feec176098dd6bb8316b81b1d470e8c9",
+    "bindings": [],
+    "expressions": [
+      "children"
+    ]
+  },
+  "apps/admin-panel/src/app/loading.tsx": {
+    "logic": "f7ec4c135e54a053ebbaa71ebbc23ceeb8947628caf34a76a75cae51217b5625",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/admin-panel/src/app/login/page.tsx": {
+    "logic": "7322b549eda38022b40e4e326d82094ded736693d4562ac69dc7f054d9867dbf",
+    "bindings": [
+      "id=\"admin-login-title\"",
+      "name=\"email\"",
+      "name=\"password\"",
+      "onSubmit={submit}",
+      "required",
+      "required",
+      "type=\"email\"",
+      "type=\"password\"",
+      "type=\"submit\""
+    ],
+    "expressions": [
+      "error",
+      "error ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/admin-panel/src/app/not-found.tsx": {
+    "logic": "c98c530e8d1251db5ad5d662b8a1777b6938f29cb8bd4f5aee3cb93d999c992e",
+    "bindings": [
+      "href=\"/\""
+    ],
+    "expressions": []
+  },
+  "apps/admin-panel/src/app/orders/[orderId]/page.tsx": {
+    "logic": "b70ca37b542d770233bed103cbd8e1d33017494e1b5592734b3eb2e1f6f32ba1",
+    "bindings": [
+      "aria-label={`Recovery SellerOrder ${part.id}`}",
+      "disabled={!reason.trim()}",
+      "href=\"/orders\"",
+      "maxLength={500}",
+      "minLength={1}",
+      "name=\"reason\"",
+      "onChange={(event) => setReason(event.target.value)}",
+      "onClick={() => setPendingRecovery(null)}",
+      "onClick={() => void recover()}",
+      "onClick={() => {\n        setReason(\"\");\n        setPendingRecovery({ part, action: \"confirm\" });\n    }}",
+      "onClick={() => {\n        setReason(\"\");\n        setPendingRecovery({ part, action: \"pack\" });\n    }}",
+      "onClick={() => {\n        setReason(\"\");\n        setPendingRecovery({ part, action: \"reject\" });\n    }}",
+      "onClose={() => setPendingRecovery(null)}",
+      "required",
+      "value={reason}"
+    ],
+    "expressions": [
+      "!detail ? (PRESENTATION) : (PRESENTATION)",
+      "\" \"",
+      "`${payment.status} · ${payment.amount} VND`",
+      "detail.auditReferenceIds.length ? (PRESENTATION) : (PRESENTATION)",
+      "detail.auditReferenceIds.map((id) => (PRESENTATION))",
+      "detail.order.buyerId",
+      "detail.order.payments.length === 0 ? (PRESENTATION) : (PRESENTATION)",
+      "detail.order.payments.map((payment) => (PRESENTATION))",
+      "detail.order.sellerOrders.map((part) => (PRESENTATION))",
+      "error",
+      "error ? (PRESENTATION) : null",
+      "formatVnd(detail.order.cancelledAmount)",
+      "formatVnd(detail.order.capturedAmount)",
+      "formatVnd(detail.order.originalTotal)",
+      "formatVnd(detail.order.outstandingAmount)",
+      "formatVnd(detail.order.refundedAmount)",
+      "formatVnd(part.originalTotal)",
+      "formatVnd(refund.amount)",
+      "formatVnd(row.lineTotal)",
+      "formatVnd(row.unitPrice)",
+      "id",
+      "part.id",
+      "part.shipment ? (PRESENTATION) : null",
+      "part.shipment.trackingCode",
+      "part.shopId",
+      "part.shopNameSnapshot",
+      "part.status === \"CONFIRMED\" ? (PRESENTATION) : null",
+      "part.status === \"PENDING\" ? (PRESENTATION) : null",
+      "part.status === \"PENDING\" || part.status === \"CONFIRMED\" ? (PRESENTATION) : null",
+      "part.version",
+      "payment.refunds.map((refund, index) => (PRESENTATION))",
+      "payment.transactionCode",
+      "paymentMethods[detail.order.paymentMethod]?.label ?? detail.order.paymentMethod",
+      "pendingRecovery ? (PRESENTATION) : null",
+      "refund.reason",
+      "row.productName",
+      "row.quantity",
+      "row.sku"
+    ]
+  },
+  "apps/admin-panel/src/app/orders/page.tsx": {
+    "logic": "0fef05bc8e63845966da2085579a93b865aab32181d38f2374f5f8cc0bf33e2b",
+    "bindings": [
+      "href={`/orders/${row.id}`}",
+      "name=\"buyerId\"",
+      "name=\"from\"",
+      "name=\"q\"",
+      "name=\"shopId\"",
+      "name=\"status\"",
+      "name=\"to\"",
+      "onChange={(event) => setFilters({ ...filters, buyerId: event.target.value })}",
+      "onChange={(event) => setFilters({ ...filters, from: event.target.value })}",
+      "onChange={(event) => setFilters({ ...filters, q: event.target.value })}",
+      "onChange={(event) => setFilters({ ...filters, shopId: event.target.value })}",
+      "onChange={(event) => setFilters({ ...filters, status: event.target.value })}",
+      "onChange={(event) => setFilters({ ...filters, to: event.target.value })}",
+      "onClick={() => {\n        setFilters(emptyFilters);\n        setApplied(emptyFilters);\n        setPage(1);\n    }}",
+      "onPageChange={setPage}",
+      "onRetry={() => void refresh()}",
+      "onSubmit={submit}",
+      "type=\"button\"",
+      "type=\"datetime-local\"",
+      "type=\"datetime-local\"",
+      "type=\"submit\"",
+      "value=\"\"",
+      "value={filters.buyerId}",
+      "value={filters.from}",
+      "value={filters.q}",
+      "value={filters.shopId}",
+      "value={filters.status}",
+      "value={filters.to}",
+      "value={value}"
+    ],
+    "expressions": [
+      "Object.entries(sellerOrderStatuses).map(([value, meta]) => (PRESENTATION))",
+      "formatDateTime(row.createdAt)",
+      "formatVnd(row.originalTotal)",
+      "formatVnd(row.outstandingAmount)",
+      "meta.label",
+      "row.orderNumber",
+      "row.partiallyCancelled ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/admin-panel/src/app/orders/returns/page.tsx": {
+    "logic": "50b5f4fbf2f4a3ac67886198a399bbeeec51be0aabb72f94b637bcbee7bd1dfd",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/admin-panel/src/app/page.tsx": {
+    "logic": "6203b06f22f68967dbdef7a7e383a1112bb439c9d69ef201de7a94871223c485",
+    "bindings": [
+      "aria-label=\"Thống kê nền tảng\"",
+      "aria-label={entity}",
+      "href=\"/audit\"",
+      "href=\"/orders/returns\"",
+      "href=\"/shops\"",
+      "onRetry={() => void loadAudit()}",
+      "onRetry={() => void loadShops()}",
+      "value={formatNumber(stats.orderCount)}",
+      "value={formatNumber(stats.productCount)}",
+      "value={formatNumber(stats.shopCount)}",
+      "value={formatNumber(stats.userCount)}",
+      "value={formatVnd(stats.completedSellerOrderValue)}"
+    ],
+    "expressions": [
+      "!stats ? (PRESENTATION) : Object.keys(stats.countsByStatus).length === 0 ? (PRESENTATION) : (PRESENTATION)",
+      "Array.from({ length: 4 }, (_, index) => (PRESENTATION))",
+      "Object.entries(stats.countsByStatus).map(([entity, values]) => {\n    const total = Object.values(values).reduce((sum, value) => sum + value, 0);\n    return (PRESENTATION);\n})",
+      "Object.entries(values).length === 0 ? (PRESENTATION) : (PRESENTATION)",
+      "Object.entries(values).map(([statusKey, count]) => (PRESENTATION))",
+      "entity",
+      "formatNumber(count)",
+      "formatNumber(total)",
+      "row.action",
+      "row.name",
+      "row.resourceId.slice(0, 8)",
+      "row.resourceType",
+      "row.slug",
+      "stats.simulated ? (PRESENTATION) : null",
+      "statsError",
+      "statsError ? (PRESENTATION) : !stats ? (PRESENTATION) : (PRESENTATION)",
+      "statusKey"
+    ]
+  },
+  "apps/admin-panel/src/app/products/page.tsx": {
+    "logic": "c41005ca878c753cb71bcca15d6f705ea0cc5ee22d6dc687db5770614d57a28d",
+    "bindings": [
+      "disabled={!reason.trim()}",
+      "maxLength={500}",
+      "name=\"adminHidden\"",
+      "name=\"q\"",
+      "name=\"reason\"",
+      "name=\"shopId\"",
+      "onChange={(event) => setHidden(event.target.value)}",
+      "onChange={(event) => setQ(event.target.value)}",
+      "onChange={(event) => setReason(event.target.value)}",
+      "onChange={(event) => setShopId(event.target.value)}",
+      "onClick={() => pending && void hide(pending)}",
+      "onClick={() => {\n        setPending(null);\n        setReason(\"\");\n    }}",
+      "onClick={() => {\n        setReason(\"\");\n        setPending(row);\n    }}",
+      "onClose={() => {\n        setPending(null);\n        setReason(\"\");\n    }}",
+      "onPageChange={setPage}",
+      "onRetry={() => void refresh()}",
+      "onSubmit={submit}",
+      "required",
+      "type=\"submit\"",
+      "value=\"\"",
+      "value=\"false\"",
+      "value=\"true\"",
+      "value={hidden}",
+      "value={q}",
+      "value={reason}",
+      "value={shopId}"
+    ],
+    "expressions": [
+      "pending ? (PRESENTATION) : null",
+      "pending.description || \"Sản phẩm không có mô tả.\"",
+      "row.adminHidden ? \"Đã ẩn\" : \"Công khai\"",
+      "row.hiddenReason",
+      "row.hiddenReason ? (PRESENTATION) : null",
+      "row.minimumPrice ? `${row.minimumPrice} VND` : \"Chưa có\"",
+      "row.name",
+      "row.shopId",
+      "row.version"
+    ]
+  },
+  "apps/admin-panel/src/app/providers.tsx": {
+    "logic": "4f88f849f2c6097fa6da7efcda3107335cb65ce95e844a804469b270656fa3fc",
+    "bindings": [],
+    "expressions": [
+      "children"
+    ]
+  },
+  "apps/admin-panel/src/app/shipments/page.tsx": {
+    "logic": "1cd88bab2cf074da244792c088d6c7d8b86dfcf749be55928b95b0551b48f40e",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/admin-panel/src/app/shops/page.tsx": {
+    "logic": "f68f1f428af1ac4eb1ad46231d9a36030d2e10e08c6ebaf6cf05ba519d02b8f8",
+    "bindings": [
+      "disabled={needsReason && !reason.trim()}",
+      "maxLength={500}",
+      "name=\"reason\"",
+      "name={row.name}",
+      "onChange={(event) => setReason(event.target.value)}",
+      "onChange={(key) => {\n        setPage(1);\n        setStatus(key);\n    }}",
+      "onClick={() => pending && void run(pending.shop, pending.action)}",
+      "onClick={() => {\n        setPending(null);\n        setReason(\"\");\n    }}",
+      "onClick={() => {\n        setReason(\"\");\n        setPending({ shop: row, action: \"approve\" });\n    }}",
+      "onClick={() => {\n        setReason(\"\");\n        setPending({ shop: row, action: \"reject\" });\n    }}",
+      "onClick={() => {\n        setReason(\"\");\n        setPending({ shop: row, action: \"resume\" });\n    }}",
+      "onClick={() => {\n        setReason(\"\");\n        setPending({ shop: row, action: \"suspend\" });\n    }}",
+      "onClose={() => {\n        setPending(null);\n        setReason(\"\");\n    }}",
+      "onPageChange={setPage}",
+      "onRetry={() => void refresh()}",
+      "required",
+      "value={reason}",
+      "value={status}"
+    ],
+    "expressions": [
+      "pending ? (needsReason ? (PRESENTATION) : (PRESENTATION)) : null",
+      "pending ? confirmLabels[pending.action] : \"Xác nhận\"",
+      "row.description || \"Chưa có mô tả\"",
+      "row.name",
+      "row.slug",
+      "row.status === \"ACTIVE\" ? (PRESENTATION) : null",
+      "row.status === \"PENDING\" ? (PRESENTATION) : null",
+      "row.status === \"SUSPENDED\" ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/admin-panel/src/app/users/page.tsx": {
+    "logic": "a9eabc302c616449cbec8b239c88fb68d8f1d136532c599a7b5e8b8e7b38e769",
+    "bindings": [
+      "disabled={!reason.trim()}",
+      "maxLength={500}",
+      "name=\"q\"",
+      "name=\"reason\"",
+      "name=\"status\"",
+      "name={row.fullName}",
+      "onChange={(event) => setQ(event.target.value)}",
+      "onChange={(event) => setReason(event.target.value)}",
+      "onChange={(event) => setStatus(event.target.value)}",
+      "onClick={() => void changeState()}",
+      "onClick={() => {\n        setPending(null);\n        setReason(\"\");\n    }}",
+      "onClick={() => {\n        setReason(\"\");\n        setPending({ target: row, action: \"lock\" });\n    }}",
+      "onClick={() => {\n        setReason(\"\");\n        setPending({ target: row, action: \"unlock\" });\n    }}",
+      "onClose={() => {\n        setPending(null);\n        setReason(\"\");\n    }}",
+      "onPageChange={setPage}",
+      "onRetry={() => void refresh()}",
+      "onSubmit={submit}",
+      "required",
+      "type=\"submit\"",
+      "value=\"\"",
+      "value=\"ACTIVE\"",
+      "value=\"LOCKED\"",
+      "value={q}",
+      "value={reason}",
+      "value={status}"
+    ],
+    "expressions": [
+      "pending ? (PRESENTATION) : null",
+      "pending?.action === \"unlock\" ? \"Xác nhận mở khóa\" : \"Xác nhận khóa\"",
+      "role",
+      "row.email",
+      "row.fullName",
+      "row.roles.length ? (row.roles.map((role) => (PRESENTATION))) : (PRESENTATION)",
+      "row.status",
+      "row.version"
+    ]
+  },
+  "apps/admin-panel/src/features/categories/category-editor.tsx": {
+    "logic": "f25eeca18e4e3dd21b3b0922666973eaea7626c383574c004dfd37ae437c74ac",
+    "bindings": [
+      "aria-label=\"Tạo danh mục\"",
+      "id=\"category-edit-form\"",
+      "maxLength={120}",
+      "maxLength={120}",
+      "name=\"edit-name\"",
+      "name=\"edit-parent\"",
+      "name=\"name\"",
+      "name=\"parentId\"",
+      "onChange={(event) => setEditName(event.target.value)}",
+      "onChange={(event) => setEditParent(event.target.value)}",
+      "onChange={(event) => setName(event.target.value)}",
+      "onChange={(event) => setParentId(event.target.value)}",
+      "onClick={() => setEditing(null)}",
+      "onClick={() => void toggleVisible(row)}",
+      "onClick={() => {\n        setEditing(row);\n        setEditName(row.name);\n        setEditParent(row.parentId ?? \"\");\n    }}",
+      "onClose={() => setEditing(null)}",
+      "onSubmit={saveEdit}",
+      "onSubmit={submit}",
+      "required",
+      "required",
+      "type=\"submit\"",
+      "type=\"submit\"",
+      "value=\"\"",
+      "value=\"\"",
+      "value={editName}",
+      "value={editParent}",
+      "value={name}",
+      "value={option.id}",
+      "value={parentId}",
+      "value={row.id}"
+    ],
+    "expressions": [
+      "\"— \".repeat(depth)",
+      "\"— \".repeat(depth)",
+      "`${row.name} · ${row.visible ? \"Hiện\" : \"Ẩn\"}`",
+      "busy ? \"Đang lưu…\" : \"Tạo danh mục\"",
+      "editing ? (PRESENTATION) : null",
+      "error",
+      "error ? (PRESENTATION) : null",
+      "option.name",
+      "options\n    .filter(({ row: option }) => option.id !== editing.id && !descendants(editing).has(option.id))\n    .map(({ row: option, depth }) => (PRESENTATION))",
+      "options.map(({ row, depth }) => (PRESENTATION))",
+      "row.name",
+      "row.version",
+      "row.visible ? \"Đang hiển thị\" : \"Đang ẩn\"",
+      "row.visible ? \"Ẩn danh mục\" : \"Hiện lại\""
+    ]
+  },
+  "apps/admin-panel/src/features/orders/return-confirmation.tsx": {
+    "logic": "b6f2413f9cd073001e3dcc621930c268376750973966424401e05685ada5d16b",
+    "bindings": [
+      "aria-label=\"Thông tin kiện hàng\"",
+      "disabled={!shipmentId.trim()}",
+      "maxLength={500}",
+      "min={0}",
+      "minLength={1}",
+      "name=\"expectedVersion\"",
+      "name=\"reason\"",
+      "name=\"shipmentId\"",
+      "onChange={(event) => setExpectedVersion(event.target.value)}",
+      "onChange={(event) => setReason(event.target.value)}",
+      "onChange={(event) => setShipmentId(event.target.value)}",
+      "onClick={() => void lookup()}",
+      "onSubmit={submit}",
+      "required",
+      "required",
+      "required",
+      "type=\"button\"",
+      "type=\"number\"",
+      "type=\"submit\"",
+      "value={expectedVersion}",
+      "value={reason}",
+      "value={shipmentId}"
+    ],
+    "expressions": [
+      "entry.reason ?? \"\"",
+      "entry.toStatus",
+      "error",
+      "error ? (PRESENTATION) : null",
+      "lookupError",
+      "lookupError ? (PRESENTATION) : null",
+      "notice",
+      "notice ? (PRESENTATION) : null",
+      "shipment ? (PRESENTATION) : null",
+      "shipment.history.map((entry) => (PRESENTATION))",
+      "shipment.id",
+      "shipment.trackingCode"
+    ]
+  },
+  "apps/admin-panel/src/lib/api.ts": {
+    "logic": "b9d26dc0c716eea0ba73ffd98f95525ec36a02831b1e5f1e4a7f1db5922ed76f",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/seller-center/src/app/error.tsx": {
+    "logic": "2fcb3be9779ebde7eed725fc1e2902d525660fcb84f262629500831251a4aba9",
+    "bindings": [
+      "onClick={reset}"
+    ],
+    "expressions": []
+  },
+  "apps/seller-center/src/app/layout.tsx": {
+    "logic": "b946ebed66002285a42a920d88e00cd6feec176098dd6bb8316b81b1d470e8c9",
+    "bindings": [],
+    "expressions": [
+      "children"
+    ]
+  },
+  "apps/seller-center/src/app/loading.tsx": {
+    "logic": "f7ec4c135e54a053ebbaa71ebbc23ceeb8947628caf34a76a75cae51217b5625",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/seller-center/src/app/login/page.tsx": {
+    "logic": "7c8efacf527980cf57f14ce24b57d2c65a445b5376aa515f7fb0d824e37dba86",
+    "bindings": [
+      "href=\"/register\"",
+      "id=\"seller-login-title\"",
+      "name=\"email\"",
+      "name=\"password\"",
+      "onSubmit={submit}",
+      "required",
+      "required",
+      "type=\"email\"",
+      "type=\"password\"",
+      "type=\"submit\""
+    ],
+    "expressions": [
+      "error",
+      "error ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/seller-center/src/app/not-found.tsx": {
+    "logic": "c98c530e8d1251db5ad5d662b8a1777b6938f29cb8bd4f5aee3cb93d999c992e",
+    "bindings": [
+      "href=\"/shops\""
+    ],
+    "expressions": []
+  },
+  "apps/seller-center/src/app/page.tsx": {
+    "logic": "d904b49027e0c7fb0c8972bb5cd63c71d60926646ef40c5fa844393adf2685fb",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/seller-center/src/app/providers.tsx": {
+    "logic": "4f88f849f2c6097fa6da7efcda3107335cb65ce95e844a804469b270656fa3fc",
+    "bindings": [],
+    "expressions": [
+      "children"
+    ]
+  },
+  "apps/seller-center/src/app/register/page.tsx": {
+    "logic": "951194d658e762891b006942fe0e535b86818a20e1772a7aae7a315611af03ca",
+    "bindings": [
+      "disabled={status !== \"anonymous\"}",
+      "href=\"/login\"",
+      "id=\"seller-register-title\"",
+      "maxLength={120}",
+      "maxLength={128}",
+      "name=\"email\"",
+      "name=\"fullName\"",
+      "name=\"password\"",
+      "onSubmit={submit}",
+      "required",
+      "required",
+      "required",
+      "type=\"email\"",
+      "type=\"password\"",
+      "type=\"submit\""
+    ],
+    "expressions": [
+      "error",
+      "error && PRESENTATION"
+    ]
+  },
+  "apps/seller-center/src/app/seller-shell.tsx": {
+    "logic": "c70426731dd4381632ed00353b02211aedef9e5108ad24398312c3bbf42e1c52",
+    "bindings": [
+      "onChange={(event) => {\n        const next = event.target.value;\n        if (!next)\n            return;\n        router.push(`/shops/${next}/dashboard`);\n    }}",
+      "onClick={() => setAttempt((value) => value + 1)}",
+      "type=\"button\"",
+      "value={activeShopId ?? \"\"}",
+      "value={row.shopId}"
+    ],
+    "expressions": [
+      "\" \"",
+      "activeShop?.shopName ?? \"Chọn cửa hàng để bắt đầu\"",
+      "children",
+      "children",
+      "membershipError",
+      "membershipError && (PRESENTATION)",
+      "memberships.map((row) => (PRESENTATION))",
+      "row.shopName"
+    ]
+  },
+  "apps/seller-center/src/app/shops/[shopId]/analytics/page.tsx": {
+    "logic": "addc8dd550d70484fe97f71a534ddb0170f373e63edd6ea9882e710a87431313",
+    "bindings": [
+      "aria-label=\"Chỉ số doanh thu\"",
+      "onFromChange={setDraftFrom}",
+      "onGroupByChange={revenue.setGroupBy}",
+      "onSubmit={applyRange}",
+      "onToChange={setDraftTo}",
+      "value={formatNumber(stats.completedCount)}",
+      "value={formatNumber(stats.productCount)}",
+      "value={formatVnd(stats.completedRevenue)}"
+    ],
+    "expressions": [
+      "Array.from({ length: 3 }, (_, index) => (PRESENTATION))",
+      "stats.simulated ? (PRESENTATION) : null",
+      "statsError",
+      "statsError ? (PRESENTATION) : !stats ? (PRESENTATION) : (PRESENTATION)"
+    ]
+  },
+  "apps/seller-center/src/app/shops/[shopId]/dashboard/page.tsx": {
+    "logic": "9f8ca89f03b3ce243593ae8a76ff26d9e9a33acb30e4fd28f323fa95b1c05904",
+    "bindings": [
+      "aria-label=\"Thống kê cửa hàng\"",
+      "href={`/shops/${shopId}/analytics`}",
+      "href={`/shops/${shopId}/orders`}",
+      "href={`/shops/${shopId}/orders`}",
+      "href={`/shops/${shopId}/orders`}",
+      "href={`/shops/${shopId}/orders`}",
+      "href={`/shops/${shopId}/products`}",
+      "href={`/shops/${shopId}/reviews`}",
+      "onFromChange={setDraftFrom}",
+      "onGroupByChange={revenue.setGroupBy}",
+      "onRetry={() => void loadRecent()}",
+      "onRowClick={() => router.push(`/shops/${shopId}/orders`)}",
+      "onSubmit={applyRange}",
+      "onToChange={setDraftTo}",
+      "value={formatNumber(stats.completedCount)}",
+      "value={formatNumber(stats.pendingCount)}",
+      "value={formatNumber(stats.processingCount)}",
+      "value={formatNumber(stats.productCount)}",
+      "value={formatVnd(stats.completedRevenue)}"
+    ],
+    "expressions": [
+      "Array.from({ length: 5 }, (_, index) => (PRESENTATION))",
+      "row.id.slice(0, 8)",
+      "row.items.length",
+      "stats.simulated ? (PRESENTATION) : null",
+      "statsError",
+      "statsError ? (PRESENTATION) : !stats ? (PRESENTATION) : (PRESENTATION)"
+    ]
+  },
+  "apps/seller-center/src/app/shops/[shopId]/orders/page.tsx": {
+    "logic": "2646dd1d3935d2dcffb743f0656782e9233c5d6e6abb7d9f1b498023e17b5870",
+    "bindings": [
+      "disabled={busy || !reason.trim()}",
+      "disabled={busy || !reason.trim()}",
+      "disabled={busy || (event === \"FAILED\" && !reason.trim())}",
+      "disabled={busy}",
+      "disabled={busy}",
+      "disabled={busy}",
+      "maxLength={500}",
+      "onChange={(event) => setReason(event.target.value)}",
+      "onChange={(key) => setStatus(key)}",
+      "onClick={() => void action(`/payments/seller-orders/${part.id}/cod-collection`, {\n        eventId: crypto.randomUUID(),\n        expectedVersion: part.version,\n    })}",
+      "onClick={() => void action(`/shipments/${part.shipment!.id}/events`, {\n        eventId: crypto.randomUUID(),\n        event,\n        expectedVersion: part.shipment!.version,\n        ...(reason ? { reason } : {}),\n    })}",
+      "onClick={() => void action(`/shipments/${part.shipment!.id}/retry`, {\n        expectedVersion: part.shipment!.version,\n        reason,\n    })}",
+      "onClick={() => void action(`/shops/${shopId}/orders/${part.id}/confirm`, {\n        expectedVersion: part.version,\n    })}",
+      "onClick={() => void action(`/shops/${shopId}/orders/${part.id}/pack`, {\n        expectedVersion: part.version,\n    })}",
+      "onClick={() => void action(`/shops/${shopId}/orders/${part.id}/reject`, {\n        reason,\n        expectedVersion: part.version,\n    })}",
+      "onClick={() => void refresh()}",
+      "value={reason}",
+      "value={status}"
+    ],
+    "expressions": [
+      "[\"PENDING\", \"CONFIRMED\"].includes(part.status) ? (PRESENTATION) : null",
+      "error",
+      "error ? (PRESENTATION) : null",
+      "event",
+      "item.productName",
+      "item.quantity",
+      "loading ? (PRESENTATION) : rows.length === 0 ? (PRESENTATION) : (PRESENTATION)",
+      "part.items.map((item) => (PRESENTATION))",
+      "part.shipment\n    ? nextEvents(part.shipment.status).map((event) => (PRESENTATION))\n    : null",
+      "part.shipment ? (PRESENTATION) : (PRESENTATION)",
+      "part.shipment.attemptNumber",
+      "part.shipment.trackingCode",
+      "part.shipment?.status === \"FAILED\" ? (PRESENTATION) : null",
+      "part.status === \"CONFIRMED\" ? (PRESENTATION) : null",
+      "part.status === \"DELIVERED\" && part.outstandingAmount !== \"0\" ? (PRESENTATION) : null",
+      "part.status === \"PENDING\" ? (PRESENTATION) : null",
+      "rows.map((part) => (PRESENTATION))"
+    ]
+  },
+  "apps/seller-center/src/app/shops/[shopId]/products/page.tsx": {
+    "logic": "dbb3ca43a6b783338969004121bc6774b8ab2b03b20b7f8a2e4562112fb9d746",
+    "bindings": [
+      "aria-label=\"Thư viện ảnh\"",
+      "aria-label=\"Đang tải sản phẩm\"",
+      "name=\"adminHidden\"",
+      "name=\"q\"",
+      "name=\"selling\"",
+      "onCancel={() => setEditing(\"\")}",
+      "onChange={(event) => setAdminHidden(event.target.value)}",
+      "onChange={(event) => setQ(event.target.value)}",
+      "onChange={(event) => setSelling(event.target.value)}",
+      "onChanged={refresh}",
+      "onClick={() => setEditing(isEditing ? \"\" : product.id)}",
+      "onClick={() => void refresh()}",
+      "onClick={() => void toggleSelling(product)}",
+      "onCreated={refresh}",
+      "onDismiss={() => setNotice(\"\")}",
+      "onPageChange={setPage}",
+      "onSaved={async () => {\n        setEditing(\"\");\n        setNotice(`Đã lưu thay đổi cho ${product.name}.`);\n        await refresh();\n    }}",
+      "onSubmit={submit}",
+      "type=\"submit\"",
+      "value=\"\"",
+      "value=\"\"",
+      "value=\"false\"",
+      "value=\"false\"",
+      "value=\"true\"",
+      "value=\"true\"",
+      "value={adminHidden}",
+      "value={q}",
+      "value={selling}"
+    ],
+    "expressions": [
+      "\" \"",
+      "error",
+      "error ? PRESENTATION : null",
+      "formatVnd(product.variants[0]?.price)",
+      "isEditing ? (PRESENTATION) : null",
+      "loading && rows.length === 0 ? (PRESENTATION) : rows.length === 0 ? (filtering ? (PRESENTATION) : (PRESENTATION)) : (PRESENTATION)",
+      "loading ? null : (PRESENTATION)",
+      "notice",
+      "notice ? (PRESENTATION) : null",
+      "product.images.length === 0 ? (PRESENTATION) : (product.images.map((image) => {\n    const src = imageSrc(image.objectKey);\n    return src ? (PRESENTATION) : null;\n}))",
+      "product.name",
+      "product.selling ? \"Dừng bán\" : \"Đăng bán lại\"",
+      "product.selling ? \"Đang bán\" : \"Đã dừng bán\"",
+      "product.variants.length",
+      "rows.map((product) => {\n    const isEditing = editing === product.id;\n    return (PRESENTATION);\n})",
+      "variant.availableQuantity",
+      "variant.selling ? \"Đang bán\" : \"Đã dừng\"",
+      "variant.sku"
+    ]
+  },
+  "apps/seller-center/src/app/shops/[shopId]/reviews/page.tsx": {
+    "logic": "36feddc2ac0c4623f7a102e7d6a51ef639cd9a107e8a2798cc484ff6e3f37f59",
+    "bindings": [
+      "name=\"productId\"",
+      "name=\"rating\"",
+      "name={review.buyerDisplayName}",
+      "onChange={(event) => setProductId(event.target.value)}",
+      "onChange={(event) => setRating(event.target.value)}",
+      "onPageChange={setPage}",
+      "onSubmit={submit}",
+      "type=\"submit\"",
+      "value=\"\"",
+      "value={productId}",
+      "value={rating}",
+      "value={value}"
+    ],
+    "expressions": [
+      "[5, 4, 3, 2, 1].map((value) => (PRESENTATION))",
+      "error",
+      "formatDateTime(review.createdAt)",
+      "loading ? (PRESENTATION) : error ? (PRESENTATION) : rows.length === 0 ? (PRESENTATION) : (PRESENTATION)",
+      "review.buyerDisplayName",
+      "review.comment || \"Người mua không để lại bình luận.\"",
+      "review.productId",
+      "review.rating",
+      "rows.map((review) => (PRESENTATION))",
+      "value"
+    ]
+  },
+  "apps/seller-center/src/app/shops/[shopId]/settings/page.tsx": {
+    "logic": "025cfc8a578d33787a76badb4bcb664dcf83f9b9b4e617668b9d9576826d1a44",
+    "bindings": [
+      "href={`/shops/${shopId}/dashboard`}",
+      "onDismiss={() => setNotice(\"\")}",
+      "onResubmit={() => void resubmit()}",
+      "onSaved={async () => {\n        setNotice(\"Đã lưu thông tin cửa hàng.\");\n        await refresh();\n    }}"
+    ],
+    "expressions": [
+      "error",
+      "error",
+      "error ? (PRESENTATION) : null",
+      "loading && !shop ? (PRESENTATION) : error && !shop ? (PRESENTATION) : shop ? (PRESENTATION) : null",
+      "notice",
+      "notice ? (PRESENTATION) : null",
+      "shop.status === \"SUSPENDED\" ? (PRESENTATION) : (PRESENTATION)"
+    ]
+  },
+  "apps/seller-center/src/app/shops/page.tsx": {
+    "logic": "1b56e5e4b07b8d12e9a8f2285efcfd7053c63917e530e96ccc49b1af072b2a23",
+    "bindings": [
+      "disabled={selecting}",
+      "onChange={(event) => void selectShop(event.target.value)}",
+      "onCreated={async () => {\n        setNotice(\"Đã gửi hồ sơ cửa hàng. Hồ sơ đang chờ quản trị viên duyệt.\");\n        await refresh();\n    }}",
+      "onResubmit={() => void resubmit()}",
+      "onSaved={async () => {\n        setNotice(\"Đã lưu thông tin cửa hàng.\");\n        await refresh();\n    }}",
+      "value={row.shopId}",
+      "value={shop.id}"
+    ],
+    "expressions": [
+      "error",
+      "error",
+      "error && shop ? (PRESENTATION) : null",
+      "loading ? (PRESENTATION) : error && !shop ? (PRESENTATION) : !shop ? (PRESENTATION) : (PRESENTATION)",
+      "memberships.length > 1 ? (PRESENTATION) : null",
+      "memberships.map((row) => (PRESENTATION))",
+      "notice",
+      "notice ? (PRESENTATION) : null",
+      "row.shopName",
+      "shop.status !== \"SUSPENDED\" ? (PRESENTATION) : null",
+      "shop.status === \"PENDING\" ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/seller-center/src/features/catalog/inventory-editor.tsx": {
+    "logic": "859f28fbc1078f496dc51e07d2600bd4a3f93f4dc865748d05a30c6d2d7ce904",
+    "bindings": [
+      "aria-label=\"Lý do\"",
+      "aria-label=\"Số lượng thay đổi\"",
+      "aria-label={`Điều chỉnh kho ${product.name}`}",
+      "disabled={busy || !Number(delta)}",
+      "onChange={(event) => setDelta(event.target.value)}",
+      "onChange={(event) => setReason(event.target.value)}",
+      "onClick={() => void submit(variant)}",
+      "type=\"number\"",
+      "value={delta}",
+      "value={reason}"
+    ],
+    "expressions": [
+      "error",
+      "error ? (PRESENTATION) : null",
+      "product.variants.map((variant) => (PRESENTATION))",
+      "variant.availableQuantity",
+      "variant.sku"
+    ]
+  },
+  "apps/seller-center/src/features/catalog/product-create-form.tsx": {
+    "logic": "dd8778b62fc0c46d19747b4c9b8fd1977a8041e9a8b4dd88a31e659f1f1dfb34",
+    "bindings": [
+      "aria-label=\"Tạo sản phẩm\"",
+      "defaultValue=\"\"",
+      "defaultValue={defaultVariants}",
+      "disabled",
+      "maxLength={200}",
+      "name=\"categoryId\"",
+      "name=\"description\"",
+      "name=\"image\"",
+      "name=\"name\"",
+      "name=\"variants\"",
+      "onChange={(event) => setDescription(event.target.value)}",
+      "onChange={(event) => setName(event.target.value)}",
+      "onSubmit={submit}",
+      "required",
+      "required",
+      "required",
+      "required",
+      "required",
+      "type=\"file\"",
+      "type=\"submit\"",
+      "value=\"\"",
+      "value={category.id}",
+      "value={description}",
+      "value={name}"
+    ],
+    "expressions": [
+      "categories.map((category) => (PRESENTATION))",
+      "category.name",
+      "error",
+      "error ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/seller-center/src/features/catalog/product-edit-form.tsx": {
+    "logic": "6fdb65ee264dc500f3ab46d02a6d78647a371c812c57b5621ec5ed388c2dc9c9",
+    "bindings": [
+      "aria-label={`Sửa ${product.name}`}",
+      "defaultValue={product.description}",
+      "defaultValue={product.name}",
+      "maxLength={200}",
+      "name=\"description\"",
+      "name=\"images\"",
+      "name=\"name\"",
+      "onClick={onCancel}",
+      "onSubmit={submit}",
+      "required",
+      "type=\"button\"",
+      "type=\"file\"",
+      "type=\"submit\""
+    ],
+    "expressions": [
+      "error",
+      "error ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/seller-center/src/features/dashboard/range-form.tsx": {
+    "logic": "4ab2896158cb2db7f05f3e8e1edb0074af609a0511ed8c1d93cf868a2d2029f9",
+    "bindings": [
+      "onChange={(event) => onFromChange(event.target.value)}",
+      "onChange={(event) => onToChange(event.target.value)}",
+      "onSubmit={onSubmit}",
+      "required",
+      "required",
+      "type=\"datetime-local\"",
+      "type=\"datetime-local\"",
+      "type=\"submit\"",
+      "value={draftFrom}",
+      "value={draftTo}"
+    ],
+    "expressions": [
+      "error",
+      "error ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/seller-center/src/features/dashboard/revenue-panel.tsx": {
+    "logic": "608db72c967db7177becf96fa4c2b1c6477372119a55d6da3256c223c2380ccd",
+    "bindings": [
+      "onChange={(event) => onGroupByChange(event.target.value as GroupBy)}",
+      "value=\"DAY\"",
+      "value=\"MONTH\"",
+      "value={groupBy}"
+    ],
+    "expressions": [
+      "error",
+      "formatNumber(series.points.reduce((sum, point) => sum + point.completedCount, 0))",
+      "formatVnd(series.totalRevenue)",
+      "loading ? (PRESENTATION) : error ? (PRESENTATION) : !series?.points.length ? (PRESENTATION) : (PRESENTATION)",
+      "series.simulated ? (PRESENTATION) : null",
+      "showTable && series?.points.length ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/seller-center/src/features/dashboard/seller-range.ts": {
+    "logic": "d473acda4f2b4d36f32a570b0b337c6562e6a4383312a50d20ec31311a9f49dd",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/seller-center/src/features/shop/shop-overview.tsx": {
+    "logic": "64c06b4c972b5e6d7c5eb51249eec34639cc4afaf38c4fb86a00d40f1ea2678f",
+    "bindings": [
+      "aria-label=\"Thông tin cửa hàng\"",
+      "href={`/shops/${shop.id}/dashboard`}",
+      "href={`/shops/${shop.id}/orders`}",
+      "href={`/shops/${shop.id}/products`}",
+      "href={`/shops/${shop.id}/settings`}",
+      "onClick={onResubmit}"
+    ],
+    "expressions": [
+      "actionsAllowed ? (PRESENTATION) : null",
+      "shop.approvedAt ? formatDate(shop.approvedAt) : \"Chưa duyệt\"",
+      "shop.banner?.url ? (PRESENTATION) : (PRESENTATION)",
+      "shop.contactAddress",
+      "shop.logo?.url ? (PRESENTATION) : (PRESENTATION)",
+      "shop.name",
+      "shop.phone",
+      "shop.rejectionReason",
+      "shop.rejectionReason ? (PRESENTATION) : null",
+      "shop.slug",
+      "shop.status",
+      "shop.status === \"SUSPENDED\" ? (PRESENTATION) : null",
+      "shop.version",
+      "status.label"
+    ]
+  },
+  "apps/seller-center/src/features/shop/shop-profile-form.tsx": {
+    "logic": "3a06e0a48f55410973c020d944e31d4fd80becefb8f6c275e70657af5d36a7c9",
+    "bindings": [
+      "aria-label=\"Thông tin cửa hàng\"",
+      "defaultValue={shop.contactAddress}",
+      "defaultValue={shop.description}",
+      "defaultValue={shop.name}",
+      "defaultValue={shop.phone}",
+      "defaultValue={shop.slug}",
+      "maxLength={150}",
+      "maxLength={20}",
+      "maxLength={5000}",
+      "maxLength={500}",
+      "minLength={8}",
+      "name=\"banner\"",
+      "name=\"contactAddress\"",
+      "name=\"description\"",
+      "name=\"logo\"",
+      "name=\"name\"",
+      "name=\"phone\"",
+      "name=\"slug\"",
+      "onSubmit={save}",
+      "pattern=\"[a-z0-9]+(-[a-z0-9]+)*\"",
+      "required",
+      "required",
+      "required",
+      "required",
+      "required",
+      "type=\"file\"",
+      "type=\"file\"",
+      "type=\"submit\""
+    ],
+    "expressions": [
+      "error",
+      "error ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/seller-center/src/features/shop/shop-register-form.tsx": {
+    "logic": "1f671b0aed8293ee6f50e8806b7c8afb4c470d357c827c1f051fe74447c1a1c9",
+    "bindings": [
+      "aria-label=\"Hồ sơ đăng ký cửa hàng\"",
+      "maxLength={150}",
+      "maxLength={20}",
+      "maxLength={5000}",
+      "maxLength={500}",
+      "maxLength={80}",
+      "minLength={3}",
+      "minLength={8}",
+      "name=\"contactAddress\"",
+      "name=\"description\"",
+      "name=\"logo\"",
+      "name=\"name\"",
+      "name=\"phone\"",
+      "name=\"slug\"",
+      "onSubmit={submit}",
+      "pattern=\"[a-z0-9]+(-[a-z0-9]+)*\"",
+      "required",
+      "required",
+      "required",
+      "required",
+      "required",
+      "required",
+      "type=\"file\"",
+      "type=\"submit\""
+    ],
+    "expressions": [
+      "error",
+      "error ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/seller-center/src/lib/api.ts": {
+    "logic": "b9d26dc0c716eea0ba73ffd98f95525ec36a02831b1e5f1e4a7f1db5922ed76f",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/seller-center/src/lib/types.ts": {
+    "logic": "754bdd658f93c3252ea9f71e1f341333d48616afdcffe2242d4593fb9d7c69bd",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/seller-center/src/lib/vietnam-time.ts": {
+    "logic": "b9c2cfbd2734184d14740513f7cc441d31a95192e5796aaa6e49050bf13576a0",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/storefront/src/app/account-view.tsx": {
+    "logic": "29205c4e34088fdb87e662f0d5dd657d92af745c973f07783b4b45226c799860",
+    "bindings": [
+      "defaultValue={user.fullName}",
+      "defaultValue={user.phone ?? \"\"}",
+      "disabled={pending}",
+      "disabled={pending}",
+      "disabled={pending}",
+      "disabled={pending}",
+      "disabled={pending}",
+      "disabled={pending}",
+      "disabled={showAddress}",
+      "id={fileInputId}",
+      "maxLength={120}",
+      "maxLength={128}",
+      "maxLength={20}",
+      "maxLength={20}",
+      "minLength={8}",
+      "name=\"currentPassword\"",
+      "name=\"district\"",
+      "name=\"fullName\"",
+      "name=\"isDefault\"",
+      "name=\"line1\"",
+      "name=\"newPassword\"",
+      "name=\"phone\"",
+      "name=\"phone\"",
+      "name=\"province\"",
+      "name=\"recipientName\"",
+      "name=\"ward\"",
+      "onChange={(event) => void uploadAvatar(event.currentTarget.files?.[0])}",
+      "onClick={() => setShowAddress(false)}",
+      "onClick={() => setShowAddress(true)}",
+      "onClick={() => setShowPassword(false)}",
+      "onClick={() => setShowPassword(true)}",
+      "onClick={() => void logout()}",
+      "onClick={() => void logout()}",
+      "onSubmit={submitAddress}",
+      "onSubmit={submitPassword}",
+      "onSubmit={submitProfile}",
+      "required",
+      "required",
+      "required",
+      "required",
+      "required",
+      "required",
+      "required",
+      "required",
+      "required",
+      "type=\"button\"",
+      "type=\"button\"",
+      "type=\"file\"",
+      "type=\"password\"",
+      "type=\"password\"",
+      "value={view}"
+    ],
+    "expressions": [
+      "!showPassword ? (PRESENTATION) : (PRESENTATION)",
+      "address.district",
+      "address.isDefault ? (PRESENTATION) : null",
+      "address.line1",
+      "address.phone",
+      "address.province",
+      "address.recipientName",
+      "address.ward",
+      "addresses.map((address) => (PRESENTATION))",
+      "addressesLoading ? (PRESENTATION) : addresses.length === 0 && !showAddress ? (PRESENTATION) : (PRESENTATION)",
+      "error",
+      "error ? (PRESENTATION) : null",
+      "logoutError",
+      "logoutError ? (PRESENTATION) : null",
+      "showAddress ? (PRESENTATION) : null",
+      "statusMessage",
+      "statusMessage ? (PRESENTATION) : null",
+      "user.avatar ? \"Ảnh mới sẽ thay thế ảnh hiện tại.\" : \"Chưa có ảnh đại diện.\"",
+      "user.avatar ? (PRESENTATION) : (PRESENTATION)",
+      "view === \"profile\" ? (PRESENTATION) : (PRESENTATION)"
+    ]
+  },
+  "apps/storefront/src/app/account/addresses/page.tsx": {
+    "logic": "1ff557f21d4a1b5ec7cc8593105b070c0e8cfc87464551d604f4e0b14497c1ef",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/storefront/src/app/account/page.tsx": {
+    "logic": "c63e962db717ca19594397dc26779e39cfd957318ada94ea4d1bd2bf30f1b0f3",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/storefront/src/app/auth-form.tsx": {
+    "logic": "c2b018d2e9d9986c8820c4474594de5b560f06a2abda22cbfb545029368a9269",
+    "bindings": [
+      "href={mode === \"register\" ? \"/login\" : \"/register\"}",
+      "maxLength={120}",
+      "maxLength={128}",
+      "minLength={1}",
+      "name=\"email\"",
+      "name=\"fullName\"",
+      "name=\"password\"",
+      "onSubmit={submit}",
+      "required",
+      "required",
+      "required",
+      "type=\"email\"",
+      "type=\"password\"",
+      "type=\"submit\""
+    ],
+    "expressions": [
+      "error",
+      "error && (PRESENTATION)",
+      "mode === \"register\"\n    ? \"Dùng email của anh để tạo tài khoản mua hàng.\"\n    : \"Nhập email và mật khẩu đã đăng ký.\"",
+      "mode === \"register\"\n    ? \"Theo dõi đơn theo từng cửa hàng và nhận hàng đúng hẹn.\"\n    : \"Tiếp tục mua sắm, theo dõi vận chuyển và đánh giá sản phẩm.\"",
+      "mode === \"register\" && (PRESENTATION)",
+      "mode === \"register\" ? \"Thông tin tài khoản\" : \"Chào mừng trở lại\"",
+      "mode === \"register\" ? \"Tạo tài khoản\" : \"Đăng nhập\"",
+      "mode === \"register\" ? \"Đã có tài khoản? \" : \"Chưa có tài khoản? \"",
+      "mode === \"register\" ? \"Đăng ký\" : \"Đăng nhập\"",
+      "mode === \"register\" ? \"Đăng nhập\" : \"Đăng ký\"",
+      "status",
+      "status && (PRESENTATION)"
+    ]
+  },
+  "apps/storefront/src/app/cart/page.tsx": {
+    "logic": "88130e0fa27f78d442e4f88a4d28bbac7eccaf3cce34cfe9860fcea9ac3f59b5",
+    "bindings": [
+      "action={PRESENTATION}",
+      "aria-label=\"Tóm tắt đơn hàng\"",
+      "disabled={pending}",
+      "href=\"/checkout\"",
+      "href=\"/products\"",
+      "href=\"/products\"",
+      "onDismiss={() => setError(\"\")}",
+      "onRemove={(item) => void remove(item)}",
+      "onUpdate={(item, changes) => void update(item, changes)}"
+    ],
+    "expressions": [
+      "cart?.groups.length ?? 0",
+      "cart?.groups.map((group) => (PRESENTATION))",
+      "error",
+      "error && (PRESENTATION)",
+      "formatVnd(cart?.selectedTotal)",
+      "itemCount",
+      "itemCount === 0 ? (PRESENTATION) : (PRESENTATION)"
+    ]
+  },
+  "apps/storefront/src/app/checkout/page.tsx": {
+    "logic": "4d1357f8d80435b2d6e2a2e58bb945c5f43902a9bf957409917e6af6a38cc729",
+    "bindings": [
+      "action={PRESENTATION}",
+      "aria-current=\"step\"",
+      "aria-label=\"Các bước thanh toán\"",
+      "aria-label=\"Tóm tắt thanh toán\"",
+      "checked={paymentMethod === \"COD\"}",
+      "checked={paymentMethod === \"MOCK\"}",
+      "disabled={!selected.length || !addressId}",
+      "href=\"/account/addresses\"",
+      "href=\"/account/addresses\"",
+      "href=\"/cart\"",
+      "href=\"/cart\"",
+      "id=\"checkout-address\"",
+      "id=\"checkout-items\"",
+      "name=\"payment\"",
+      "name=\"payment\"",
+      "onChange={() => {\n        setPaymentMethod(\"COD\");\n        discardQuote();\n    }}",
+      "onChange={() => {\n        setPaymentMethod(\"MOCK\");\n        discardQuote();\n    }}",
+      "onChange={(event) => {\n        setAddressId(event.target.value);\n        discardQuote();\n    }}",
+      "onClick={() => void createQuote()}",
+      "onClick={() => {\n        setBootstrapError(\"\");\n        setLoading(true);\n        setReload((value) => value + 1);\n    }}",
+      "onConfirm={() => void placeOrder()}",
+      "onDismiss={() => setError(\"\")}",
+      "type=\"button\"",
+      "type=\"radio\"",
+      "type=\"radio\"",
+      "value=\"\"",
+      "value={addressId}",
+      "value={item.id}"
+    ],
+    "expressions": [
+      "!item.purchasable ? \" · cần kiểm tra tồn kho\" : \"\"",
+      "\" \"",
+      "\" \"",
+      "\" \"",
+      "addresses.length === 0 ? (PRESENTATION) : (PRESENTATION)",
+      "addresses.map((item) => (PRESENTATION))",
+      "bootstrapError",
+      "error",
+      "error && (PRESENTATION)",
+      "formatVnd((BigInt(item.currentUnitPrice) * BigInt(item.quantity)).toString())",
+      "formatVnd(cart?.selectedTotal)",
+      "item.district",
+      "item.isDefault ? \" (Mặc định)\" : \"\"",
+      "item.line1",
+      "item.phone",
+      "item.productName",
+      "item.province",
+      "item.quantity",
+      "item.recipientName",
+      "item.ward",
+      "quote && (PRESENTATION)",
+      "quote ? \"Cập nhật báo giá\" : \"Kiểm tra giá và tồn kho\"",
+      "selected.length",
+      "selected.length === 0 ? (PRESENTATION) : (PRESENTATION)",
+      "selected.map((item) => (PRESENTATION))"
+    ]
+  },
+  "apps/storefront/src/app/error.tsx": {
+    "logic": "b74701f6726331b41f425ce3524acfcab3626cbec06ecaefab9888b56369edd2",
+    "bindings": [
+      "onClick={reset}"
+    ],
+    "expressions": []
+  },
+  "apps/storefront/src/app/layout.tsx": {
+    "logic": "b946ebed66002285a42a920d88e00cd6feec176098dd6bb8316b81b1d470e8c9",
+    "bindings": [],
+    "expressions": [
+      "children"
+    ]
+  },
+  "apps/storefront/src/app/loading.tsx": {
+    "logic": "f7ec4c135e54a053ebbaa71ebbc23ceeb8947628caf34a76a75cae51217b5625",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/storefront/src/app/login/page.tsx": {
+    "logic": "e2f58a3f4ff0696aba64cbbd6ff9d82d5a0fcbdb5d39077527a832815def8ea0",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/storefront/src/app/not-found.tsx": {
+    "logic": "c98c530e8d1251db5ad5d662b8a1777b6938f29cb8bd4f5aee3cb93d999c992e",
+    "bindings": [
+      "href=\"/\""
+    ],
+    "expressions": []
+  },
+  "apps/storefront/src/app/orders/[orderId]/page.tsx": {
+    "logic": "e84468a3871a9df0201dc43b784d1839a6480ab89c1d58cef2e8a7e0ddde66fb",
+    "bindings": [
+      "aria-label=\"Tổng đơn hàng\"",
+      "href=\"/orders\"",
+      "href=\"/orders\"",
+      "href={`/products/${item.productId}`}",
+      "id=\"order-address\"",
+      "onChange={refreshOrder}",
+      "onDone={refreshOrder}",
+      "onDone={refreshOrder}",
+      "onDone={refreshOrder}"
+    ],
+    "expressions": [
+      "\" \"",
+      "\" \"",
+      "Object.values(item.attributes).join(\" / \") || item.sku",
+      "address && (PRESENTATION)",
+      "address.district",
+      "address.line1",
+      "address.phone",
+      "address.province",
+      "address.recipientName",
+      "address.ward",
+      "error || \"Không tìm thấy đơn hàng.\"",
+      "formatVnd(item.lineTotal)",
+      "formatVnd(item.unitPrice)",
+      "formatVnd(order.originalTotal)",
+      "formatVnd(seller.capturedAmount)",
+      "formatVnd(seller.originalTotal)",
+      "formatVnd(seller.refundedAmount)",
+      "item.productName",
+      "item.quantity",
+      "order.sellerOrders.map((seller) => (PRESENTATION))",
+      "paymentMethods[order.paymentMethod]?.label ?? order.paymentMethod",
+      "seller.cancelReason ? `: ${seller.cancelReason}` : \"\"",
+      "seller.capturedAmount !== undefined && (PRESENTATION)",
+      "seller.items.map((item, index) => (PRESENTATION))",
+      "seller.status === \"CANCELLED\" && (PRESENTATION)",
+      "seller.status === \"COMPLETED\" && item.id && (PRESENTATION)",
+      "seller.status === \"DELIVERED\" && seller.outstandingAmount === \"0\" && (PRESENTATION)"
+    ]
+  },
+  "apps/storefront/src/app/orders/page.tsx": {
+    "logic": "6904f1d0980462b58608943f10d068793fc5eb63bf7577aa61dad81f3c7b2dd9",
+    "bindings": [
+      "action={PRESENTATION}",
+      "href=\"/products\"",
+      "href={`/orders/${order.id}`}"
+    ],
+    "expressions": [
+      "[0, 1].map((index) => (PRESENTATION))",
+      "error",
+      "formatDateTime(order.createdAt)",
+      "formatVnd(order.originalTotal)",
+      "loading ? (PRESENTATION) : error ? (PRESENTATION) : orders.length === 0 ? (PRESENTATION) : (PRESENTATION)",
+      "order.orderNumber",
+      "orders.map((order, index) => (PRESENTATION))"
+    ]
+  },
+  "apps/storefront/src/app/page.tsx": {
+    "logic": "90660b561f1c011672b70c14197237da6f16e2aa963cc280c77c0af67ae8c0d0",
+    "bindings": [
+      "href=\"/orders\"",
+      "href=\"/products\"",
+      "href=\"/products\"",
+      "href=\"/products\"",
+      "id=\"home-heading\"",
+      "id=\"new-products\"",
+      "id=\"order-steps-heading\"",
+      "id=\"shopping-guide-heading\""
+    ],
+    "expressions": []
+  },
+  "apps/storefront/src/app/products/[productId]/page.tsx": {
+    "logic": "cf4b563e662e25b27a1233942a016af2b3cb8b8f1429e67be1e492c7e2956920",
+    "bindings": [
+      "aria-label=\"Phân loại sản phẩm\"",
+      "aria-label=\"Thư viện ảnh sản phẩm\"",
+      "aria-label={`Xem ảnh ${index + 1}`}",
+      "disabled={!selected?.availableQuantity}",
+      "href=\"/cart\"",
+      "href=\"/products\"",
+      "href={`/login?returnTo=${encodeURIComponent(`/products/${product.id}`)}`}",
+      "href={`/shops/${product.shop.id}`}",
+      "onChange={(event) => {\n        setVariantId(event.target.value);\n        setAdded(false);\n    }}",
+      "onClick={() => setAttempt((value) => value + 1)}",
+      "onClick={() => setImageIndex(index)}",
+      "onClick={() => {\n        if (!selected)\n            return;\n        setAdding(true);\n        setCartError(\"\");\n        setAdded(false);\n        void api\n            .request(\"/cart/items\", {\n            method: \"POST\",\n            body: JSON.stringify({\n                variantId: selected.id,\n                quantity: 1,\n            }),\n        })\n            .then(async () => {\n            if (user)\n                await queryClient.invalidateQueries({\n                    queryKey: [\"cart\", user.id],\n                });\n            window.dispatchEvent(new Event(\"marketplace:cart-changed\"));\n            setAdded(true);\n        })\n            .catch((cause) => setCartError(normalizeFormError(cause)))\n            .finally(() => setAdding(false));\n    }}",
+      "type=\"button\"",
+      "type=\"button\"",
+      "value={variant.id}",
+      "value={variantId}"
+    ],
+    "expressions": [
+      "\" \"",
+      "\" \"",
+      "\" \"",
+      "Object.values(variant.attributes).join(\" / \") || variant.sku",
+      "added && (PRESENTATION)",
+      "added ? \"Đã thêm vào giỏ\" : \"Thêm vào giỏ hàng\"",
+      "cartError",
+      "cartError && (PRESENTATION)",
+      "error",
+      "formatVnd(selected?.price ?? product.minimumPrice)",
+      "formatVnd(variant.price)",
+      "image ? (PRESENTATION) : (PRESENTATION)",
+      "product.description",
+      "product.images.length > 1 && (PRESENTATION)",
+      "product.images.map((item, index) => (PRESENTATION))",
+      "product.name",
+      "product.shop.name",
+      "product.shop.name",
+      "product.variants.length > 0 && (PRESENTATION)",
+      "product.variants.map((variant) => (PRESENTATION))",
+      "selected?.availableQuantity\n    ? `Còn ${selected.availableQuantity} sản phẩm`\n    : \"Tạm hết hàng\"",
+      "selected?.sku ?? \"—\"",
+      "status === \"loading\" ? (PRESENTATION) : user ? (PRESENTATION) : (PRESENTATION)"
+    ]
+  },
+  "apps/storefront/src/app/products/page.tsx": {
+    "logic": "830ca75f7b3696199cecef9988c2b82a148c3330b5a4b4eb210fb409629f87ee",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/storefront/src/app/providers.tsx": {
+    "logic": "4f88f849f2c6097fa6da7efcda3107335cb65ce95e844a804469b270656fa3fc",
+    "bindings": [],
+    "expressions": [
+      "children"
+    ]
+  },
+  "apps/storefront/src/app/register/page.tsx": {
+    "logic": "4e538c27148384c101e783abbdf295d56846748887468cb62bd84c56c780947c",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/storefront/src/app/shops/[shopId]/page.tsx": {
+    "logic": "63c2fbef6d50dc3fcd9016b20fe6d73a284d6fd0931835d5dc3b6ae615ccd30f",
+    "bindings": [
+      "href=\"/products\"",
+      "id=\"shop-products\"",
+      "onClick={() => setAttempt((value) => value + 1)}",
+      "type=\"button\""
+    ],
+    "expressions": [
+      "\" \"",
+      "\" \"",
+      "error",
+      "shop.banner ? (PRESENTATION) : (PRESENTATION)",
+      "shop.description",
+      "shop.logo ? (PRESENTATION) : (PRESENTATION)",
+      "shop.name"
+    ]
+  },
+  "apps/storefront/src/features/cart/cart-view.tsx": {
+    "logic": "447c0b6795416339299a1dca412b78b3cdaa94b94a9eaf8bc54bcfc659dc71e8",
+    "bindings": [
+      "aria-label={`Chọn ${item.productName}`}",
+      "aria-label={`Giảm số lượng ${item.productName}`}",
+      "aria-label={`Số lượng ${item.productName}`}",
+      "aria-label={`Tăng số lượng ${item.productName}`}",
+      "aria-label={`Xóa ${item.productName}`}",
+      "checked={item.selected}",
+      "disabled={disabled || item.quantity <= 1}",
+      "disabled={disabled || item.quantity >= 999}",
+      "disabled={disabled}",
+      "disabled={disabled}",
+      "disabled={disabled}",
+      "href={`/products/${item.productId}`}",
+      "href={`/shops/${group.shopId}`}",
+      "id={`cart-shop-${group.shopId}`}",
+      "max={999}",
+      "min={1}",
+      "onChange={(event) => onUpdate(item, { selected: event.target.checked })}",
+      "onChange={(event) => {\n        const quantity = Number(event.target.value);\n        if (quantity >= 1 && quantity <= 999)\n            onUpdate(item, { quantity });\n    }}",
+      "onClick={() => onRemove(item)}",
+      "onClick={() => onUpdate(item, { quantity: item.quantity + 1 })}",
+      "onClick={() => onUpdate(item, { quantity: item.quantity - 1 })}",
+      "type=\"button\"",
+      "type=\"button\"",
+      "type=\"button\"",
+      "type=\"number\"",
+      "value={item.quantity}"
+    ],
+    "expressions": [
+      "!item.purchasable && (PRESENTATION)",
+      "Object.values(item.attributes).join(\" / \") || item.sku",
+      "formatVnd((BigInt(item.currentUnitPrice) * BigInt(item.quantity)).toString())",
+      "formatVnd(item.currentUnitPrice)",
+      "group.items.map((item) => (PRESENTATION))",
+      "group.shopName",
+      "item.productName",
+      "item.productName",
+      "item.productName.slice(0, 1)",
+      "item.unavailableReason === \"INSUFFICIENT_STOCK\"\n    ? \"Số lượng vượt tồn kho\"\n    : \"Sản phẩm hiện không khả dụng\""
+    ]
+  },
+  "apps/storefront/src/features/checkout/checkout-confirm.tsx": {
+    "logic": "af9ca9fe4d2bfd14f75a0593db244effe9ead70511203a92df431e5c06bfc576",
+    "bindings": [
+      "disabled={!quote.valid || expired}",
+      "id=\"checkout-confirm\"",
+      "onClick={onConfirm}"
+    ],
+    "expressions": [
+      "!expired && remaining !== null ? (PRESENTATION) : null",
+      "\" \"",
+      "Math.floor(remaining / 60)",
+      "String(remaining % 60).padStart(2, \"0\")",
+      "expired ? (PRESENTATION) : null",
+      "formatVnd(quote.total)",
+      "new Date(quote.expiresAt).toLocaleTimeString(\"vi-VN\")"
+    ]
+  },
+  "apps/storefront/src/features/discovery/category-strip.tsx": {
+    "logic": "2c860c4d8b368acf91e0a77b74bc1da6557287dde403f9a27650944183ac39ab",
+    "bindings": [
+      "aria-label=\"Danh mục sản phẩm\"",
+      "href=\"/products\"",
+      "href={`/products?categoryId=${encodeURIComponent(category.id)}`}",
+      "id=\"market-categories-heading\"",
+      "onClick={() => setAttempt((value) => value + 1)}",
+      "type=\"button\""
+    ],
+    "expressions": [
+      "\" \"",
+      "categories.map((category) => (PRESENTATION))",
+      "category.name",
+      "error"
+    ]
+  },
+  "apps/storefront/src/features/discovery/product-grid.tsx": {
+    "logic": "7db69ab272f402725048b76df925d5fa669b1ba8ed5cfa790b816ab299fb656a",
+    "bindings": [
+      "action={PRESENTATION}",
+      "aria-label=\"Danh sách sản phẩm\"",
+      "href={`/products/${product.id}`}",
+      "href={`/products/${product.id}`}",
+      "href={`/shops/${product.shopId}`}",
+      "name=\"q\"",
+      "onChange={(event) => setMaxPrice(event.target.value.replace(/\\D/g, \"\"))}",
+      "onChange={(event) => setMinPrice(event.target.value.replace(/\\D/g, \"\"))}",
+      "onChange={(event) => setQuery(event.target.value)}",
+      "onChange={(event) => update(\"categoryId\", event.target.value)}",
+      "onChange={(event) => update(\"sort\", event.target.value)}",
+      "onClick={() => router.replace(pathname, { scroll: false })}",
+      "onClick={() => setRetryKey((value) => value + 1)}",
+      "onSubmit={(event) => {\n        event.preventDefault();\n        const next = new URLSearchParams(search);\n        for (const [key, value] of [\n            [\"q\", query],\n            [\"minPrice\", minPrice],\n            [\"maxPrice\", maxPrice],\n        ]) {\n            if (value)\n                next.set(key, value);\n            else\n                next.delete(key);\n        }\n        next.set(\"page\", \"1\");\n        router.replace(`${pathname}?${next.toString()}`, { scroll: false });\n    }}",
+      "type=\"button\"",
+      "type=\"submit\"",
+      "value=\"NEWEST\"",
+      "value=\"PRICE_ASC\"",
+      "value=\"PRICE_DESC\"",
+      "value={category.id}",
+      "value={maxPrice}",
+      "value={minPrice}",
+      "value={params.get(\"categoryId\") ?? \"\"}",
+      "value={params.get(\"sort\") ?? \"NEWEST\"}",
+      "value={query}"
+    ],
+    "expressions": [
+      "!loading && !error && result && result.data.length === 0 && (PRESENTATION)",
+      "!loading && !error && result && result.data.length > 0 && (PRESENTATION)",
+      "\" \"",
+      "Array.from({ length: 8 }, (_, index) => (PRESENTATION))",
+      "categories.map((category) => (PRESENTATION))",
+      "category.name",
+      "error",
+      "error && !loading && (PRESENTATION)",
+      "formatVnd(product.minimumPrice)",
+      "loading && (PRESENTATION)",
+      "product.available ? \"Còn hàng\" : \"Tạm hết hàng\"",
+      "product.image ? (PRESENTATION) : (PRESENTATION)",
+      "product.name",
+      "product.ratingCount",
+      "product.ratingCount > 0 ? (PRESENTATION) : null",
+      "product.shopName",
+      "result.data.map((product, index) => (PRESENTATION))",
+      "result.meta.total"
+    ]
+  },
+  "apps/storefront/src/features/money.ts": {
+    "logic": "df0b104ce663d630db1d08bcd3fc7fb099f3df3229a37a7ef0fd110d7e626693",
+    "bindings": [],
+    "expressions": []
+  },
+  "apps/storefront/src/features/orders/cancel-dialog.tsx": {
+    "logic": "bb3fd202a3aa119b90e8c8d9cdbaf80dcd3edc34ec16cc064e616a77933103c7",
+    "bindings": [
+      "disabled={!reason.trim()}",
+      "disabled={busy}",
+      "maxLength={500}",
+      "onChange={(event) => setReason(event.target.value)}",
+      "onClick={() => setTarget(\"ALL\")}",
+      "onClick={() => void submit()}",
+      "onClick={() => {\n        setError(\"\");\n        setTarget(part);\n    }}",
+      "onClick={() => {\n        setTarget(null);\n        setError(\"\");\n    }}",
+      "onClose={() => {\n        if (busy)\n            return;\n        setTarget(null);\n        setError(\"\");\n    }}",
+      "onDismiss={() => setError(\"\")}",
+      "value={reason}"
+    ],
+    "expressions": [
+      "eligible.length === parts.filter((part) => part.status !== \"CANCELLED\").length && (PRESENTATION)",
+      "eligible.map((part) => (PRESENTATION))",
+      "error",
+      "error && (PRESENTATION)",
+      "part.shopNameSnapshot"
+    ]
+  },
+  "apps/storefront/src/features/orders/payment-panel.tsx": {
+    "logic": "3cca6e5bc5660011b86eb7ecc58b08aaca3848dc9684df4b96cd565dc174bef2",
+    "bindings": [
+      "aria-label=\"Thanh toán\"",
+      "disabled={busy}",
+      "onClick={() => void mockPay(\"FAILED\")}",
+      "onClick={() => void mockPay(\"SUCCEEDED\")}",
+      "onDismiss={() => setError(\"\")}"
+    ],
+    "expressions": [
+      "\" \"",
+      "canMock && (PRESENTATION)",
+      "deadline && (PRESENTATION)",
+      "error",
+      "error && (PRESENTATION)",
+      "formatVnd(outstandingAmount)",
+      "formatVnd(payment.amount)",
+      "formatVnd(refund.amount)",
+      "message",
+      "message && (PRESENTATION)",
+      "new Date(deadline).toLocaleString(\"vi-VN\")",
+      "payment.refunds.length > 0 && (PRESENTATION)",
+      "payment.refunds.map((refund, index) => (PRESENTATION))",
+      "payment.settlementKind",
+      "payment.transactionCode",
+      "paymentMethods[method]?.label ?? method",
+      "payments.length > 0 && (PRESENTATION)",
+      "payments.map((payment) => (PRESENTATION))",
+      "refund.reason",
+      "remainingSeconds",
+      "remainingSeconds !== null ? (PRESENTATION) : null"
+    ]
+  },
+  "apps/storefront/src/features/orders/receive-button.tsx": {
+    "logic": "191e4559171218956cf1c2d6a5b46d6b5329062fda3949fd328ddbd5babca8f6",
+    "bindings": [
+      "onClick={() => void receive()}",
+      "onDismiss={() => setError(\"\")}"
+    ],
+    "expressions": [
+      "error",
+      "error && (PRESENTATION)"
+    ]
+  },
+  "apps/storefront/src/features/orders/tracking-timeline.tsx": {
+    "logic": "2e5fa82d4b3135e0f39e6ea948f75d3a5c97ca952cb5d3a6aa54600eb4aee736",
+    "bindings": [
+      "aria-label=\"Vận chuyển\""
+    ],
+    "expressions": [
+      "event.reason ? ` · ${event.reason}` : \"\"",
+      "formatDateTime(event.createdAt)",
+      "shipment.attemptNumber",
+      "shipment.history.map((event, index) => (PRESENTATION))",
+      "shipment.status === \"FAILED\" && (PRESENTATION)",
+      "shipment.trackingCode",
+      "statusLabel(shipmentStatuses, event.toStatus)"
+    ]
+  },
+  "apps/storefront/src/features/reviews/review-form.tsx": {
+    "logic": "5b29b3801854216e842ff5ce66a020a1709a8b189272840944059d3b8fef4066",
+    "bindings": [
+      "aria-label=\"Gửi đánh giá\"",
+      "aria-label=\"Đánh giá đã gửi\"",
+      "disabled={!comment.trim()}",
+      "maxLength={2000}",
+      "minLength={1}",
+      "onChange={(event) => setComment(event.target.value)}",
+      "onChange={(event) => setRating(event.target.value)}",
+      "onDismiss={() => setError(\"\")}",
+      "onSubmit={submit}",
+      "required",
+      "type=\"submit\"",
+      "value={comment}",
+      "value={rating}",
+      "value={value}"
+    ],
+    "expressions": [
+      "[5, 4, 3, 2, 1].map((value) => (PRESENTATION))",
+      "error",
+      "error && (PRESENTATION)",
+      "new Date(review.createdAt).toLocaleDateString(\"vi-VN\")",
+      "review && (PRESENTATION)",
+      "review.comment",
+      "review.rating",
+      "value"
+    ]
+  },
+  "apps/storefront/src/features/reviews/review-list.tsx": {
+    "logic": "9bc714a4b3472caf7e6bb0aa5a8ccbee024eb062e4e02f87c11ad855c52bbde0",
+    "bindings": [
+      "aria-label={`${row.rating} trên 5 sao`}",
+      "id=\"product-reviews\"",
+      "onPageChange={setPage}"
+    ],
+    "expressions": [
+      "!loading && !error && rows.length > 0 && (PRESENTATION)",
+      "\" \"",
+      "[0, 1].map((index) => (PRESENTATION))",
+      "error",
+      "loading ? (PRESENTATION) : error ? (PRESENTATION) : rows.length === 0 ? (PRESENTATION) : (PRESENTATION)",
+      "new Date(row.createdAt).toLocaleDateString(\"vi-VN\")",
+      "ratingAverage != null\n    ? `${Number(ratingAverage).toLocaleString(\"vi-VN\", {\n        maximumFractionDigits: 1,\n    })}/5`\n    : \"Chưa có điểm\"",
+      "ratingCount",
+      "ratingCount > 0 ? \"Đánh giá thật từ người mua\" : \"Chưa có đánh giá\"",
+      "row.buyerDisplayName",
+      "row.comment",
+      "row.rating",
+      "rows.map((row) => (PRESENTATION))"
+    ]
+  },
+  "apps/storefront/src/lib/session.ts": {
+    "logic": "b9d26dc0c716eea0ba73ffd98f95525ec36a02831b1e5f1e4a7f1db5922ed76f",
+    "bindings": [],
+    "expressions": []
+  }
+}

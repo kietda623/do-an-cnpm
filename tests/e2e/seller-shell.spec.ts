@@ -81,7 +81,7 @@ test("seller console shell lists shop navigation and switches active shop", asyn
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/shops/shop-one/dashboard");
 
-  await expect(page.getByRole("link", { name: "Seller Center — trang chủ" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "sopi Seller Center — trang chủ" })).toBeVisible();
   await expect(page.getByText("Kênh người bán")).toBeVisible();
   await expect(page.locator(".mp-console__context-name")).toHaveText("Cửa hàng Một");
 

@@ -54,7 +54,7 @@ export function SellerShell({ children }: { children: ReactNode }) {
     if (status === "anonymous" && !isAuthPage) router.replace("/login");
   }, [isAuthPage, router, status]);
 
-  if (isAuthPage) return <>{children}</>;
+  if (isAuthPage) return <div className="mp-seller-auth">{children}</div>;
 
   if (status === "loading" || status === "anonymous") {
     return (
@@ -148,17 +148,17 @@ export function SellerShell({ children }: { children: ReactNode }) {
 
   return (
     <ConsoleShell
-      product="Seller Center"
+      product="sopi Seller Center"
       homeHref="/shops"
       brandIcon={<Store size={20} />}
       navGroups={navGroups}
       shopSwitcher={switcher}
       topbar={
-        <div className="mp-console__context">
-          <span className="mp-console__eyebrow">Kênh người bán</span>
+        <div className="mp-console__context mp-seller-context">
           <span className="mp-console__context-name">
             {activeShop?.shopName ?? "Chọn cửa hàng để bắt đầu"}
           </span>
+          <span className="mp-seller-context__label">Kênh người bán</span>
         </div>
       }
     >
@@ -174,7 +174,7 @@ export function SellerShell({ children }: { children: ReactNode }) {
           </button>
         </p>
       )}
-      {children}
+      <div className="mp-seller-workspace">{children}</div>
     </ConsoleShell>
   );
 }
