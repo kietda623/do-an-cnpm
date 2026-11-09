@@ -188,7 +188,7 @@ export default function AdminUsersPage() {
   const pageCount = page + (hasNext ? 1 : 0);
 
   return (
-    <div className="mp-page mp-admin-page">
+    <div className="mp-page mp-admin-page mp-admin-users">
       <PageHeader
         title="Quản lý người dùng"
         description="Tìm kiếm tài khoản, kiểm tra vai trò và khóa hoặc mở khóa khi cần."

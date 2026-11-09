@@ -53,7 +53,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
   if (status === "loading" || status === "anonymous") {
     return (
       <main className="mp-console-boot" role="status">
-        <span className="mp-visually-hidden">Đang khôi phục phiên quản trị…</span>
+        <span className="mp-visually-hidden">
+          Đang khôi phục phiên quản trị…
+        </span>
         <Skeleton className="mp-skeleton--cell" />
         <Skeleton className="mp-skeleton--block" />
       </main>
@@ -68,7 +70,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <div className="mp-alert__body">
             <p className="mp-alert__title">Không có quyền quản trị</p>
             <div className="mp-alert__text">
-              Tài khoản hiện tại không được cấp quyền vào bảng điều khiển quản trị.
+              Tài khoản hiện tại không được cấp quyền vào bảng điều khiển quản
+              trị.
             </div>
           </div>
         </div>
@@ -84,8 +87,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
       navGroups={navigation}
       topbar={
         <div className="mp-console__context">
-          <span className="mp-console__eyebrow">Quản trị nền tảng</span>
           <span className="mp-console__context-name">Vận hành Marketplace</span>
+          <span className="mp-console__eyebrow">Quản trị nền tảng</span>
         </div>
       }
     >
