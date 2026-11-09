@@ -36,17 +36,17 @@ export default function SellerLoginPage() {
       <section className="mp-auth__intro">
         <h1 className="mp-auth__title">Quản lý cửa hàng trong một màn hình.</h1>
         <span className="mp-seller-auth__identity">
-          <Store size={16} aria-hidden="true" /> Seller Center
+          <Store size={16} aria-hidden="true" /> sopi Seller Center
         </span>
         <p className="mp-auth__description">
           Theo dõi đơn cần xử lý, cập nhật sản phẩm và xem doanh thu hoàn tất bằng dữ liệu thật
-          từ Marketplace.
+          từ sopi.
         </p>
       </section>
       <section className="mp-auth__card" aria-labelledby="seller-login-title">
         <header className="mp-auth__card-head">
           <h2 id="seller-login-title">Đăng nhập người bán</h2>
-          <p>Dùng tài khoản Marketplace để đăng ký hoặc quản lý cửa hàng.</p>
+          <p>Dùng tài khoản sopi để đăng ký hoặc quản lý cửa hàng.</p>
         </header>
         <form onSubmit={submit} className="mp-auth__fields">
           <TextField

@@ -148,7 +148,7 @@ export function SellerShell({ children }: { children: ReactNode }) {
 
   return (
     <ConsoleShell
-      product="Seller Center"
+      product="sopi Seller Center"
       homeHref="/shops"
       brandIcon={<Store size={20} />}
       navGroups={navGroups}

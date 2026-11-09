@@ -209,7 +209,7 @@ export default function AdminDashboardPage() {
     <div className="mp-page mp-admin-page mp-admin-dashboard">
       <PageHeader
         title="Tổng quan nền tảng"
-        description="Theo dõi hồ sơ chờ duyệt, hàng hoàn và hoạt động trên toàn Marketplace."
+        description="Theo dõi hồ sơ chờ duyệt, hàng hoàn và hoạt động trên toàn sopi."
         actions={
           <Link
             className="mp-button mp-button--secondary mp-button--md"

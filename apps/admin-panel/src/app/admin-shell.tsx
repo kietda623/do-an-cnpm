@@ -81,13 +81,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <ConsoleShell
-      product="Marketplace Admin"
+      product="sopi Admin"
       homeHref="/"
       brandIcon={<Shield size={20} />}
       navGroups={navigation}
       topbar={
         <div className="mp-console__context">
-          <span className="mp-console__context-name">Vận hành Marketplace</span>
+          <span className="mp-console__context-name">Vận hành sopi</span>
           <span className="mp-console__eyebrow">Quản trị nền tảng</span>
         </div>
       }

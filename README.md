@@ -1,4 +1,4 @@
-# Marketplace MVP
+# sopi
 
 Nền tảng thương mại điện tử đa người bán cho thị trường Việt Nam. Người mua tìm kiếm sản phẩm từ nhiều cửa hàng, đặt một đơn gồm nhiều shop, thanh toán COD hoặc MOCK, theo dõi và xác nhận nhận hàng; người bán quản lý cửa hàng, catalog, tồn kho và xử lý đơn; quản trị viên duyệt cửa hàng/sản phẩm, khóa tài khoản, xử lý hoàn trả và tra cứu audit log.
 

@@ -38,7 +38,7 @@ export default function HomePage() {
         <div>
           <h1 id="home-heading">Khám phá sản phẩm từ các cửa hàng</h1>
           <p>Tìm sản phẩm, chọn cửa hàng và mua sắm theo cách của bạn.</p>
-          <p className="mp-market-note">Marketplace · Mua sắm trực tuyến</p>
+          <p className="mp-market-note">sopi · Mua sắm trực tuyến</p>
         </div>
         <Link
           className="mp-button mp-button--primary mp-button--md"
@@ -133,7 +133,7 @@ export default function HomePage() {
             </h2>
             <p className="mp-market-note">Cách đặt hàng</p>
             <OrderRail
-              label="Cách đặt hàng trên Marketplace"
+              label="Cách đặt hàng trên sopi"
               steps={orderSteps}
               orientation="vertical"
             />

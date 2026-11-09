@@ -48,7 +48,7 @@ export default function CategoriesPage() {
     <div className="mp-page mp-admin-page">
       <PageHeader
         title="Quản lý danh mục"
-        description="Dựng cây danh mục dùng chung cho toàn Marketplace và ẩn những nhánh ngừng sử dụng."
+        description="Dựng cây danh mục dùng chung cho toàn sopi và ẩn những nhánh ngừng sử dụng."
       />
       <CategoryEditor rows={rows} onSave={save} />
       {error ? (

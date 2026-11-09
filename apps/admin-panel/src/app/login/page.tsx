@@ -41,9 +41,9 @@ export default function AdminLoginPage() {
   return (
     <main className="mp-auth mp-auth--console mp-admin-auth">
       <section className="mp-auth__intro">
-        <h1 className="mp-auth__title">Marketplace Admin</h1>
+        <h1 className="mp-auth__title">sopi Admin</h1>
         <span className="mp-auth__eyebrow">
-          <Shield size={16} aria-hidden="true" /> Marketplace Admin
+          <Shield size={16} aria-hidden="true" /> sopi Admin
         </span>
         <p className="mp-auth__description">
           Duyệt cửa hàng, kiểm duyệt sản phẩm, khóa tài khoản và tra cứu giao
@@ -53,7 +53,7 @@ export default function AdminLoginPage() {
       <section className="mp-auth__card" aria-labelledby="admin-login-title">
         <header className="mp-auth__card-head">
           <h2 id="admin-login-title">Đăng nhập quản trị</h2>
-          <p>Chỉ tài khoản quản trị Marketplace được tiếp tục.</p>
+          <p>Chỉ tài khoản quản trị sopi được tiếp tục.</p>
         </header>
         <form onSubmit={submit} className="mp-auth__fields">
           <TextField

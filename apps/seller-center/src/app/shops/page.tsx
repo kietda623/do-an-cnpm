@@ -115,7 +115,7 @@ export default function ShopsPage() {
           <EmptyState
             icon={<Store size={22} />}
             title="Bạn chưa có cửa hàng nào."
-            description="Gửi hồ sơ đăng ký bên dưới để bắt đầu bán hàng trên Marketplace."
+            description="Gửi hồ sơ đăng ký bên dưới để bắt đầu bán hàng trên sopi."
           />
           <ShopRegisterForm
             onCreated={async () => {

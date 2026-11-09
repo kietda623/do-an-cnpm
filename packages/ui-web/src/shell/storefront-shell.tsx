@@ -132,11 +132,11 @@ export function StorefrontShell({ children }: { children: ReactNode }) {
       </div>
       <header className="mp-header">
         <div className="mp-container mp-header__inner">
-          <Link href="/" className="mp-brand" aria-label="Marketplace — trang chủ">
+          <Link href="/" className="mp-brand" aria-label="sopi — trang chủ">
             <span className="mp-brand__mark" aria-hidden="true">
               <ShoppingBag size={18} />
             </span>
-            <span className="mp-brand__name">Marketplace</span>
+            <span className="mp-brand__name">sopi</span>
           </Link>
 
           <nav className="mp-header__nav" aria-label="Danh mục chính">
@@ -153,7 +153,7 @@ export function StorefrontShell({ children }: { children: ReactNode }) {
 
           <form className="mp-search" role="search" action="/products" method="get">
             <label className="mp-visually-hidden" htmlFor="storefront-search">
-              Tìm trên Marketplace
+              Tìm trên sopi
             </label>
             <Search className="mp-search__icon" size={17} aria-hidden="true" />
             <input
@@ -265,7 +265,7 @@ export function StorefrontShell({ children }: { children: ReactNode }) {
       <footer className="mp-footer">
         <div className="mp-container mp-footer__grid">
           <div className="mp-footer__brand">
-            <span className="mp-brand__name">Marketplace</span>
+            <span className="mp-brand__name">sopi</span>
             <p>
               Sàn nhiều cửa hàng: mỗi đơn được tách theo cửa hàng để bạn theo dõi và xử lý riêng.
             </p>
@@ -284,7 +284,7 @@ export function StorefrontShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
         <div className="mp-container mp-footer__bottom">
-          <span>Marketplace MVP</span>
+          <span>sopi MVP</span>
           <span>Giá và tồn kho được xác nhận lại khi thanh toán.</span>
         </div>
       </footer>

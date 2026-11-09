@@ -1,5 +1,5 @@
 ---
-name: Cyan Marketplace
+name: sopi
 description: A clear, task-focused Vietnamese marketplace across Buyer, Seller and Admin.
 colors:
   primary: "oklch(0.5 0.12 230)"
@@ -35,11 +35,11 @@ components:
     rounded: "{rounded.control}"
 ---
 
-# Design System: Cyan Marketplace
+# Design System: sopi
 
 ## Overview
 
-The user approved a light neutral system with cyan on 2026-11-09. Marketplace is a working shopping and operations product: products and decisions carry the screen, with quiet chrome and clear Vietnamese labels. Buyer emphasizes discovery; Seller emphasizes the next operational task; Admin emphasizes reviewing dense records.
+The user approved a light neutral system with cyan on 2026-11-09. sopi is a working shopping and operations product: products and decisions carry the screen, with quiet chrome and clear Vietnamese labels. Buyer emphasizes discovery; Seller emphasizes the next operational task; Admin emphasizes reviewing dense records.
 
 This replaces the previous orange direction. Current API data remains authoritative, including empty lists. Missing capabilities are absent, rather than represented by pretend controls.
 

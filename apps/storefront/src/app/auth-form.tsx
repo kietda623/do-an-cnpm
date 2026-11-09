@@ -56,7 +56,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <h1 className="mp-auth__title">
           {mode === "register" ? "Tạo tài khoản" : "Đăng nhập"}
         </h1>
-        <p className="mp-market-note">Marketplace</p>
+        <p className="mp-market-note">sopi</p>
         <p className="mp-auth__description">
           {mode === "register"
             ? "Theo dõi đơn theo từng cửa hàng và nhận hàng đúng hẹn."

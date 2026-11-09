@@ -31,7 +31,7 @@ const display = Space_Grotesk({
 const themeScript = `(function(){var k="marketplace-theme";var m="system";try{var s=localStorage.getItem(k);if(s==="light"||s==="dark"||s==="system")m=s;}catch(e){}var d=m==="dark"||(m==="system"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.dataset.theme=d?"dark":"light";r.dataset.themeMode=m;})();`;
 
 export const metadata: Metadata = {
-  title: { default: "Marketplace", template: "%s | Marketplace" },
+  title: { default: "sopi", template: "%s | sopi" },
   description: "Sàn thương mại nhiều cửa hàng: mua sắm, theo dõi đơn và thanh toán an toàn.",
 };
 

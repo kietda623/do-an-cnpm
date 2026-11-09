@@ -38,7 +38,7 @@ The differentiator is the settlement and fulfillment model: multi-shop orders, 5
 
 ## Brand Commitments
 
-- Product name shown in UI: **Marketplace** (seller console: Seller Center; admin console: Marketplace Admin).
+- Product name shown in UI: **sopi** (seller console: sopi Seller Center; admin console: sopi Admin).
 - Voice: direct, calm Vietnamese; verbs name the action; errors name the problem and the recovery.
 - No invented brand claims, testimonials, benchmarks, or demo imagery.
 

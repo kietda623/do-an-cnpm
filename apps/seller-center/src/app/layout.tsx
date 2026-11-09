@@ -32,8 +32,8 @@ const display = Space_Grotesk({
 const themeScript = `(function(){var k="marketplace-theme";var m="system";try{var s=localStorage.getItem(k);if(s==="light"||s==="dark"||s==="system")m=s;}catch(e){}var d=m==="dark"||(m==="system"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.dataset.theme=d?"dark":"light";r.dataset.themeMode=m;})();`;
 
 export const metadata: Metadata = {
-  title: { default: "Seller Center", template: "%s | Seller Center" },
-  description: "Quản lý cửa hàng Marketplace",
+  title: { default: "sopi Seller Center", template: "%s | sopi Seller Center" },
+  description: "Quản lý cửa hàng sopi",
 };
 
 export const viewport: Viewport = {
