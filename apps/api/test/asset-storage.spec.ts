@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import type { ConfigService } from "@nestjs/config";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -136,6 +136,30 @@ describe("AssetService local driver", () => {
     expect(result.width).toBe(2);
     expect(result.height).toBe(3);
     expect(await readFile(join(directory, created[0]!.objectKey))).toEqual(image);
+  });
+
+  it("streams decoded pixels without collecting them into a Buffer", async () => {
+    const { service } = localService(directory);
+    const image = await sharp({
+      create: { width: 2, height: 3, channels: 4, background: "#336699" },
+    })
+      .png()
+      .toBuffer();
+    const toBuffer = jest.spyOn(sharp.prototype, "toBuffer");
+
+    try {
+      const result = await service.upload(
+        userId,
+        { buffer: image, originalname: "logo.png", mimetype: "image/png" },
+        "SHOP_LOGO",
+      );
+
+      expect(result.width).toBe(2);
+      expect(result.height).toBe(3);
+      expect(toBuffer).not.toHaveBeenCalled();
+    } finally {
+      toBuffer.mockRestore();
+    }
   });
 
   it("returns dimensions after applying JPEG EXIF orientation", async () => {

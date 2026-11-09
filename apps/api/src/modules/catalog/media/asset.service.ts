@@ -12,6 +12,8 @@ import type { OutputInfo } from "sharp";
 import { randomUUID } from "node:crypto";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { Writable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { DatabaseService } from "../../../database/prisma.service.js";
 import { resolveAssetStorage, type AssetStorage } from "./asset-storage.js";
 
@@ -77,13 +79,30 @@ export class AssetService {
         code: "IMAGE_SIGNATURE_MISMATCH",
         message: "Image content does not match its declared type.",
       });
-    let decoded: { data: Buffer; info: OutputInfo };
+    let dimensions: { width: number; height: number };
     try {
-      decoded = await sharp(file.buffer, { failOn: "warning", limitInputPixels: 40_000_000 })
+      const decoder = sharp(file.buffer, {
+        failOn: "warning",
+        limitInputPixels: 40_000_000,
+      })
         .rotate()
         .ensureAlpha()
-        .raw()
-        .toBuffer({ resolveWithObject: true });
+        .raw();
+      let outputDimensions: { width: number; height: number } | undefined;
+      decoder.on("info", (info: OutputInfo) => {
+        outputDimensions = { width: info.width, height: info.height };
+      });
+      await pipeline(
+        decoder,
+        new Writable({
+          highWaterMark: 64 * 1024,
+          write(_chunk, _encoding, callback) {
+            callback();
+          },
+        }),
+      );
+      if (!outputDimensions) throw new Error("Image decoder returned no dimensions.");
+      dimensions = outputDimensions;
     } catch {
       throw new UnprocessableEntityException({
         code: "INVALID_IMAGE",
@@ -114,8 +133,6 @@ export class AssetService {
     const ext = detected.ext === "jpeg" ? "jpg" : detected.ext;
     const objectKey = `users/${userId}/assets/${randomUUID()}.${ext}`;
     const assetPurpose = purpose as AssetPurpose;
-    const dimensions = { width: decoded.info.width, height: decoded.info.height };
-
     if (storage.mode === "local") {
       const filePath = resolve(storage.directory, objectKey);
       await mkdir(dirname(filePath), { recursive: true });
