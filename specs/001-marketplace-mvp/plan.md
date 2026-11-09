@@ -7,7 +7,7 @@
 Setup resolver trả logical context `001-marketplace-mvp`; Git thực tế vẫn là `main`.
 Không tạo/chuyển branch; toàn bộ công việc trong bước này chỉ là tài liệu thiết kế.
 
-**Implementation status update 2026-11-09:** T140–T143 đã triển khai; T144 có Windows MSI build/checksum nhưng thiếu install quyền admin và macOS evidence; T145/SC-009 desktop vẫn BLOCKED vì thiếu HTTPS acceptance environment và cross-platform install/flow evidence. Chi tiết hiện trạng ở [tasks.md](tasks.md) và [desktop-evidence.md](../../docs/testing/desktop-evidence.md).
+**Implementation status update 2026-11-09:** Phạm vi desktop được chốt là demo buyer trên Windows với storefront/API local (`http://localhost:3000`). T140–T145 được nghiệm thu bằng Windows demo/session/commerce evidence; không yêu cầu URL public, MSI hay nền tảng khác. Xem [tasks.md](tasks.md) và [desktop-evidence.md](../../docs/testing/desktop-evidence.md).
 
 ## Summary
 
@@ -30,7 +30,7 @@ Lý do, alternatives và nguồn: research R01–08.
 Không Redis/BullMQ/search engine trước khi có nhu cầu đo được. Không MinIO archived làm mặc định.
 **Testing**: Jest/Supertest, PostgreSQL integration thật, Playwright Web, desktop wrapper acceptance
 (khi triển khai), contract diff, concurrency barriers, test clock, backup/restore drill.
-**Target Platform**: Linux Docker server; Web responsive cho Buyer/Seller/Admin; desktop buyer
+**Target Platform**: Linux Docker server; Web responsive cho Buyer/Seller/Admin; Windows local demo cho Buyer desktop
 (Tauri wrapper, kế hoạch). Không có client mobile.
 W008 ghi exact min OS theo toolchain desktop đã chọn và runner khả dụng.
 Không hứa hỗ trợ OS đã hết hỗ trợ hoặc app store publishing.
@@ -245,7 +245,7 @@ ID/effort thống nhất WBS, không estimate hai lần.
 | S4 W7–8 | Discovery/cart US4–5.1 | W026–033 | 20.5 | Catalog/stock | Search/filter/cart, stock UI, checkout policies | Last-stock proof/schema drift/load baseline | Transaction chưa đúng → giữ gate trước order |
 | S5 W9–10 | Commerce US5–7 | W034–041 | 21 | Cart/policies/stock proof | Hai shop split/COD/mock/hủy/fulfill/deliver E2E Web thật | SC003/004, payment/expiry/cancel races | Critical path dày → mock UI sớm, ưu tiên integrity, dùng buffer |
 | S6 W11–12 | Reviews/stats/admin US8–10 | W042–049 | 20 | Order/payment/shipping | Stats/reviews/Admin web; T140–T143 desktop implementation đã xong, acceptance tiếp tục ở T144/T145 | Known totals/timezone/review unique/role denial | M4/M5 quá tải → M3 hỗ trợ storefront, reuse UI |
-| S7 W13–14 | Full acceptance/stability US1–10 | W050–057 | 20 | S6 feature integrated | Web screens + security/perf/recovery evidence; desktop evidence BLOCKED nếu chưa build | SC001–009,5-user usability, IDOR/CSRF/restore | Thiếu evidence desktop → giữ BLOCKED, không claim pass |
+| S7 W13–14 | Full acceptance/stability US1–10 | W050–057 | 20 | S6 feature integrated | Web screens + security/perf/recovery evidence; desktop Windows local demo evidence | SC001–009,5-user usability, IDOR/CSRF/restore | Thiếu evidence local services → hoãn desktop demo, web vẫn dùng được |
 | S8 W15–16 | Release/docs/demo | W058–064 | 15.5 | Accepted RC | HTTPS demo, seed/report/slides/runbook | SC010/restore/rollback/full rehearsal | Deploy trễ → lab/video fallback có nhãn, không coi là online pass |
 
 Điều chỉnh roadmap nguồn: inventory nền tảng S3 để hàng có tồn hợp lệ; shipping S5 để
@@ -335,7 +335,7 @@ webview và memory access token. Clear user/shop query caches khi logout.
 | Usability P1 | S3–7 | 360/1280/keyboard/form states;5 người mua5 dòng/2shop | SC005:>=4/5 trong3 phút, record từng lần |
 | Performance P1 | S4 baseline/S7 | 1000 products/10 shops/20users/100 observations | SC006:>=95/100 <=2s, record host/network/fixture |
 | Reports P0 | S6–7 | Completed/cancel/refund/partial COD/midnight | SC008 exact totals không double-count |
-| Desktop P1 (acceptance) | T140–T145 | Buyer desktop flow trong Tauri WebView | SC009 vẫn BLOCKED đến khi có cài/chạy evidence trên Windows/macOS qua HTTPS |
+| Desktop P1 (demo) | T140–T145 | Buyer local demo flow trong Tauri WebView trên Windows | SC009: chạy local storefront/API, cùng dữ liệu sau reload; không cần URL public hay installer |
 | Recovery P0 | S7–8 | Restart expiry/fresh clone/seed twice/restore/rollback | SC010<=30phút sau prerequisites; lịch sử/totals giữ nguyên |
 
 Không dùng coverage% thay acceptance. Mock cho isolation UI/unit, không thay DB integrity/E2E.
@@ -387,13 +387,13 @@ trước thao tác phá hủy. W053/057/063 chạy rehearsal; không tự thực
 | R02 | DB/migration sai | Medium | High | P0 | FK thiếu/snapshot đổi | ERD/constraints/upgrade tests | Corrective migration/restore drill | M2 |
 | R03 | Checkout/payment bất nhất | High | High | P0 | Âm tồn/trùng thu | Proof S4/shared locks/dedupe | Stop release, buffer/review transaction | M2+M1 |
 | R04 | API/client lệch | Medium | High | P0 | Mock pass/integration fail | Contract/gen-client drift CI | Sửa provider/consumer trong cùng PR | M3+M2 |
-| R05 | Desktop acceptance chưa sẵn sàng | Medium | Medium | P1 | Thiếu install/flow evidence macOS, Windows install privilege và HTTPS environment | Giữ desktop acceptance BLOCKED; dùng workflow artifact tùy chọn | Không claim desktop pass; tiếp tục web | M3 |
+| R05 | Local desktop demo services chưa chạy | Medium | Medium | P1 | Storefront/API hoặc PostgreSQL/Redis local chưa sẵn sàng | Dùng quickstart và health checks trước demo | Demo lại sau khi local services sẵn sàng | M3 |
 | R06 | Tauri integration | Low | Medium | P2 | URL/CORS/cookie lỗi trong webview | Cấu hình allow-list/CSP, dùng cùng web session | Sửa cấu hình, không fork UI | M3 |
 | R07 | Auth/ownership bug | Medium | High | P0 | Cross-shop/reuse succeeds | Negative policy tests | Revoke/fix/full security rerun | M1 |
 | R08 | Merge conflicts | High | Medium | P1 | PR>2ngày, cùng DTO | Owner module/small PR/contract-first | Pair resolve/rerun, không overwrite | M4 |
 | R09 | Deploy/budget failure | Medium | High | P0 | OOM/health/bucket fail | Budget/benchmark/staging | Image rollback/lab-video fallback có nhãn | M5 |
 | R10 | Thiếu thời gian test | High | High | P0 | Test dồn S7/defects tăng | Owner tests từng Sprint/buffer | Freeze features, P0 regression trước release | M5 |
-| R11 | Thiếu target OS desktop evidence | Medium | Medium | P1 | Không có host macOS; Windows installer cần elevated rights | Ghi rõ OS/tool access trước acceptance | Giữ SC009 BLOCKED đến khi đủ evidence | M3+M5 |
+| R11 | Desktop demo chạy trên Windows | Low | Low | P2 | Khác biệt WebView2/local service giữa máy demo | Ghi Windows/WebView2 versions và chạy flow trước buổi demo | Dùng web storefront làm fallback | M3+M5 |
 | R12 | Runtime compatibility | Medium | High | P0 | ESM/peer/build lỗi S2 | Exact pin/smoke trước feature | ADR chọn supported compatible version | M2 |
 | R13 | Ít người hơn giả định | Medium | High | P0 | Actual<4.5PD/Sprint | Actual/forecast weekly | Rebalance/reduce optional/extend date | M1 |
 | R14 | Mất dữ liệu/demo | Low | High | P0 | Restore fail/seed reset | Off-host backup/guarded seed | Stop writes/preserve logs/recovery decision | M5 |
@@ -414,7 +414,7 @@ FR/platform hoặc kéo dài lịch bằng sửa spec được chấp thuận, k
 | G4 S4 | Cart/query/stock proof | Last-stock proof, selected cart, order contract frozen |
 | G5 S5 | Team commerce/staging | Hai shop split/paid/cancel/fulfill/deliver, races data đúng |
 | G6 S6 | Reviews/stats/Admin | Known totals, role denial evidence |
-| G7 S7 | RC/tests/web artifacts | Zero P0, SC001–009 web evidence, backup drill; desktop BLOCKED nếu chưa build |
+| G7 S7 | RC/tests/web artifacts | Zero P0, SC001–009 web evidence, backup drill; desktop có Windows local demo evidence |
 | G8 S8 | Source/schema/API/tests/report/slides/runbook | SC010/full demo/limitations/handover |
 
 GitHub Projects đề xuất BACKLOG→READY→IN PROGRESS→IN REVIEW→TESTING→DONE.
@@ -439,7 +439,7 @@ thông báo nhóm trong bước này.
 8. Trình diễn failure/retry/expiry bằng test-clock fixture/report có nhãn;
    không giả vờ chờ15phút đã chạy nếu dùng test clock.
 9. Buyer mở cùng dữ liệu trên web và desktop (khi wrapper có); Seller/Admin trên web; logout/cross-shop denied.
-10. Trình bày SC003/004/007 reports, web evidence, restore và clean-room runbook. Desktop evidence ghi BLOCKED nếu chưa build.
+10. Trình bày SC003/004/007 reports, web evidence, restore và clean-room runbook. Desktop scope là Windows local demo, không phải release build.
 
 Chi tiết lệnh/expected outcomes ở [quickstart.md](quickstart.md).
 

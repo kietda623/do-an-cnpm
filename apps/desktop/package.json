@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "desktop:build": "node scripts/run-tauri.mjs build",
     "desktop:dev": "node scripts/run-tauri.mjs dev",
     "desktop:test": "node --test scripts/*.test.mjs && cargo test --manifest-path src-tauri/Cargo.toml"
   },

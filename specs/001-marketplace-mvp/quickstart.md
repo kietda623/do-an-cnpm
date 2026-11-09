@@ -16,10 +16,9 @@ DoD chỉ đạt khi command/evidence thật được ghi lại; không dùng gu
   exact patch/version metadata trong lockfile/runtime matrix W008/W017.
 - S3-compatible dev/demo bucket với credentials scoped, endpoints/region/namespace cấu hình riêng.
   Unit tests có adapter mock, upload E2E phải có bucket thật; không tự mặc định MinIO legacy.
-- Windows Desktop: Rust/MSVC/WebView2 theo Tauri prerequisites; macOS: Rust/Xcode runner.
-  Tauri workspace đã có; build/install acceptance hai OS vẫn BLOCKED và toolchain desktop không bắt buộc để chạy web/API.
-- Không có app mobile (Android/iOS), không cần emulator/simulator. macOS/Xcode chỉ cần cho desktop acceptance;
-  không yêu cầu đưa app lên store trong MVP.
+- Windows Desktop demo: Rust/MSVC/WebView2 theo Tauri prerequisites. Desktop chạy local cùng storefront/API;
+  không cần URL public hay installer. Toolchain desktop không bắt buộc để chạy web/API.
+- Không có app mobile (Android/iOS), không cần emulator/simulator; không yêu cầu đưa app lên store trong MVP.
 - CPU/RAM/disk đủ chạy containers; môi trường không trùng tên/database production.
   Web/desktop phải truy cập được API qua URL hợp lệ.
 
@@ -31,7 +30,7 @@ API package `@marketplace/api` có `test:unit` và `test:integration` (Jest/Supe
 migration và `prisma:migrate:dev|deploy|status`; integration test chỉ nhận `TEST_DATABASE_URL` riêng.
 `@marketplace/api-client` có `generate:types` và `test`; `@marketplace/contracts` là workspace package cho OpenAPI/examples.
 Database demo seed, contract/E2E/concurrency/security, performance và expiry suites sẽ được bổ sung ở các task tương ứng.
-`@marketplace/desktop`: có `desktop:dev`, `desktop:test`, `desktop:build` cho Tauri buyer wrapper. Acceptance cần HTTPS storefront và Windows/macOS evidence; xem phần Desktop validation bên dưới. Không còn workspace mobile.
+`@marketplace/desktop`: có `desktop:dev` và `desktop:test` cho Tauri buyer demo trên Windows. `desktop:dev` mặc định mở storefront local; xem phần Desktop validation bên dưới. Không còn workspace mobile.
 Compose services: postgres, api, storefront, seller-center, admin-panel; profile `test` có PostgreSQL/API test riêng.
 Contract này là công việc W011/015–17/033/040/057.
 
@@ -134,13 +133,11 @@ pnpm --filter @marketplace/desktop desktop:dev
 pnpm --filter @marketplace/desktop desktop:test
 ```
 
-Development cần `DESKTOP_STOREFRONT_URL=http://localhost:3000` trong môi trường hoặc file `.env` gốc.
-Build artifact chỉ chạy trên OS đích; trước release build, đặt `DESKTOP_STOREFRONT_URL` thành storefront
-HTTPS có thể truy cập rồi chạy `pnpm --filter @marketplace/desktop desktop:build`.
-Windows tạo MSI; macOS tạo DMG. Ghi OS/tool versions, artifact filename/SHA-256, install result,
-storefront/API origins và thời điểm chạy trong [desktop-evidence.md](../../docs/testing/desktop-evidence.md).
-Build pass không thay flow pass. Desktop buyer hiện còn BLOCKED đến khi có HTTPS và evidence cài/chạy
-trên cả Windows lẫn macOS. MSI local hiện tại dùng URL `.invalid`, nên không phải production evidence.
+Desktop demo không cần cấu hình URL: `desktop:dev` mặc định dùng `http://localhost:3000`.
+Khởi động API, PostgreSQL/Redis và storefront theo các bước local bên trên trước khi mở Tauri.
+Ghi Windows/WebView2/tool versions, các flow đã chạy và kết quả trong
+[desktop-evidence.md](../../docs/testing/desktop-evidence.md). Đây là demo local, không tạo installer
+hay phát hành ứng dụng.
 
 - Buyer desktop: US1,4–8 trong webview, gồm reload/session restore, cookie HttpOnly/CSRF, không token plaintext.
 - Seller/Admin: chỉ web; không có desktop hay mobile client riêng.

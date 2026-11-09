@@ -50,8 +50,9 @@ Status: hợp đồng API chuẩn; runtime được hiện thực hóa theo từ
 
 Access JWT 10 phút, giữ trong memory; refresh token hết hạn sau 7 ngày,
 rotation với family/session revocation (research decision R04).
-`clientPlatform` enum `WEB|ANDROID|IOS|WINDOWS|MACOS` phục vụ lựa chọn adapter,
-không phải chứng cứ cấp quyền. Server cấu hình client/origin allowlist riêng.
+`clientPlatform` là enum session metadata phục vụ lựa chọn adapter, không phải chứng cứ cấp quyền.
+Giá trị enum không mở rộng phạm vi client được nghiệm thu; desktop demo của MVP chỉ chạy local trên Windows.
+Server cấu hình client/origin allowlist riêng.
 Web refresh cookie HttpOnly Secure SameSite=Lax path `/api/v1/auth`; body response
 không chứa refresh token. `/auth/csrf` cấp token gắn session/pre-session; web gửi
 `X-CSRF-Token` và Origin hợp lệ khi login/register/refresh/logout hay cookie mutation.

@@ -157,10 +157,9 @@ DB integration và contract; secret không vào PR untrusted. Migration deploy t
 thích schema; backup ngoài VPS, restore drill. Rollback app image cũ với migration additive,
 không tự down migration phá dữ liệu. Log structured có requestId, redact tokens/PII.
 
-Windows build cần Rust/MSVC/WebView2; macOS build cần Xcode/Rust targets tương ứng.
-Desktop buyer chưa được build nên các tuyên bố desktop phải để ở trạng thái planned/BLOCKED.
-Signing/distribution account và budget là điều kiện quản lý phải kiểm khi triển khai;
-không coi store publishing là MVP. Windows smoke sớm khi có toolchain; macOS không dồn Sprint8.
+Windows demo cần Rust/MSVC/WebView2. Desktop buyer chạy Tauri với storefront/API local;
+không cần production URL, installer, signing hay app-store distribution. Desktop acceptance
+trong MVP giới hạn ở demo local trên Windows.
 pnpm build scripts được allowlist/review, lockfile frozen.
 
 **Rationale:** Phù hợp quy mô sinh viên, vẫn có transaction/security và bằng chứng web thực.

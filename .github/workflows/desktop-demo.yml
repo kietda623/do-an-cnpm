@@ -1,9 +1,9 @@
-name: Desktop Acceptance Builds
+name: Windows Desktop Demo Checks
 
 on:
   pull_request:
     paths:
-      - .github/workflows/desktop-build.yml
+      - .github/workflows/desktop-demo.yml
       - apps/api/src/common/http/**
       - apps/api/src/modules/identity/**
       - apps/desktop/**
@@ -15,7 +15,7 @@ on:
   push:
     branches: ["**"]
     paths:
-      - .github/workflows/desktop-build.yml
+      - .github/workflows/desktop-demo.yml
       - apps/api/src/common/http/**
       - apps/api/src/modules/identity/**
       - apps/desktop/**
@@ -30,25 +30,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: desktop-build-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: desktop-demo-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: ${{ matrix.artifact }}
-    runs-on: ${{ matrix.os }}
+  test:
+    name: windows-desktop-demo
+    runs-on: windows-2025
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-2025
-            artifact: windows-msi
-            bundle_directory: msi
-          - os: macos-15
-            artifact: macos-arm64-dmg
-            bundle_directory: dmg
 
     steps:
       - name: Check out source without persisted credentials
@@ -82,22 +72,3 @@ jobs:
       - name: Check desktop scripts and Rust shell
         shell: bash
         run: pnpm --filter @marketplace/desktop desktop:test
-
-      - name: Build target installer
-        shell: bash
-        env:
-          DESKTOP_STOREFRONT_URL: ${{ vars.DESKTOP_STOREFRONT_URL }}
-        run: pnpm --filter @marketplace/desktop desktop:build
-
-      - name: Generate and verify artifact checksums
-        shell: bash
-        working-directory: apps/desktop
-        run: node scripts/write-checksums.mjs "src-tauri/target/release/bundle/${{ matrix.bundle_directory }}"
-
-      - name: Upload acceptance artifact and SHA256SUMS
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: marketplace-desktop-${{ matrix.artifact }}
-          path: apps/desktop/src-tauri/target/release/bundle/${{ matrix.bundle_directory }}
-          if-no-files-found: error
-          retention-days: 14

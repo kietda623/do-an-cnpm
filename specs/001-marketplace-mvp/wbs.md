@@ -74,7 +74,7 @@ Task 3–4 PD UI có thể chia theo màn hình mà giữ AC và tổng effort.
 | W059 | 8 | Database Design | Release migrations/seed/schema handover | M2 | M1 | P0 | Medium | 2 | W053,W056 | Final deterministic seed + schema | Fresh demo khớp totals/stock, repeat safe | US1–9/seed twice |
 | W060 | 8 | Deployment | API release image và rollback support | M2 | M5 | P0 | Medium | 1 | W059,W057 | Versioned image/release notes | Pinned digest, health/readiness pass | Previous app/schema compatibility |
 | W061 | 8 | Demo & Presentation | Demo script/slides/video/user guide | M3 | M4 | P1 | Medium | 3 | W054,W056,W058 | 15-min demo + fallback video | Hai shop/payment branches/review | New-user dry run/quickstart |
-| W062 | 8 | Buyer Desktop (kế hoạch) | Desktop artifacts verify + Buyer guide | M4 | M3 | P0 | Medium | 3 | W055,W057,W056 | Win/Mac checksums + buyer desktop guide | Fresh target machine đúng quyền | Install→login→purchase smoke |
+| W062 | 8 | Buyer Desktop (kế hoạch) | Windows local demo + Buyer guide | M4 | M3 | P0 | Medium | 3 | W055,W057,W056 | Local launch + buyer flow evidence | Windows/WebView2 + local services ready | Login→purchase→reload smoke |
 | W063 | 8 | Deployment | HTTPS demo/env/secrets/backup/restore | M5 | M2 | P0 | High | 2 | W057,W059,W060 | Demo instance + deployment runbook | DB private, off-host backup, rollback tested | Health/persistence/restore |
 | W064 | 8 | Demo & Presentation | Final acceptance/clean setup/handover | M5 | M1 | P0 | Medium | 1.5 | W061,W062,W063 | Acceptance matrix + limitations | SC010 <=30 phút sau prerequisites, zero P0 | Full demo/clean clone |
 

@@ -1,19 +1,5 @@
 use url::{Host, Url};
 
-fn is_loopback_host(url: &Url) -> bool {
-    match url.host() {
-        Some(Host::Domain(host)) => {
-            let host = host.trim_end_matches('.').to_ascii_lowercase();
-            host == "localhost" || host.ends_with(".localhost")
-        }
-        Some(Host::Ipv4(address)) => address.is_loopback(),
-        Some(Host::Ipv6(address)) => {
-            address.is_loopback() || address.to_ipv4().is_some_and(|mapped| mapped.is_loopback())
-        }
-        None => false,
-    }
-}
-
 fn is_explicit_dev_host(url: &Url) -> bool {
     match url.host() {
         Some(Host::Domain(host)) => host == "localhost",
@@ -35,11 +21,7 @@ pub fn is_allowed_navigation(candidate: &Url, storefront_origin: &Url, is_dev: b
         && storefront_origin.scheme() == "http"
         && is_explicit_dev_host(storefront_origin)
         && storefront_origin.port() == Some(3000);
-    let public_https_origin = storefront_origin.scheme() == "https"
-        && storefront_origin.port().is_none()
-        && !is_loopback_host(storefront_origin);
-
-    if !local_development_origin && !public_https_origin {
+    if !local_development_origin {
         return false;
     }
     if candidate.scheme() != storefront_origin.scheme() {
@@ -59,9 +41,9 @@ mod tests {
     }
 
     #[test]
-    fn allows_paths_on_the_exact_https_origin() {
+    fn rejects_remote_storefront_origins_for_the_local_demo() {
         let storefront = parse("https://shop.example.test/");
-        assert!(is_allowed_navigation(
+        assert!(!is_allowed_navigation(
             &parse("https://shop.example.test/orders/42"),
             &storefront,
             false,
@@ -144,7 +126,7 @@ mod tests {
             &parse("http://localhost/"),
             true,
         ));
-        assert!(is_allowed_navigation(
+        assert!(!is_allowed_navigation(
             &parse("https://shop.example.test/products"),
             &parse("https://shop.example.test/"),
             true,

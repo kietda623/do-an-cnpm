@@ -12,7 +12,7 @@ Ngày chỉnh: 2026-10-20. 158 task chưa thực hiện; 64 WBS giữ nguyên t�
 | T131 | Done, web-only | Test phiên web cookie/CSRF trong `packages/api-client/test/web-session.test.ts`; 27 test pass |
 | T132–T137 | Removed | Buyer Mobile integration (W048); không còn client mobile |
 | T138–T139 | Removed | Mobile review/usability/security (W054/W049); thay bằng kiểm chứng web |
-| T140–T145 | De-scoped → kế hoạch | Trước là Seller Desktop; nay là packaging/verify desktop buyer Tauri, chưa triển khai |
+| T140–T145 | De-scoped → kế hoạch | Trước là Seller Desktop; nay là packaging/verify desktop buyer Tauri, chưa triển khai tại thời điểm 2026-11-03 |
 | T148 | Điều chỉnh | Usability 360/1280 vẫn là web; bỏ nhãn native, desktop chỉ khi có build |
 | T155 | Điều chỉnh | W061 demo vẫn còn; phần W062 nay là verify desktop buyer (kế hoạch) |
 | T160 | Điều chỉnh | Seller desktop journeys → buyer desktop journeys (kế hoạch) |

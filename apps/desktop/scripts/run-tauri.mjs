@@ -1,8 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { isIP } from "node:net";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,27 +8,9 @@ const appRoot = path.resolve(
   "..",
 );
 const require = createRequire(import.meta.url);
+export const DEFAULT_DEMO_STOREFRONT_URL = "http://localhost:3000";
 
-function isLoopbackHostname(hostname) {
-  const normalized = hostname.toLowerCase().replace(/\.$/, "");
-  if (normalized === "localhost" || normalized.endsWith(".localhost"))
-    return true;
-  const address = normalized.startsWith("[")
-    ? normalized.slice(1, -1)
-    : normalized;
-  if (isIP(address) === 4) return address.startsWith("127.");
-  if (address === "::1") return true;
-  if (isIP(address) === 6 && address.startsWith("::ffff:")) {
-    const firstMappedWord = Number.parseInt(address.slice(7).split(":")[0], 16);
-    return (
-      Number.isFinite(firstMappedWord) &&
-      Math.floor(firstMappedWord / 256) === 127
-    );
-  }
-  return false;
-}
-
-export function validateStorefrontUrl(rawValue, { development = false } = {}) {
+export function validateStorefrontUrl(rawValue = DEFAULT_DEMO_STOREFRONT_URL) {
   if (
     typeof rawValue !== "string" ||
     rawValue.length === 0 ||
@@ -60,78 +39,30 @@ export function validateStorefrontUrl(rawValue, { development = false } = {}) {
     );
   }
 
-  const hasStandardHttpsOrigin = url.protocol === "https:" && url.port === "";
-  const isLocalDevelopmentUrl =
-    development &&
+  const isLocalDemoUrl =
     url.protocol === "http:" &&
-    (url.hostname === "localhost" || url.hostname === "127.0.0.1") &&
+    url.hostname === "localhost" &&
     url.port === "3000";
 
-  if (hasStandardHttpsOrigin && !isLoopbackHostname(url.hostname)) {
-    return url.href;
-  }
-  if (isLocalDevelopmentUrl) return url.href;
+  if (isLocalDemoUrl) return url.href;
 
-  throw new Error(
-    development
-      ? "Use an HTTPS storefront or http://localhost:3000 (127.0.0.1 is also allowed) during development"
-      : "Production desktop builds require a public HTTPS storefront on the standard port",
-  );
+  throw new Error("The Windows desktop demo only allows http://localhost:3000");
 }
 
-export function createConfigOverride(mode, storefrontUrl) {
-  if (mode !== "dev" && mode !== "build") {
-    throw new Error("Tauri mode must be dev or build");
-  }
-  return {
-    build: {
-      frontendDist: storefrontUrl,
-      ...(mode === "dev" ? { devUrl: storefrontUrl } : {}),
-    },
-  };
-}
-
-export function bundleArgumentsForPlatform(platform) {
-  if (platform === "win32") return ["--bundles", "msi"];
-  if (platform === "darwin") return ["--bundles", "dmg"];
-  throw new Error("Desktop release bundles are supported on Windows and macOS");
-}
-
-function runTauri(mode, storefrontUrl) {
-  if (mode !== "dev" && mode !== "build") {
-    throw new Error("Usage: node scripts/run-tauri.mjs <dev|build>");
-  }
-
-  const configDirectory = mkdtempSync(
-    path.join(tmpdir(), "marketplace-desktop-"),
-  );
-  const configPath = path.join(configDirectory, "tauri.override.json");
-  const configOverride = createConfigOverride(mode, storefrontUrl);
-  writeFileSync(configPath, JSON.stringify(configOverride), "utf8");
-
-  try {
-    const cliPath = require.resolve("@tauri-apps/cli/tauri.js");
-    const args = [cliPath, mode];
-    if (mode === "build") {
-      args.push(...bundleArgumentsForPlatform(process.platform));
-    }
-    args.push("--config", configPath);
-    const result = spawnSync(process.execPath, args, {
-      cwd: appRoot,
-      env: { ...process.env, DESKTOP_STOREFRONT_URL: storefrontUrl },
-      stdio: "inherit",
-    });
-    if (result.error) throw result.error;
-    return result.status ?? 1;
-  } finally {
-    rmSync(configDirectory, { recursive: true, force: true });
-  }
+function runTauri(storefrontUrl) {
+  const cliPath = require.resolve("@tauri-apps/cli/tauri.js");
+  const result = spawnSync(process.execPath, [cliPath, "dev"], {
+    cwd: appRoot,
+    env: { ...process.env, DESKTOP_STOREFRONT_URL: storefrontUrl },
+    stdio: "inherit",
+  });
+  if (result.error) throw result.error;
+  return result.status ?? 1;
 }
 
 function main() {
-  const mode = process.argv[2];
-  if (mode !== "dev" && mode !== "build") {
-    throw new Error("Usage: node scripts/run-tauri.mjs <dev|build>");
+  if (process.argv[2] !== "dev") {
+    throw new Error("Usage: node scripts/run-tauri.mjs dev");
   }
   try {
     process.loadEnvFile(path.resolve(appRoot, "../../.env"));
@@ -139,12 +70,9 @@ function main() {
     if (error?.code !== "ENOENT") throw error;
   }
   const storefrontUrl = validateStorefrontUrl(
-    process.env.DESKTOP_STOREFRONT_URL,
-    {
-      development: mode === "dev",
-    },
+    process.env.DESKTOP_STOREFRONT_URL || undefined,
   );
-  process.exitCode = runTauri(mode, storefrontUrl);
+  process.exitCode = runTauri(storefrontUrl);
 }
 
 if (
