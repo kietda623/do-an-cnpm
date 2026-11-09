@@ -17,7 +17,15 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { ApiOperation, ApiResponse as ApiDocResponse, ApiTags } from "@nestjs/swagger";
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiProperty,
+  ApiPropertyOptional,
+  ApiResponse as ApiDocResponse,
+  ApiTags,
+  getSchemaPath,
+} from "@nestjs/swagger";
 import {
   IsBoolean,
   IsEmail,
@@ -90,6 +98,24 @@ class AddressPatchDto {
   @IsOptional() @IsString() @MaxLength(20) postalCode?: string;
 }
 
+class ErrorDetail {
+  @ApiPropertyOptional({ maxLength: 200 }) field?: string;
+  @ApiProperty({ maxLength: 100 }) code!: string;
+  @ApiProperty({ maxLength: 1000 }) message!: string;
+}
+
+class ApiError {
+  @ApiProperty({ maxLength: 100 }) code!: string;
+  @ApiProperty({ maxLength: 1000 }) message!: string;
+  @ApiPropertyOptional({ type: [ErrorDetail] }) details?: ErrorDetail[];
+  @ApiProperty({ maxLength: 100 }) requestId!: string;
+}
+
+class ErrorEnvelope {
+  @ApiProperty({ type: ApiError }) error!: ApiError;
+}
+
+@ApiExtraModels(ErrorDetail, ApiError, ErrorEnvelope)
 @ApiTags("auth")
 @Controller("auth")
 export class AuthController {
@@ -119,7 +145,7 @@ export class AuthController {
     description: "The request exceeded an authentication rate limit.",
     content: {
       "application/json": {
-        schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+        schema: { $ref: getSchemaPath(ErrorEnvelope) },
       },
     },
     headers: {
@@ -134,7 +160,7 @@ export class AuthController {
     description: "Rate limiting is unavailable.",
     content: {
       "application/json": {
-        schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+        schema: { $ref: getSchemaPath(ErrorEnvelope) },
       },
     },
   })
@@ -154,7 +180,7 @@ export class AuthController {
     description: "The request exceeded an authentication rate limit.",
     content: {
       "application/json": {
-        schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+        schema: { $ref: getSchemaPath(ErrorEnvelope) },
       },
     },
     headers: {
@@ -169,7 +195,7 @@ export class AuthController {
     description: "Rate limiting is unavailable.",
     content: {
       "application/json": {
-        schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+        schema: { $ref: getSchemaPath(ErrorEnvelope) },
       },
     },
   })
@@ -189,7 +215,7 @@ export class AuthController {
     description: "The request exceeded an authentication rate limit.",
     content: {
       "application/json": {
-        schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+        schema: { $ref: getSchemaPath(ErrorEnvelope) },
       },
     },
     headers: {
@@ -204,7 +230,7 @@ export class AuthController {
     description: "Rate limiting is unavailable.",
     content: {
       "application/json": {
-        schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+        schema: { $ref: getSchemaPath(ErrorEnvelope) },
       },
     },
   })

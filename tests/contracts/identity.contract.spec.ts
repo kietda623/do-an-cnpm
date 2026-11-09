@@ -152,6 +152,7 @@ describe("identity OpenAPI and runtime contract", () => {
     );
 
     const runtimeOperation = runtimeDocument.paths[path]?.[method] as Operation | undefined;
+    expect(runtimeDocument.components?.schemas?.ErrorEnvelope).toBeDefined();
     expect(
       runtimeOperation?.responses?.["429"]?.headers?.["Retry-After"]?.schema,
     ).toMatchObject({ type: "integer", minimum: 1 });
