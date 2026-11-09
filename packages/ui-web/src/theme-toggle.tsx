@@ -2,13 +2,20 @@
 
 import { useEffect, useState, type MouseEvent } from "react";
 import { Monitor, Moon, Sun } from "./icons";
-import { isThemeMode, resolveTheme, THEME_STORAGE_KEY, type ThemeMode } from "./theme";
+import {
+  isThemeMode,
+  resolveTheme,
+  THEME_STORAGE_KEY,
+  type ThemeMode,
+} from "./theme";
 
 type ViewTransitionDocument = Document & {
   startViewTransition?: (callback: () => void) => { ready: Promise<void> };
 };
 
-type PseudoKeyframeOptions = KeyframeAnimationOptions & { pseudoElement: string };
+type PseudoKeyframeOptions = KeyframeAnimationOptions & {
+  pseudoElement: string;
+};
 
 const modes: ThemeMode[] = ["system", "light", "dark"];
 
@@ -19,7 +26,10 @@ const labels: Record<ThemeMode, string> = {
 };
 
 function prefersDark(): boolean {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  );
 }
 
 function prefersReducedMotion(): boolean {
@@ -38,7 +48,7 @@ function applyTheme(mode: ThemeMode, origin?: { x: number; y: number }) {
   };
 
   const doc = document as ViewTransitionDocument;
-  if (!doc.startViewTransition || prefersReducedMotion()) {
+  if (!origin || !doc.startViewTransition || prefersReducedMotion()) {
     update();
     return;
   }
@@ -46,28 +56,37 @@ function applyTheme(mode: ThemeMode, origin?: { x: number; y: number }) {
   const transition = doc.startViewTransition(update);
   const x = origin?.x ?? window.innerWidth / 2;
   const y = origin?.y ?? 0;
-  const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+  const radius = Math.hypot(
+    Math.max(x, window.innerWidth - x),
+    Math.max(y, window.innerHeight - y),
+  );
 
-  void transition.ready.then(() => {
-    const options: PseudoKeyframeOptions = {
-      duration: 520,
-      easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-      pseudoElement: "::view-transition-new(root)",
-    };
-    root.animate(
-      {
-        clipPath: [
-          `circle(0px at ${x}px ${y}px)`,
-          `circle(${radius}px at ${x}px ${y}px)`,
-        ],
-      },
-      options,
-    );
-  });
+  void transition.ready
+    .then(() => {
+      const options: PseudoKeyframeOptions = {
+        duration: 520,
+        easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+        pseudoElement: "::view-transition-new(root)",
+      };
+      root.animate(
+        {
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${radius}px at ${x}px ${y}px)`,
+          ],
+        },
+        options,
+      );
+    })
+    .catch(() => {
+      // A skipped/superseded animation still runs its update callback.
+      // Keep the selected theme without surfacing an unhandled rejection.
+    });
 }
 
 export function ThemeToggle({ className }: { className?: string }) {
   const [mode, setMode] = useState<ThemeMode>("system");
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     try {
@@ -76,16 +95,18 @@ export function ThemeToggle({ className }: { className?: string }) {
     } catch {
       // Storage can be unavailable (private mode); keep the system default.
     }
+    setReady(true);
   }, []);
 
   useEffect(() => {
+    if (!ready) return;
     applyTheme(mode);
     if (mode !== "system") return;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => applyTheme("system");
     media.addEventListener("change", onChange);
     return () => media.removeEventListener("change", onChange);
-  }, [mode]);
+  }, [mode, ready]);
 
   const cycle = (event: MouseEvent<HTMLButtonElement>) => {
     const next = modes[(modes.indexOf(mode) + 1) % modes.length]!;

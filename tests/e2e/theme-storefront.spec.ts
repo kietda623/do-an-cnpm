@@ -113,3 +113,45 @@ test("theme toggle works with reduced motion and does not overflow at 360px", as
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
   ).toBe(true);
 });
+
+test("restoring a theme is immediate and skipped click animations do not throw", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await mockShell(page, { authenticated: true });
+  await page.addInitScript(() => {
+    localStorage.setItem("marketplace-theme", "light");
+    const state = window as Window & { themeTransitions: number };
+    state.themeTransitions = 0;
+    Object.defineProperty(document, "startViewTransition", {
+      configurable: true,
+      value: (update: () => void) => {
+        state.themeTransitions++;
+        update();
+        return {
+          ready: Promise.reject(
+            new DOMException("Transition was skipped", "AbortError"),
+          ),
+        };
+      },
+    });
+  });
+  await page.goto("/");
+  const toggle = page.locator(".mp-theme-toggle");
+  await expect(toggle).toHaveAttribute("data-theme-mode", "light");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  expect(
+    await page.evaluate(
+      () => (window as Window & { themeTransitions: number }).themeTransitions,
+    ),
+  ).toBe(0);
+  await toggle.click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  expect(
+    await page.evaluate(
+      () => (window as Window & { themeTransitions: number }).themeTransitions,
+    ),
+  ).toBe(1);
+  expect(errors).toEqual([]);
+});
