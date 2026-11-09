@@ -121,6 +121,7 @@
 **Files**
 
 - Modify: apps/api/test/http/cors-csrf.spec.ts
+- Modify: apps/api/test/integration/refresh-errors.integration.spec.ts
 - Modify: .env.example
 - Modify: apps/desktop/README.md
 - Reuse: packages/api-client/test/web-session.test.ts
@@ -132,11 +133,12 @@
 - Production CORS_ORIGINS contains the storefront HTTPS origin. The current API refresh cookie remains HttpOnly, Secure, SameSite=Lax, and server logout continues to revoke the session.
 - Document that DESKTOP_STOREFRONT_URL and CORS_ORIGINS are public configuration values; signing keys remain server-only.
 
-- [ ] Add CORS/CSRF tests for an allowed HTTPS storefront origin, an unrelated HTTPS origin, and tauri://localhost. Confirm only the configured storefront origin receives credentialed CORS permission.
-- [ ] Run the focused API unit suite: pnpm --filter @marketplace/api test. Run the session package suite through pnpm test and API integration suite through pnpm --filter @marketplace/api test:integration.
-- [ ] Run the local Tauri shell against http://localhost:3000 and the local API. Sign in, reload, make an authenticated request, log out, and confirm the revoked session cannot refresh. Inspect storage to confirm access tokens are not persisted.
-- [ ] If production storefront and API are not same-site, stop here and record the deployment/auth decision; do not weaken SameSite or introduce native token storage as a workaround.
-- [ ] Commit this task on the same feature branch with message: test(desktop): preserve web cookie session contract.
+- [x] Add CORS/CSRF tests for an allowed HTTPS storefront origin, an unrelated HTTPS origin, and tauri://localhost. Confirm only the configured storefront origin receives credentialed CORS permission.
+- [x] Add WEB logout integration coverage for the HttpOnly Secure SameSite=Lax refresh cookie, omitted response refresh token, cookie clearing, and stale-cookie replay rejection.
+- [x] Run the focused API unit suite: pnpm --filter @marketplace/api test. Run the session package suite through pnpm test and API integration suite through pnpm --filter @marketplace/api test:integration.
+- [x] Run the local Tauri shell against http://localhost:3000 and the local API. Sign in, reload, make an authenticated request, log out, and confirm the revoked session cannot refresh. Inspect storage to confirm access tokens are not persisted.
+- [x] Production storefront/API origins are not configured here. Document the same-site requirement and preserve the existing cookie policy; T145 remains gated on HTTPS deployment evidence.
+- [x] Commit this task on the same feature branch with message: test(desktop): preserve web cookie session contract.
 
 **Expected result:** Desktop uses the same web authentication implementation and server session rules. No API auth behavior is forked for the wrapper.
 

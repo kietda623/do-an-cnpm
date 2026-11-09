@@ -10,6 +10,13 @@ This is a Tauri 2 shell for the existing buyer storefront. It loads the configur
 
 The launcher rejects a missing URL, non-local HTTP URLs, nonstandard ports, URL credentials, queries, and fragments. An HTTPS storefront may be used in development as well.
 
+## Production configuration
+
+- Set `DESKTOP_STOREFRONT_URL` to the exact public HTTPS origin used by the buyer storefront, including its port only when it is the standard HTTPS port. This value is public build configuration.
+- Add that same exact storefront origin to the API's `CORS_ORIGINS`. Do not add `tauri://localhost`; the desktop page keeps the storefront's web origin.
+- Keep the storefront and API on the same site (the same registrable domain) so the existing `SameSite=Lax` refresh cookie works for credentialed API requests. The refresh cookie remains `HttpOnly`, `Secure`, and `SameSite=Lax`; desktop uses its own webview cookie jar and can sign in to the same account.
+- Keep signing keys and API credentials on the API server. `DESKTOP_STOREFRONT_URL`, `CORS_ORIGINS`, and other public URL settings are not secrets.
+
 ## Native prerequisites
 
 - Windows: Rust's MSVC toolchain and the Microsoft C++ Build Tools, plus the WebView2 Runtime.
