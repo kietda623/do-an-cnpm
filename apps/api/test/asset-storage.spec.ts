@@ -138,7 +138,7 @@ describe("AssetService local driver", () => {
     expect(await readFile(join(directory, created[0]!.objectKey))).toEqual(image);
   });
 
-  it("streams decoded pixels without collecting them into a Buffer", async () => {
+  it("streams encoded output without requesting or collecting raw pixels", async () => {
     const { service } = localService(directory);
     const image = await sharp({
       create: { width: 2, height: 3, channels: 4, background: "#336699" },
@@ -146,6 +146,7 @@ describe("AssetService local driver", () => {
       .png()
       .toBuffer();
     const toBuffer = jest.spyOn(sharp.prototype, "toBuffer");
+    const raw = jest.spyOn(sharp.prototype, "raw");
 
     try {
       const result = await service.upload(
@@ -157,8 +158,10 @@ describe("AssetService local driver", () => {
       expect(result.width).toBe(2);
       expect(result.height).toBe(3);
       expect(toBuffer).not.toHaveBeenCalled();
+      expect(raw).not.toHaveBeenCalled();
     } finally {
       toBuffer.mockRestore();
+      raw.mockRestore();
     }
   });
 

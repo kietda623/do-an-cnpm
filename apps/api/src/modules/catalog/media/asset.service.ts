@@ -86,8 +86,7 @@ export class AssetService {
         limitInputPixels: 40_000_000,
       })
         .rotate()
-        .ensureAlpha()
-        .raw();
+        .png();
       let outputDimensions: { width: number; height: number } | undefined;
       decoder.on("info", (info: OutputInfo) => {
         outputDimensions = { width: info.width, height: info.height };
