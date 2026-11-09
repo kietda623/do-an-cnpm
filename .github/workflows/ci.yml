@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Workspace and PostgreSQL checks
+    name: Workspace, PostgreSQL, and Redis checks
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -32,10 +32,21 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 20
+      redis:
+        image: redis:8.10.3-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
     env:
       DATABASE_URL: postgresql://postgres:local_test_password@localhost:5432/marketplace_test?schema=public
       TEST_DATABASE_URL: postgresql://postgres:local_test_password@localhost:5432/marketplace_test?schema=public
       TEST_DATABASE_NAME_CONFIRMATION: marketplace_test
+      RATE_LIMIT_REDIS_URL: redis://localhost:6379
+      RATE_LIMIT_KEY_PREFIX: marketplace-ci
 
     steps:
       - name: Check out source without persisted credentials

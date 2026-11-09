@@ -1,6 +1,17 @@
 name: marketplace-dev
 
 services:
+  redis:
+    image: redis:8.10.3-alpine
+    ports:
+      - "127.0.0.1:56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
   postgres:
     image: postgres:17.11-bookworm
     environment:
@@ -28,6 +39,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/marketplace_dev?schema=public
       JWT_SIGNING_SECRET: ${JWT_SIGNING_SECRET:?Set JWT_SIGNING_SECRET in .env.compose}
       NODE_ENV: production
+      RATE_LIMIT_REDIS_URL: redis://redis:6379
+      RATE_LIMIT_KEY_PREFIX: ${RATE_LIMIT_KEY_PREFIX:-marketplace}
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       S3_REGION: ${S3_REGION:-}
       S3_BUCKET: ${S3_BUCKET:-}
@@ -38,6 +51,8 @@ services:
       - "127.0.0.1:4000:4000"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test:
@@ -151,6 +166,18 @@ services:
       retries: 20
       start_period: 10s
 
+  redis-test:
+    image: redis:8.10.3-alpine
+    profiles: [test]
+    ports:
+      - "127.0.0.1:56380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
   api-test:
     build:
       context: .
@@ -161,9 +188,13 @@ services:
       TEST_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-test:5432/marketplace_test?schema=public
       TEST_DATABASE_NAME_CONFIRMATION: marketplace_test
       NODE_ENV: test
+      RATE_LIMIT_REDIS_URL: redis://redis-test:6379
+      RATE_LIMIT_KEY_PREFIX: marketplace-test
     command: ["pnpm", "test:integration"]
     depends_on:
       postgres-test:
+        condition: service_healthy
+      redis-test:
         condition: service_healthy
 
 volumes:

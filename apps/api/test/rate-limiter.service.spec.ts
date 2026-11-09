@@ -24,7 +24,7 @@ function fixture(
 ) {
   const calls: Call[] = [];
   const store: RateLimitStore = {
-    consume: jest.fn(async (key, limit, duration) => {
+    consume: jest.fn(async (key: string, limit: number, duration: number) => {
       const call = { key, limit, windowMs: duration };
       calls.push(call);
       return decide(call);
