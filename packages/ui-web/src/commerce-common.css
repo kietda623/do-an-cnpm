@@ -1,5 +1,25 @@
-/* Hallmark · Marketplace Commerce · shape: app screen · redesign: full */
-/* Critique: compact readable task surfaces, accessible orange actions and restrained motion. */
+/* Hallmark · Cyan Marketplace · shape: app screen · redesign: full */
+/* Critique: compact readable task surfaces, accessible cyan actions and restrained motion. */
+/* Cyan system: data remains factual; surfaces and hierarchy do the design work. */
+.mp-page-header__title, .mp-auth__title, .mp-detail__name, .mp-panel__title,
+.mp-market-welcome h1, .mp-section__head h2 { font-family: var(--font-display); }
+.mp-stat__value, .mp-table [data-numeric], .mp-product-card__price,
+.mp-order-card__total, .mp-numeric { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.mp-panel { border-color: var(--color-line); }
+.mp-table th { color: var(--color-muted-foreground); background: var(--color-muted); }
+.mp-table td { vertical-align: middle; }
+.mp-console__sidebar { border-right-color: var(--color-line); }
+.mp-console__link--active { background: var(--color-accent-soft); color: var(--color-accent-strong); }
+.mp-console__link--active::before { content: none; }
+.mp-market-welcome { border-inline-start: 1px solid var(--color-line); }
+.mp-market-welcome .mp-eyebrow, .mp-auth__eyebrow, .mp-console__eyebrow,
+.mp-market-guide .mp-eyebrow { font-size: .875rem; font-weight: 400; letter-spacing: normal; }
+.mp-market-guide .mp-hero__panel { padding: 0; border: 0; background: transparent; box-shadow: none; }
+.mp-detail__buy { border: 0; background: transparent; padding-inline: 0; box-shadow: none; }
+.mp-panel .mp-panel { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.mp-skeleton { position: relative; overflow: hidden; background: var(--color-muted); animation: none; }
+.mp-skeleton::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--color-line), transparent); animation: mp-shimmer 1.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .mp-skeleton::after { animation: none; } }
 /* ---------- Theme toggle ---------- */
 
 .mp-theme-toggle {
@@ -20,11 +40,7 @@
   letter-spacing: normal;
   text-transform: none;
   cursor: pointer;
-  transition:
-    background-color var(--dur-base) var(--ease-out-expo),
-    border-color var(--dur-base) var(--ease-out-expo),
-    color var(--dur-base) var(--ease-out-expo),
-    transform var(--dur-base) var(--ease-spring);
+  transition: transform var(--dur-base) var(--ease-spring);
 }
 
 .mp-theme-toggle:hover {
@@ -264,11 +280,7 @@ body,
   letter-spacing: normal;
 }
 .mp-button {
-  transition:
-    background-color 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease,
-    transform 150ms ease;
+  transition: transform 150ms ease;
 }
 .mp-button:active:not(:disabled) {
   transform: translateY(1px);
@@ -400,9 +412,7 @@ body,
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.mp-link-arrow::after {
-  content: "→";
-}
+.mp-link-arrow::after { content: none; }
 
 /* The console navigation is compact rather than vertically stretched. */
 .mp-console__sidebar {
@@ -462,7 +472,7 @@ body,
   letter-spacing: normal;
 }
 .mp-console__eyebrow {
-  font-size: 0.6875rem;
+  font-size: 0.875rem;
   color: var(--color-muted-foreground);
 }
 .mp-console__drawer {

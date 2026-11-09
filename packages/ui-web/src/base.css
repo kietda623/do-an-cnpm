@@ -1,4 +1,4 @@
-/* Hallmark · Marketplace Commerce · shared component foundation · redesign: full */
+/* Hallmark · Cyan Marketplace · shared component foundation · redesign: full */
 /* Critique: retain component semantics and state styling beneath the commerce compositions. */
 /* Shared surfaces for the storefront and the two consoles. */
 
@@ -51,11 +51,7 @@
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
-  transition:
-    background-color 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease,
-    box-shadow 150ms ease;
+  transition: none;
 }
 .mp-button--sm {
   min-height: 36px;
@@ -142,9 +138,7 @@
   background: transparent;
   color: var(--color-muted-foreground);
   cursor: pointer;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease;
+  transition: none;
 }
 .mp-icon-button--sm {
   min-width: 32px;
@@ -206,7 +200,7 @@
   padding: 10px 12px;
   font: inherit;
   font-size: 0.9375rem;
-  transition: border-color 150ms ease;
+  transition: none;
 }
 .mp-field__input::placeholder {
   color: var(--color-muted-foreground);
@@ -280,9 +274,7 @@
   border-radius: 6px;
   background: var(--color-background);
   color: var(--color-accent-foreground);
-  transition:
-    background-color 150ms ease,
-    border-color 150ms ease;
+  transition: none;
 }
 .mp-checkbox__input:checked + .mp-checkbox__box {
   border-color: var(--color-accent);
@@ -347,7 +339,7 @@
   height: 24px;
   border-radius: 999px;
   background: var(--color-border);
-  transition: background-color 150ms ease;
+  transition: none;
 }
 .mp-switch__thumb {
   position: absolute;
@@ -1161,7 +1153,7 @@
   display: block;
   border-radius: 4px 4px 0 0;
   background: var(--color-accent);
-  transition: background-color 150ms ease;
+  transition: none;
 }
 .mp-chart__column:hover .mp-chart__bar {
   background: var(--color-accent-strong);
@@ -1326,9 +1318,7 @@
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease;
+  transition: none;
 }
 .mp-nav__link:hover {
   background: var(--color-muted);
@@ -1362,9 +1352,7 @@
   color: var(--color-foreground);
   font: inherit;
   font-size: 0.875rem;
-  transition:
-    background-color 150ms ease,
-    border-color 150ms ease;
+  transition: none;
 }
 .mp-search__input::placeholder {
   color: var(--color-muted-foreground);
@@ -1958,14 +1946,7 @@
     transform: rotate(360deg);
   }
 }
-@keyframes mp-shimmer {
-  0% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0 50%;
-  }
-}
+@keyframes mp-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 @keyframes mp-dialog-in {
   from {
     opacity: 0;
@@ -2225,10 +2206,7 @@
   font-weight: 500;
   text-decoration: none;
   white-space: nowrap;
-  transition:
-    border-color 150ms ease,
-    background-color 150ms ease,
-    color 150ms ease;
+  transition: none;
 }
 .mp-chip:hover {
   border-color: var(--color-border);
@@ -2323,10 +2301,7 @@
   background: var(--color-surface);
   box-shadow: 0 1px 2px
     color-mix(in srgb, var(--color-shadow-ink) 5%, transparent);
-  transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    border-color 180ms ease;
+  transition: transform 180ms ease;
 }
 .mp-product-card:hover {
   transform: translateY(-2px);
@@ -3064,9 +3039,7 @@
   border: 1px solid var(--color-line);
   border-radius: 10px;
   cursor: pointer;
-  transition:
-    border-color 150ms ease,
-    background-color 150ms ease;
+  transition: none;
 }
 .mp-choice:hover {
   border-color: var(--color-border);
@@ -3186,10 +3159,7 @@
   text-decoration: none;
   box-shadow: 0 1px 2px
     color-mix(in srgb, var(--color-shadow-ink) 5%, transparent);
-  transition:
-    transform 150ms ease,
-    border-color 150ms ease,
-    box-shadow 150ms ease;
+  transition: transform 150ms ease;
 }
 .mp-order-card:hover {
   transform: translateY(-1px);

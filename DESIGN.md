@@ -1,60 +1,83 @@
-# Design system — Marketplace Commerce
+---
+name: Cyan Marketplace
+description: A clear, task-focused Vietnamese marketplace across Buyer, Seller and Admin.
+colors:
+  primary: "oklch(0.5 0.12 230)"
+  primary-strong: "oklch(0.44 0.1 230)"
+  primary-soft: "oklch(0.955 0.025 230)"
+  canvas: "oklch(0.97 0.006 230)"
+  surface: "oklch(0.995 0.001 230)"
+  ink: "oklch(0.24 0.02 230)"
+  muted-ink: "oklch(0.47 0.02 230)"
+  line: "oklch(0.88 0.012 230)"
+  control-border: "oklch(0.6 0.025 230)"
+typography:
+  display:
+    fontFamily: "Space Grotesk, sans-serif"
+    fontWeight: 700
+    lineHeight: 1.15
+  body:
+    fontFamily: "Be Vietnam Pro, sans-serif"
+    lineHeight: 1.6
+  numeric:
+    fontFamily: "IBM Plex Mono, monospace"
+rounded:
+  control: "10px"
+  panel: "14px"
+spacing:
+  compact: "8px"
+  regular: "16px"
+  section: "24px"
+components:
+  button-primary:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.surface}"
+    rounded: "{rounded.control}"
+---
 
-Approved direction: Shopee-like shopping storefront and Seller Centre-like operations, as specified in docs/superpowers/specs/2026-11-09-shopee-marketplace-redesign.md. This replaces the previous Signal Dispatch visual system across Buyer, Seller and Admin.
+# Design System: Cyan Marketplace
 
-## Identity and hierarchy
+## Overview
 
-Marketplace retains its own name and existing functions. The dominant identity is commerce orange on white, a light neutral page canvas, dense merchandise, compact controls and straightforward Vietnamese typography. Do not add rival logos, unsupported promotions, fabricated sold counts, or invented service promises.
+The user approved a light neutral system with cyan on 2026-11-09. Marketplace is a working shopping and operations product: products and decisions carry the screen, with quiet chrome and clear Vietnamese labels. Buyer emphasizes discovery; Seller emphasizes the next operational task; Admin emphasizes reviewing dense records.
 
-Buyer prioritizes finding products, comparing prices and checking out. Seller prioritizes pending orders and catalog maintenance. Admin prioritizes approvals, returns and moderation. Every route shares the same semantic component foundation; console screens do not use a marketing hero.
+This replaces the previous orange direction. Current API data remains authoritative, including empty lists. Missing capabilities are absent, rather than represented by pretend controls.
 
-## Color and typography
+## Colors
 
-All colors and fonts come from packages/design-tokens/src/styles.css. Brand orange #EE4D2D was observed in source fetched from https://shopee.vn on 2026-11-09. It is a reference for decorative identity. Accessible action/masthead orange #C9361B is used when paired with small white text; hover/link orange is #A72D17. Light canvas #F5F5F5, surface white, primary text #252525, secondary #666666, separators #E4E4E4. Controls have a stronger border than decorative separators.
+Use the semantic CSS variables in packages/design-tokens/src/styles.css. Cyan is the single brand/action hue; success, warning, danger and information colors convey genuine states only. Light mode uses cool neutral canvas and white surfaces. Explicit and system dark modes use the corresponding token block with brighter cyan and readable muted text. Do not hard-code an alternate brand palette in an app.
 
-Be Vietnam Pro is used for body, headings, tables and prices. Body 14–16px; page headings 22–28px; panel headings 16–18px. Money and table numbers use tabular numerals, not instrumentation-style monospace. IBM Plex Mono is available for code/SKU values only. No tracked capitals or ornamental eyebrows. Labels are readable Vietnamese sentence case.
+## Typography
 
-Dark mode uses neutral charcoal surfaces with warm-orange actions; never the old green-tinted background. Existing light/dark/system preference, prepaint script, localStorage key marketplace-theme, accessible toggle labels and reduced-motion behavior remain. Persisted mode restoration does not animate; explicit clicks can use the native theme transition with rejected ready promises handled.
+Space Grotesk is the display face, Be Vietnam Pro the UI face and IBM Plex Mono the numeric/code face; load the Vietnamese subsets. Headings are compact and wrap naturally, without a tiny tracked uppercase label above them. Body, labels and controls retain readable Vietnamese diacritics. Use tabular mono numerals for money, metrics and record identifiers, not ordinary prose.
 
-## Layout and shape
+## Layout
 
-Buyer container max 1280px with equal gutters. Orange masthead combines brand, wide white search and cart/account actions; smaller navigation follows the search. On phones search gets its own row. Home begins with a compact shopping entry and categories; merchandise appears in the first desktop viewport. The multi-shop guide follows the catalog rather than occupying the entire opening screen.
+Use capped, centered containers. Buyer has a neutral search-led masthead, readable category/filter surfaces and a dense responsive merchandise grid. Phone layouts retain usable filters and two product tracks where space permits. Detail and checkout layouts make the existing primary action and totals easy to find.
 
-Home grid: six desktop tracks where space permits. Catalog grid: five desktop tracks beside filters. Tablet reduces to three/four and phone to two. Track minimums use minmax(0, 1fr); photos are square and contained, names two lines, prices prominent. Long names and currency strings must not cause page overflow. Public product data supplies photos, prices, availability, rating and shop; missing photographs get an explicit neutral state.
+Seller and Admin retain the shared neutral navigation shell. Group filters with their records, align numeric columns, and let wide tables scroll locally. Keep the current mobile drawer and its accessible controls. Inspect all routes at 1440, 768 and 390px; critical fields also at 360px. Do not hide overflow to conceal broken grids. html/body use overflow-x: clip.
 
-Console sidebar is 224px at desktop and an accessible drawer below 1050px. Header is 64px; content max 1440px; page gutters 24px desktop and 12–16px phone. Navigation groups align to the top and do not stretch links to fill the sidebar. Tables scroll inside their own container. Queue actions and filters are grouped above the corresponding list.
+## Elevation & Depth
 
-Spacing: 4px base; controls/forms 8–16px gaps; panels 16–20px padding; section gaps 16–24px. Control radius 4px and panel radius 6px. Shadows are subtle, used mainly for overlays/auth cards; no colored glow or large decorative radial gradients.
+Use tonal separation and fine neutral borders for everyday structure. Reserve shadows for floating menus, dialogs and modest hover elevation. Avoid nested bordered cards, colored glows, glass layers and decorative gradients. Loading shimmer is a purposeful transient state, not permanent decoration.
 
-## Shared components and states
+## Shapes
 
-Button primary is accessible orange, secondary a bordered surface, danger retains semantic red. Targets remain at least 44px where touch interaction applies. Fields keep visible labels, input/hint/error relationships and instantaneous focus rings. Dialogs retain focus trapping, Escape and focus return. Sidebar, account menus, pagination, filters, selected variants and checkout preserve existing handlers, URL state and test hooks.
+Controls use the 10px radius and panels the 14px radius from shared tokens. Existing pill-shaped status chips remain compact and semantic. Touch actions retain at least 44px targets. Fields have visible labels, adequate width for placeholders and instant keyboard focus feedback.
 
-Tables retain semantic headers, captions/labels, pagination metadata and row action names. Empty states name a real next action. Loading skeletons reserve the relevant layout. Failures remain distinguishable from empty data, include retry where supported, and keep form content. Mutations disable duplicate submission and only show success after API confirmation.
+## Components
 
-Order Rail is a functional progress component for actual orders and the retained buying guide, not the visual theme. It maps existing order statuses and never invents progress. Revenue charts and KPIs use API figures; simulated data retains its explicit label.
+Preserve all routes, hooks, state, handlers, API calls, names, validation, permissions and accessible actions. Refactor composition and classes only. Do not add fake wishlist, flash sale, bulk action, command palette or chart series. Existing counters and charts display only actual API values; preserve the simulated-payment disclosure.
 
-Auth pages use a restrained warm-tint entry panel and clear white form with existing login/register/recovery links. Buyer account/address/orders and Seller onboarding/settings retain all existing fields and validation.
+Empty, loading, unauthorized and failed requests remain distinguishable. Keep retry actions and entered form values. Dialog focus behavior, menu dismissal, keyboard navigation and reduced-motion support are part of the component contract.
 
-## CSS ownership
+Animate transform and opacity only: finite short route entrances, a restrained product lift/image zoom, button press feedback and menu/dialog settling. Keep content visible without animation. Reduced motion removes decorative displacement, stagger and shimmer. Do not introduce timers, counting state or new interaction logic to decorate data.
 
-packages/ui-web/src/styles.css is an ordered import entry point:
+## Do's and Don'ts
 
-1. base.css — established component semantics and state layouts.
-2. commerce-common.css — shared compact controls, console, auth, functional rail and restrained motion.
-3. commerce-storefront.css — shopping masthead, catalog, product and Buyer composition.
-4. commerce-seller.css — scoped Seller operational hierarchy.
-5. commerce-admin.css — scoped Admin operational hierarchy.
-6. commerce-motion.css — interaction finish shared by the three apps, including finite entrances and hover/press feedback.
-
-Change the owning file rather than appending another redesign layer. App metadata theme colors and Tailwind font mappings match these tokens. Root layouts import tokens and shared CSS exactly once.
-
-## Motion and accessibility
-
-Linked merchandise can lift 4px and its image can zoom gently within the frame on precise hover devices. Buttons have a restrained scale/press wave. Native menus settle in over 220ms; dialogs enter over 300ms with a separate 180ms backdrop fade. Active console navigation has a small selection marker. Page movement never starts content at opacity zero. Route choreography uses two cancellable animation frames rather than forcing synchronous layout, and is entirely skipped under reduced motion. No scroll-driven hiding of products, looping attention effects or giant stagger sequence. Reduced motion disables both decorative animation and hover displacement. Keyboard focus is immediately visible, headings wrap, menus/dialogs remain operable without hover, and html/body clip horizontal page overflow while tables own their local scrolling.
-
-Check text and action contrast, including masthead links in both themes. Do not copy an inaccessible reference color pair to achieve visual similarity. Preserve all permissions and unauthorized redirects.
-
-## Verification
-
-Inventory all 33 route files, including the Seller root membership redirect and Admin shipments redirect. Review shopping/auth/detail/cart/checkout/account/order and console data/form screens at 1440, 1024, 768, 390 and critical 360px layouts. Run unit, typecheck, lint, production build and browser regressions. Browser fixtures are labeled verification data and are not written to the user's database. Record real API versus fixture verification separately.
+- Do change the owning stylesheet: base, commerce-common, storefront, seller, admin or motion; keep the existing ordered import entry.
+- Do preserve content and wiring, verify the immutable presentation baseline and compare Hallmark before/kept inventories.
+- Do verify real empty data separately from mocked functional regression tests.
+- Do not seed or reset the current database for the redesign.
+- Do not use uppercase eyebrows, decorative colored left borders, nested cards, gradient text or emoji icons.
+- Do not change framework, dependencies, API contracts or business behavior.

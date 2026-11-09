@@ -1,12 +1,7 @@
-/* Hallmark · Marketplace Commerce · interaction finish · shape: app screen */
+/* Hallmark · Cyan Marketplace · interaction finish · shape: app screen */
 /* Critique: tactile finite motion, clear hierarchy and immediate keyboard feedback. */
 
 /* Surfaces stay readable before, during and after every animation. */
-.mp-market-welcome {
-  background: var(--color-commerce-tint);
-  border-color: var(--color-line);
-  border-inline-start-color: var(--color-brand);
-}
 .mp-market-welcome h1 {
   max-width: 32ch;
 }
@@ -28,9 +23,6 @@
 .mp-product-card__media img {
   transform-origin: center;
 }
-.mp-filter {
-  border-top: 3px solid var(--color-brand);
-}
 .mp-field:focus-within .mp-field__label {
   color: var(--color-accent-strong);
 }
@@ -47,15 +39,7 @@
 .mp-console__link--active {
   position: relative;
 }
-.mp-console__link--active::before {
-  content: "";
-  position: absolute;
-  inset-inline-start: 0;
-  inset-block: 12px;
-  width: 3px;
-  border-radius: var(--radius-control);
-  background: var(--color-accent);
-}
+
 
 @keyframes mp-popover-enter {
   from {
@@ -112,11 +96,7 @@
   .mp-seller-task,
   .mp-console__link,
   .mp-pagination__page {
-    transition:
-      transform 220ms var(--ease-out-expo),
-      background-color 160ms ease,
-      border-color 160ms ease,
-      color 160ms ease;
+    transition: transform 220ms var(--ease-out-expo);
   }
   .mp-button {
     position: relative;
@@ -141,9 +121,7 @@
   .mp-product-card {
     animation-duration: 400ms;
     animation-timing-function: var(--ease-out-expo);
-    transition:
-      transform 320ms var(--ease-out-expo),
-      border-color 180ms ease;
+    transition: transform 320ms var(--ease-out-expo);
   }
   .mp-product-card__media img {
     transition: transform 500ms var(--ease-out-expo);
@@ -155,7 +133,7 @@
     transition: transform 260ms var(--ease-out-expo);
   }
   .mp-table tbody tr {
-    transition: background-color 150ms ease;
+    transition: none;
   }
   .mp-menu[open] > .mp-menu__panel,
   .mp-mobile-menu[open] > .mp-mobile-menu__panel {
@@ -171,9 +149,7 @@
     animation-duration: 300ms;
     animation-timing-function: var(--ease-out-expo);
   }
-  .mp-console__link--active::before {
-    animation: mp-selection-enter 220ms var(--ease-out-expo);
-  }
+  
   .mp-tab--active {
     animation: mp-commerce-enter 180ms ease-out;
   }
