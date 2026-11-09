@@ -53,17 +53,17 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   return (
     <div className="mp-container mp-auth">
       <div className="mp-auth__intro">
-        <p className="mp-auth__eyebrow">Marketplace</p>
         <h1 className="mp-auth__title">
           {mode === "register" ? "Tạo tài khoản" : "Đăng nhập"}
         </h1>
+        <p className="mp-market-note">Marketplace</p>
         <p className="mp-auth__description">
           {mode === "register"
             ? "Theo dõi đơn theo từng cửa hàng và nhận hàng đúng hẹn."
             : "Tiếp tục mua sắm, theo dõi vận chuyển và đánh giá sản phẩm."}
         </p>
         <div className="mp-auth__journey">
-          <p className="mp-eyebrow">Sau khi đăng nhập</p>
+          <p className="mp-market-note">Sau khi đăng nhập</p>
           <OrderRail
             label="Các bước mua hàng sau khi đăng nhập"
             steps={journey}

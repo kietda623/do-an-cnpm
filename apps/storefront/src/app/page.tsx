@@ -36,9 +36,9 @@ export default function HomePage() {
     <div className="mp-container mp-home">
       <section className="mp-market-welcome" aria-labelledby="home-heading">
         <div>
-          <p className="mp-eyebrow">Marketplace · Mua sắm trực tuyến</p>
           <h1 id="home-heading">Khám phá sản phẩm từ các cửa hàng</h1>
           <p>Tìm sản phẩm, chọn cửa hàng và mua sắm theo cách của bạn.</p>
+          <p className="mp-market-note">Marketplace · Mua sắm trực tuyến</p>
         </div>
         <Link
           className="mp-button mp-button--primary mp-button--md"
@@ -53,8 +53,8 @@ export default function HomePage() {
       <section className="mp-section mp-reveal" aria-labelledby="new-products">
         <div className="mp-section__head">
           <div>
-            <p className="mp-eyebrow">Khám phá mỗi ngày</p>
             <h2 id="new-products">Sản phẩm mới</h2>
+            <p className="mp-market-note">Khám phá mỗi ngày</p>
           </div>
           <Link className="mp-link-arrow" href="/products">
             Xem tất cả
@@ -76,7 +76,6 @@ export default function HomePage() {
         aria-labelledby="shopping-guide-heading"
       >
         <div className="mp-hero__copy">
-          <p className="mp-eyebrow">Điều phối đơn hàng nhiều cửa hàng</p>
           <h2 id="shopping-guide-heading" className="mp-hero__title">
             Mua sắm từ nhiều cửa hàng
           </h2>
@@ -84,6 +83,7 @@ export default function HomePage() {
             Một giỏ hàng, nhiều cửa hàng. Mỗi phần đơn được theo dõi vận chuyển
             riêng và hủy độc lập khi cửa hàng chưa xác nhận.
           </p>
+          <p className="mp-market-note">Điều phối đơn hàng nhiều cửa hàng</p>
           <div className="mp-hero__actions">
             <Link
               className="mp-button mp-button--primary mp-button--lg"
@@ -128,10 +128,10 @@ export default function HomePage() {
         </div>
         <aside className="mp-hero__aside" aria-labelledby="order-steps-heading">
           <div className="mp-hero__panel">
-            <p className="mp-eyebrow">Cách đặt hàng</p>
             <h2 id="order-steps-heading" className="mp-hero__panel-title">
               Một đường ray cho mỗi đơn
             </h2>
+            <p className="mp-market-note">Cách đặt hàng</p>
             <OrderRail
               label="Cách đặt hàng trên Marketplace"
               steps={orderSteps}

@@ -110,10 +110,14 @@ test("primary and destructive action labels keep AA contrast in both themes", as
               button.evaluate((element) => {
                 const style = getComputedStyle(element);
                 const luminance = (color: string) => {
-                  const rgb = color
-                    .match(/[\d.]+/g)!
+                  // Computed colors may be OKLCH; parse through the browser,
+                  // rather than treating their channels as 8-bit RGB.
+                  const canvas = document.createElement("canvas");
+                  const context = canvas.getContext("2d")!;
+                  context.fillStyle = color;
+                  context.fillRect(0, 0, 1, 1);
+                  const rgb = Array.from(context.getImageData(0, 0, 1, 1).data)
                     .slice(0, 3)
-                    .map(Number)
                     .map((value) => {
                       const channel = value / 255;
                       return channel <= 0.04045

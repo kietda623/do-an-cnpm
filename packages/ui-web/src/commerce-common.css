@@ -333,7 +333,7 @@ body,
 .mp-stat__value,
 .mp-numeric,
 .mp-order-card__total {
-  font-family: var(--font-sans);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 .mp-stat {
