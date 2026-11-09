@@ -78,7 +78,7 @@ flowchart LR
 
 Checkout quote/confirm là một ý định có cùng idempotency key; bất kỳ lỗi eligibility/stock nào rollback toàn bộ. Buyer nhìn một aggregate với phần theo shop; mỗi seller chỉ nhìn phần được cấp quyền. Partial cancel áp dụng lên một SellerOrder, nêu rõ phần tiền/kho liên quan và giữ nguyên phần kia.
 
-## Buyer desktop wrapper (kế hoạch)
+## Buyer desktop wrapper (Tauri WebView quanh storefront)
 
 ```mermaid
 flowchart LR
@@ -88,4 +88,4 @@ flowchart LR
   COOKIE --> API[HTTPS API]
 ```
 
-Desktop buyer không có UI thứ hai: Tauri chỉ mở storefront URL trong webview hệ điều hành, dùng chung design system, components, validation và cookie/CSRF với web. Không có Stronghold/SecureStore trong baseline vì không có native refresh token. Seller và Admin chỉ dùng web. Desktop chưa được build; xem [ADR-0004](../adr/0004-buyer-desktop-webview-wrapper.md) và [UI plan](../../specs/001-marketplace-mvp/ui-plan.md).
+Desktop buyer không có UI thứ hai: Tauri mở storefront URL trong webview hệ điều hành, dùng chung design system, components, validation và cookie/CSRF với web. Không có Stronghold/SecureStore trong baseline vì không có native refresh token. Seller và Admin chỉ dùng web. T140–T143 đã triển khai; acceptance vẫn BLOCKED đến khi có HTTPS và evidence install/flow trên Windows/macOS. Xem [ADR-0004](../adr/0004-buyer-desktop-webview-wrapper.md) và [UI plan](../../specs/001-marketplace-mvp/ui-plan.md).

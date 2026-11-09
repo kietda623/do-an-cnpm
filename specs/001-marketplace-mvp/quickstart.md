@@ -16,10 +16,10 @@ DoD chỉ đạt khi command/evidence thật được ghi lại; không dùng gu
   exact patch/version metadata trong lockfile/runtime matrix W008/W017.
 - S3-compatible dev/demo bucket với credentials scoped, endpoints/region/namespace cấu hình riêng.
   Unit tests có adapter mock, upload E2E phải có bucket thật; không tự mặc định MinIO legacy.
-- Windows Desktop (kế hoạch): Rust/MSVC/WebView2 theo Tauri prerequisites; macOS: Rust/Xcode runner.
-  Desktop buyer chưa được build trong MVP hiện tại; không yêu cầu toolchain này để chạy web/API.
-- Không có app mobile (Android/iOS); không cần emulator, simulator hay macOS/Xcode cho buyer.
-  Không yêu cầu đưa app lên store trong MVP.
+- Windows Desktop: Rust/MSVC/WebView2 theo Tauri prerequisites; macOS: Rust/Xcode runner.
+  Tauri workspace đã có; build/install acceptance hai OS vẫn BLOCKED và toolchain desktop không bắt buộc để chạy web/API.
+- Không có app mobile (Android/iOS), không cần emulator/simulator. macOS/Xcode chỉ cần cho desktop acceptance;
+  không yêu cầu đưa app lên store trong MVP.
 - CPU/RAM/disk đủ chạy containers; môi trường không trùng tên/database production.
   Web/desktop phải truy cập được API qua URL hợp lệ.
 
@@ -31,7 +31,7 @@ API package `@marketplace/api` có `test:unit` và `test:integration` (Jest/Supe
 migration và `prisma:migrate:dev|deploy|status`; integration test chỉ nhận `TEST_DATABASE_URL` riêng.
 `@marketplace/api-client` có `generate:types` và `test`; `@marketplace/contracts` là workspace package cho OpenAPI/examples.
 Database demo seed, contract/E2E/concurrency/security, performance và expiry suites sẽ được bổ sung ở các task tương ứng.
-`@marketplace/desktop`: chưa có workspace trong baseline; desktop buyer là kế hoạch Tauri wrapper sẽ được tạo khi triển khai. Không còn workspace mobile.
+`@marketplace/desktop`: có `desktop:dev`, `desktop:test`, `desktop:build` cho Tauri buyer wrapper. Acceptance cần HTTPS storefront và Windows/macOS evidence; xem phần Desktop validation bên dưới. Không còn workspace mobile.
 Compose services: postgres, api, storefront, seller-center, admin-panel; profile `test` có PostgreSQL/API test riêng.
 Contract này là công việc W011/015–17/033/040/057.
 
@@ -125,18 +125,22 @@ V07 dùng test clock chỉ trong test process và fixture disposable, không end
 Expiry kiểm tại request và sweep30s; worker trễ không cho payment sau deadline.
 Báo cáo tách target expected với observed results, không tick acceptance khi chưa có evidence.
 
-## Desktop validation (kế hoạch — chưa chạy)
+## Desktop validation (đã triển khai; acceptance còn BLOCKED)
 
-Desktop buyer chưa có workspace, `tauri.conf.json` hay script build; các lệnh dưới là contract tương lai:
+Desktop buyer dùng Tauri wrapper quanh storefront hiện có. Chạy development shell và bộ kiểm tra riêng:
 
 ```powershell
-pnpm --filter @marketplace/desktop tauri dev
-pnpm --filter @marketplace/desktop build:desktop
+pnpm --filter @marketplace/desktop desktop:dev
+pnpm --filter @marketplace/desktop desktop:test
 ```
 
-Khi triển khai, wrapper trỏ storefront URL và dùng lại webview/cookie của web. Acceptance cần build
-trên OS đích (Windows Rust/MSVC/WebView2 hoặc macOS Xcode/Rust targets), ghi OS/tool versions,
-app/API SHA và thời điểm chạy. Build pass không thay flow pass; thiếu evidence thì ghi BLOCKED.
+Development cần `DESKTOP_STOREFRONT_URL=http://localhost:3000` trong môi trường hoặc file `.env` gốc.
+Build artifact chỉ chạy trên OS đích; trước release build, đặt `DESKTOP_STOREFRONT_URL` thành storefront
+HTTPS có thể truy cập rồi chạy `pnpm --filter @marketplace/desktop desktop:build`.
+Windows tạo MSI; macOS tạo DMG. Ghi OS/tool versions, artifact filename/SHA-256, install result,
+storefront/API origins và thời điểm chạy trong [desktop-evidence.md](../../docs/testing/desktop-evidence.md).
+Build pass không thay flow pass. Desktop buyer hiện còn BLOCKED đến khi có HTTPS và evidence cài/chạy
+trên cả Windows lẫn macOS. MSI local hiện tại dùng URL `.invalid`, nên không phải production evidence.
 
 - Buyer desktop: US1,4–8 trong webview, gồm reload/session restore, cookie HttpOnly/CSRF, không token plaintext.
 - Seller/Admin: chỉ web; không có desktop hay mobile client riêng.

@@ -233,11 +233,13 @@
 - [ ] Run the Web baseline for buyer and seller, then run the Desktop buyer smoke on Windows and macOS: login, discovery, persisted cart/order after reload, checkout/order visibility, and logout revocation.
 - [ ] Verify an unapproved origin cannot navigate in-app and the remote page has no Tauri IPC/capability access. Check browser storage and auth requests for token handling.
 - [ ] Record actual commands, versions, checksums, environment, passed/failed outcomes, and remaining blockers for each OS. No inferred results or CI-build-only evidence.
-- [ ] Update T145 and SC-009 status only from the recorded evidence. Keep T160 unchecked because executable desktop journeys remain a proposed follow-up.
+- [x] Update T145 and SC-009 status only from the recorded evidence. Keep T160 unchecked because executable desktop journeys remain a proposed follow-up.
 - [ ] Run final checks: pnpm lint:workspaces; pnpm typecheck; pnpm test; pnpm test:contracts; pnpm build; pnpm --filter @marketplace/api test:integration; pnpm test:e2e:discovery; pnpm test:e2e:checkout; pnpm test:e2e:fulfillment; pnpm --filter @marketplace/desktop desktop:test; pnpm --filter @marketplace/desktop desktop:build on both OS runners.
-- [ ] Commit evidence and task status on the same feature branch. Create/update the single PR only after all six tasks and required evidence are complete.
+- [x] Commit the recorded evidence and task status on the same feature branch. Create/update the single PR only after all six tasks and required evidence are complete.
 
 **Expected result:** SC-009 accurately reflects tested Web and Desktop behavior, with separate observed evidence for Windows and macOS.
+
+**Evidence update 2026-11-09:** T145 and SC-009 remain BLOCKED. T140–T143 Windows development evidence is recorded, and T144 produced a Windows x64 MSI/checksum; installation was denied by Windows Installer error 1925 because this session is not an administrator. There is no macOS host or configured reachable HTTPS storefront/API origin, so no cross-platform production buyer matrix or final suite was run. See [desktop-evidence.md](../../testing/desktop-evidence.md) and the current task status in [tasks.md](../../../specs/001-marketplace-mvp/tasks.md).
 
 ## Dependencies and Gates
 

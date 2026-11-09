@@ -329,11 +329,11 @@ T121–T129 are recorded in a separate follow-up commit.
 
 ## Phase 12: User Story 10 — Trải nghiệm xuyên nền tảng (Priority: P2)
 
-**Cập nhật 2026-11-03**: app mobile đã bị gỡ; buyer dùng web và desktop wrapper Tauri (kế hoạch, **chưa triển khai**). T130–T139 (Buyer Mobile) de-scoped/removed và chỉ giữ để đối chiếu lịch sử; T140–T145 đổi từ Seller Desktop sang packaging/verify desktop buyer, giữ unchecked vì chưa có code/evidence. Không task nào trong Phase 12 nằm trong baseline build/CI hiện tại.
+**Cập nhật 2026-11-09**: app mobile đã bị gỡ. T140–T143 đã triển khai và có Windows development evidence cho Tauri buyer wrapper. T144 đang dở: MSI Windows x64 đã build/checksum, nhưng cài đặt thiếu quyền admin; chưa có build/install macOS. T145 và SC-009 desktop vẫn BLOCKED đến khi có storefront HTTPS truy cập được cùng evidence acceptance trên Windows/macOS. T130–T139 vẫn de-scoped/removed; không task nào trong Phase 12 thuộc baseline build/CI mặc định.
 
-**Goal**: Buyer dùng đầy đủ B01–13 trên web; desktop buyer là wrapper Tauri quanh cùng storefront (kế hoạch). Seller/Admin chỉ có web. Không còn client mobile.
+**Goal**: Buyer dùng đầy đủ B01–13 trên web; desktop buyer dùng Tauri wrapper quanh cùng storefront. Seller/Admin chỉ có web. Không còn client mobile.
 
-**Independent Test / Checkpoint**: Cùng account dùng web, sau đó desktop wrapper (khi được triển khai) giữ phiên cookie/CSRF qua reload; purchase/logout trên web là baseline hiện tại. Build desktop chưa có, nên SC-009 phần desktop là BLOCKED, không phải PASS.
+**Independent Test / Checkpoint**: Cùng account dùng web rồi desktop và giữ phiên cookie/CSRF qua reload; purchase/logout trên web là baseline. T140–T143 có Windows development evidence. SC-009 desktop vẫn BLOCKED vì thiếu production HTTPS và install/launch evidence trên cả Windows/macOS.
 
 ### Tests
 
@@ -356,14 +356,14 @@ T121–T129 are recorded in a separate follow-up commit.
 - [ ] T138 [US10] [DE-SCOPED 2026-11-03] B13 đánh giá dòng hàng hoàn tất+existingreadonly,rating/validation/unauthorized trong apps/mobile/src/features/reviews/review-form.tsx; nốiproductdetail/order,completion củaallB01–13. [Owner: M3; Reviewer: M5; Sprint: S7; WBS: W054; Allocation: W054=2.00PD(M3/S7); Depends: T135, T136, T137]
 - [ ] T139 [US10] [DE-SCOPED 2026-11-03] Chạy nghiệm thu Android/iOS cho Buyer US1/4–8, SecureStore, logout/retry, chia sẻ dữ liệu phiên giữa Web và Mobile, và accessibility. Ghi evidence theo OS/version/API/release trong docs/testing/android-evidence.md và docs/testing/ios-evidence.md. [Owner: M5; Reviewer: M1; Sprint: S6; WBS: W049,W054,W056; Allocation: W049=0.25PD(M5/S6), W054=0.00PD(reference), W056=0.00PD(reference); Depends: T138]
   - Không còn mobile để nghiệm thu; toàn bộ tiêu chí native được thay bằng web/desktop.
-- [ ] T140 [P] [US10] [PLANNED 2026-11-03 — chưa triển khai] Tauri 2 shell mở storefront URL trong webview cho buyer; strict CSP/HTTPS allowlist/capabilities tối thiểu, không Next server/remote IPC, không dựng UI thứ hai. Repo chưa có `apps/desktop`; khi triển khai tạo mới workspace Tauri, `apps/desktop/src-tauri/tauri.conf.json`, capabilities và CI. [Owner: M4; Reviewer: M5; Sprint: chưa xếp; WBS: W032,W055; Allocation: W032=2.00PD(M5/S4), W055=0.00PD(reference); Depends: W032 wrapper spike (chưa làm)]
-- [ ] T141 [US10] [PLANNED 2026-11-03 — chưa triển khai] Xác nhận phiên desktop dùng cookie HttpOnly + CSRF như web, access token chỉ trong memory; CORS/allowlist origin Tauri; logout revoke; không plaintext/Stronghold cho buyer. Kiểm chứng bằng web-session tests + desktop smoke khi có build. [Owner: M5; Reviewer: M1; Sprint: chưa xếp; WBS: W049; Allocation: W049=0.25PD(M5/S6); Depends: T140]
-- [ ] T142 [P] [US10] [PLANNED 2026-11-03 — chưa triển khai] Desktop buyer parity B01/03/04/05/06 qua chính storefront URL: search/filter/gallery/variant/shop/reviews; không tạo screen riêng, không import Next server API. [Owner: M5; Reviewer: M3; Sprint: chưa xếp; WBS: W048; Allocation: W048=0.50PD(M5/S6); Depends: T141]
-- [ ] T143 [P] [US10] [PLANNED 2026-11-03 — chưa triển khai] Desktop buyer parity B07–B11: cart/quote/checkout/COD/orders/tracking/cancel/receive/account; cùng DTO/validation/retry key như web. [Owner: M5; Reviewer: M3; Sprint: chưa xếp; WBS: W048; Allocation: W048=0.50PD(M5/S6); Depends: T141]
-- [ ] T144 [US10] [PLANNED 2026-11-03 — chưa triển khai] Windows/macOS build/install/artifact checksum cho desktop buyer; cần Rust/MSVC/WebView2 hoặc Xcode, job CI desktop tùy chọn, secret bảo vệ, không claim store publish. [Owner: M4; Reviewer: M5; Sprint: chưa xếp; WBS: W055; Allocation: W055=1.33PD(M4/S7); Depends: T142, T143]
-- [ ] T145 [US10] [PLANNED 2026-11-03 — chưa triển khai] SC-009 desktop: web buyer là baseline hiện tại (cookie/CSRF, reload, logout revoke); desktop buyer BLOCKED đến khi wrapper được build. Không đánh dấu PASS khi thiếu OS evidence. [Owner: M5; Reviewer: M1; Sprint: chưa xếp; WBS: W049,W062; Allocation: W049=0.25PD(M5/S6), W062=0.00PD(reference); Depends: T144]
+- [x] T140 [P] [US10] [COMPLETE 2026-11-09] Tauri 2 shell mở storefront URL trong webview cho buyer; strict CSP/HTTPS allowlist/capabilities tối thiểu, không Next server/remote IPC, không dựng UI thứ hai. Code và Windows development smoke có trong `apps/desktop` và [desktop-evidence.md](../../docs/testing/desktop-evidence.md). [Owner: M4; Reviewer: M5; Sprint: chưa xếp; WBS: W032,W055; Allocation: W032=2.00PD(M5/S4), W055=0.00PD(reference); Depends: W032 wrapper spike (được thực hiện trong T140)]
+- [x] T141 [US10] [COMPLETE 2026-11-09] Xác nhận phiên desktop dùng cookie HttpOnly + CSRF như web, access token chỉ trong memory; CORS/allowlist origin Tauri; logout revoke; không plaintext/Stronghold cho buyer. Web-session tests và Windows Tauri smoke ghi trong [desktop-evidence.md](../../docs/testing/desktop-evidence.md). [Owner: M5; Reviewer: M1; Sprint: chưa xếp; WBS: W049; Allocation: W049=0.25PD(M5/S6); Depends: T140]
+- [x] T142 [P] [US10] [COMPLETE 2026-11-09] Desktop buyer parity B01/03/04/05/06 qua chính storefront URL: search/filter/gallery/variant/shop/reviews; không tạo screen riêng, không import Next server API. Windows evidence tại [desktop-evidence.md](../../docs/testing/desktop-evidence.md). [Owner: M5; Reviewer: M3; Sprint: chưa xếp; WBS: W048; Allocation: W048=0.50PD(M5/S6); Depends: T141]
+- [x] T143 [P] [US10] [COMPLETE 2026-11-09] Desktop buyer parity B07–B11: cart/quote/checkout/COD/orders/tracking/cancel/receive/account; cùng DTO/validation/retry key như web. Windows evidence tại [desktop-evidence.md](../../docs/testing/desktop-evidence.md). [Owner: M5; Reviewer: M3; Sprint: chưa xếp; WBS: W048; Allocation: W048=0.50PD(M5/S6); Depends: T141]
+- [ ] T144 [US10] [IN PROGRESS 2026-11-09] Windows/macOS build/install/artifact checksum cho desktop buyer; Windows x64 MSI đã build/checksum ở `b218ad1`, nhưng install chưa verified do thiếu quyền admin; macOS build/install chưa có. Workflow tùy chọn chỉ tạo artifacts; chưa claim store publish. [Owner: M4; Reviewer: M5; Sprint: chưa xếp; WBS: W055; Allocation: W055=1.33PD(M4/S7); Depends: T142, T143]
+- [ ] T145 [US10] [BLOCKED 2026-11-09] SC-009 desktop: web buyer là baseline (cookie/CSRF, reload, logout revoke); desktop acceptance chưa PASS vì thiếu storefront HTTPS truy cập được và install/launch/flow evidence trên macOS, cùng install/launch verification Windows. Không đánh dấu PASS khi thiếu OS evidence. [Owner: M5; Reviewer: M1; Sprint: chưa xếp; WBS: W049,W062; Allocation: W049=0.25PD(M5/S6), W062=0.00PD(reference); Depends: T144]
 
-**Checkpoint**: Phase 12 chỉ mở lại khi desktop wrapper được duyệt triển khai. Hiện tại web buyer phải xanh; SC-009 desktop ghi BLOCKED, không PASS.
+**Checkpoint**: Web buyer phải xanh. T140–T143 đã triển khai; Phase 12 desktop chỉ PASS sau khi T144 artifacts được install/verified trên cả hai OS và T145 HTTPS acceptance matrix hoàn tất. SC-009 desktop hiện BLOCKED.
 
 
 ---
@@ -414,13 +414,13 @@ flowchart TD
   U6 --> U7[US7 Fulfillment and shipping]
   U7 --> U8[US8 Reviews and revenue]
   U8 --> U9[US9 Admin completion]
-  U9 --> U10[US10 Desktop wrapper planned]
+  U9 --> U10[US10 Desktop wrapper — acceptance blocked]
   U10 --> P[Cross cutting and acceptance]
 ```
 
-Không còn nhánh Mobile sớm. Desktop buyer chỉ là wrapper Tauri quanh web storefront, nằm sau khi web ổn định và chưa thuộc baseline build/CI; web buyer/seller/admin là đường nghiệm thu chính. Task T130–T139 đã de-scoped/removed, T140–T145 giữ unchecked cho kế hoạch desktop. Trong roadmap nhóm, có thể chuẩn bị mock UI/contracts trước checkpoint toàn story nếu task đã có đủ prerequisite và không đụng shared files; không được tick tích hợp thật sớm. Admin shop/category actions đã thuộc US2/US3, không đợi đến US9; US9 chỉ hoàn thiện chức năng quản trị còn lại.
+Không còn nhánh Mobile sớm. Desktop buyer là Tauri wrapper quanh web storefront, ngoài baseline build/CI mặc định; workflow artifact của T144 là tùy chọn. T130–T139 đã de-scoped/removed; T140–T143 hoàn tất, T144 đang in progress, T145 BLOCKED theo evidence hiện có. Trong roadmap nhóm, chỉ chuẩn bị mock UI/contracts trước checkpoint toàn story khi task đủ prerequisite và không đụng shared files; không tick tích hợp thật sớm. Admin shop/category actions đã thuộc US2/US3; US9 chỉ hoàn thiện chức năng quản trị còn lại.
 
-COD collection/Buyer receive đầy đủ cần US7: US6 kiểm tra policy/negative cases và mock settlement bằng fixture, không tuyên bố giao hàng đã có. Full marketplace demo tối thiểu gồm US1–US7; đánh giá/thống kê/Admin hoàn chỉnh/desktop (kế hoạch) tiếp tục US8–US10 theo MVP đã đặc tả.
+COD collection/Buyer receive đầy đủ cần US7: US6 kiểm tra policy/negative cases và mock settlement bằng fixture, không tuyên bố giao hàng đã có. Full marketplace demo tối thiểu gồm US1–US7; đánh giá/thống kê/Admin hoàn chỉnh tiếp tục US8–US9, desktop buyer acceptance tiếp tục ở US10 theo evidence gate.
 
 ### Within Each User Story
 
@@ -441,7 +441,7 @@ Chỉ chọn các hàng [P] có dependencies hoàn tất và khác file. Model/s
 | US7 | T101 + T102 | T108, T109, T110; chia wave theo Depends, không chạy tất cả cùng lúc |
 | US8 | T112 + T113 | T118, T119; chia wave theo Depends, không chạy tất cả cùng lúc |
 | US9 | T121 + T122 | T127, T128; chia wave theo Depends, không chạy tất cả cùng lúc |
-| US10 | T131 (web session, done); desktop T140–T145 planned | Không có wave baseline; mở lại khi wrapper Tauri được duyệt |
+| US10 | T131 (web session, done); desktop T140–T143 done, T144 in progress, T145 blocked | Không có wave baseline; acceptance desktop cần đủ HTTPS và Windows/macOS evidence |
 
 ## Implementation Strategy
 
@@ -472,7 +472,7 @@ M1 identity/shop/state/cancel/shipping; M2 data/catalog/inventory/checkout/payme
 | US7 | 11 | SeedSellerOrders chạy confirm→pack→pickup→transit→delivered→CODcollect/paid→Buyerreceive;fail/retry/return không hoàn tồn sớm,sai state/quyền đều bị chặn. |
 | US8 | 9 | Completed/unfinished/cancelled fixtures với exact totals;one review đúngBuyer/rating1–5,dup reject;revenue chỉ completed ngày/tháng Asia/Saigon. |
 | US9 | 9 | Admin tìm/khóa/mở user,ẩn hàng,tra cứu allorders và exactcount;nonAdmin denied,final data immutable,action log ai/lúc nào/lý do. |
-| US10 | 16 | Buyer web hoàn tất và giữ dữ liệu sau reload; desktop buyer (Tauri wrapper) là kế hoạch, BLOCKED đến khi build; không có mobile. |
+| US10 | 16 | Buyer web hoàn tất và giữ dữ liệu sau reload; Tauri wrapper có Windows development/commerce evidence và MSI build, nhưng desktop acceptance BLOCKED đến khi cài/verify Windows/macOS trên HTTPS; không có mobile. |
 | Cross-cutting | 13 | SC001–010 có evidence,zero release-blocking auth/money/stock defects,clean setup/desktop (khi có build)/restore thật. |
 
 ## Notes
@@ -489,7 +489,7 @@ M1 identity/shop/state/cancel/shipping; M2 data/catalog/inventory/checkout/payme
 Đã phân rã 158 task trong kế hoạch đã duyệt, trong đó Setup11 và US10 gồm16 task; T159 là đề xuất follow-up chưa phân bổ. Trạng thái triển khai hiện tại được ghi ngay trong các checkbox task.
 Task IDs T001–T159 liên tục; T159 là đề xuất ngoài tổng 157 PD đã duyệt; tham chiếu/dependency và bảng song song được đánh lại.
 Owner/Reviewer/Sprint/Allocation nằm ngay mỗi task; xem [task-allocation.md](task-allocation.md) để kiểm toán 157 PD.
-Thử nghiệm Mobile S4 (T130, W032=2 PD) đã bị retired 2026-11-03 cùng `apps/mobile`; nếu desktop wrapper được duyệt, dùng lại effort W032 cho Tauri spike chứ không cộng thêm. T140–T145 hiện là kế hoạch, không nằm trong baseline build/CI.
+Thử nghiệm Mobile S4 (T130, W032=2 PD) đã bị retired 2026-11-03 cùng `apps/mobile`; effort W032 được tái sử dụng cho Tauri wrapper, không cộng thêm. T140–T143 đã triển khai; T144/T145 vẫn ngoài baseline build/CI mặc định và chưa đủ acceptance evidence.
 Đây là chỉnh tài liệu, không là kết quả build/test ứng dụng.
 
 ## Implementation status

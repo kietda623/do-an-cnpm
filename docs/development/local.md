@@ -57,7 +57,7 @@ Copy-Item .env.example .env
 | `pnpm dev`, `pnpm build`, `pnpm test`, `pnpm clean` | Root orchestration cho workspace |
 | `pnpm test:contracts`, `pnpm --filter @marketplace/api test:integration` | Contract và PostgreSQL/Redis integration suites |
 | API `prisma:migrate:deploy`, `prisma:seed:demo`, `test:expiry` | Migrations/seeds/API expiry tests; kiểm tra database namespace trước thao tác disposable |
-| Desktop `tauri`, `build:desktop` | Buyer desktop chưa có workspace và chưa triển khai |
+| `@marketplace/desktop`: `desktop:dev`, `desktop:test`, `desktop:build` | Đã có. Test chạy local; release build yêu cầu Windows/macOS native toolchain và `DESKTOP_STOREFRONT_URL` HTTPS. Acceptance matrix còn BLOCKED. |
 
 Cập nhật quickstart cùng task implementation nếu tên script hoặc service đổi. Không báo test pass khi lệnh chưa tồn tại hoặc chưa chạy được.
 
@@ -73,12 +73,12 @@ Quickstart: copy `.env.example`, cấu hình database/JWT/Redis secrets, cài fr
 - Seed chỉ chạy có chủ đích trên môi trường local disposable; không in password, token hoặc URL có credentials vào log.
 - Backup/restore rehearsal phải dùng database cô lập, không restore đè dữ liệu demo.
 
-### Desktop (kế hoạch) và giới hạn hệ điều hành
+### Desktop buyer và giới hạn hệ điều hành
 
 - Buyer desktop là Tauri wrapper quanh web storefront, không nhân đôi UI hay design system.
 - Tauri desktop cần toolchain native của OS đích. Windows cần MSVC C++ Build Tools/WebView2, Rust stable và cargo; macOS cần Xcode/Rust targets phù hợp.
-- Desktop buyer **chưa được triển khai**: không có script build trong CI và không cần Rust/MSVC để chạy repo hiện tại.
-- Ghi lại OS, phiên bản toolchain, storefront/API endpoint và evidence cho từng desktop run. Build thành công không thay cho kiểm thử flow.
+- Wrapper T140–T143 đã được triển khai và có Windows development/commerce evidence. T144 có Windows x64 MSI build/checksum; install chưa verified do thiếu quyền admin. macOS install/flow và HTTPS acceptance còn thiếu; xem [desktop evidence](../testing/desktop-evidence.md).
+- Release build dùng `pnpm --filter @marketplace/desktop desktop:build` sau khi đặt `DESKTOP_STOREFRONT_URL` thành storefront HTTPS có thể truy cập. Build thành công không thay cho kiểm thử flow.
 - Không yêu cầu phát hành app lên store trong MVP. Không có app mobile (Android/iOS).
 
 Chi tiết acceptance scenarios và evidence format ở [quickstart](../../specs/001-marketplace-mvp/quickstart.md); baseline toolchain ở [toolchain](toolchain.md).

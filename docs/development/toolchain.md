@@ -2,6 +2,8 @@
 
 **Ngày rà soát:** 2026-11-03. Workspace pins được chốt ở T008 sau khi kiểm tra peer dependency và phân giải lockfile. Buyer dùng web và desktop (Tauri wrapper, kế hoạch); không có app mobile. W008 vẫn mở cho toolchain desktop và object storage.
 
+**Cập nhật desktop 2026-11-09:** Windows x64 Tauri release build đã chạy với Node `v24.21.0`, pnpm `12.14.0`, Rust/Cargo `1.94.1`, Tauri CLI `2.12.4`, Rust crate `2.12.5`; MSI install cần quyền admin chưa có trong phiên này. Không có macOS host. Xem [desktop evidence](../testing/desktop-evidence.md); các quan sát bên dưới giữ nguyên mốc lịch sử 2026-11-03.
+
 ## Baseline dự kiến
 
 | Thành phần | Baseline | Ghi chú tương thích/gate |

@@ -2,7 +2,7 @@
 
 **Ngày kiểm tra:** 2026-11-03. Tài liệu ghi nhận quyền/môi trường mà workspace hiện nhìn thấy; không lưu credentials, mã đăng nhập hoặc thông tin thanh toán.
 
-Định hướng nền tảng: **buyer dùng web và desktop (Tauri wrapper của cùng web storefront); seller và admin dùng web. Không có app mobile.** Desktop buyer hiện là kế hoạch, chưa build hoặc phát hành.
+Định hướng nền tảng: **buyer dùng web và desktop (Tauri wrapper của cùng web storefront); seller và admin dùng web. Không có app mobile.** Bảng dưới là snapshot quyền/môi trường ngày 2026-11-03; xem phần cập nhật triển khai desktop bên dưới.
 
 | Mục tiêu nghiệm thu | Điều kiện cần | Bằng chứng hiện có | Trạng thái / việc cần làm |
 | --- | --- | --- | --- |
@@ -15,6 +15,10 @@
 ## Evidence record khi có quyền
 
 Ghi một dòng cho mỗi target: ngày giờ Asia/Saigon, owner/operator, provider/host, OS/tool versions, device/model nếu có, app SHA, API environment (không secret), lệnh/flow, exit code, kết quả observed và đường dẫn logs đã redact. Chỉ ghi “pass” cho hành trình chạy thật; compile/build riêng là build evidence.
+
+## Tình trạng desktop cập nhật 2026-11-09
+
+T140–T143 đã triển khai; Windows 11 x64 development/commerce smoke có trong [desktop evidence](../testing/desktop-evidence.md). T144 tạo được MSI Windows x64 và SHA-256, nhưng cài đặt chưa xác minh vì phiên hiện tại không có quyền admin. Chưa có macOS build/install/flow hoặc `DESKTOP_STOREFRONT_URL` production HTTPS. T144/T145 chưa hoàn tất và SC-009 desktop vẫn BLOCKED.
 
 ## Resource/budget decision còn mở
 

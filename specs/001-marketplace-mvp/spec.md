@@ -769,7 +769,7 @@ Admin có thể truy vấn đơn hàng để phục vụ quản trị và xử l
 
 | Phạm vi | Màn hình/chức năng bắt buộc | Nghiệm thu |
 | --- | --- | --- |
-| Buyer Web + Desktop (wrapper, kế hoạch) | Trang chủ, đăng ký/đăng nhập, danh sách hàng, tìm kiếm/bộ lọc, chi tiết hàng, shop, giỏ, checkout, danh sách/chi tiết đơn, hồ sơ, địa chỉ; đánh giá từ đơn hoàn tất | Chạy US1, US4–8 trên web; desktop dùng lại cùng UI khi wrapper được build; dữ liệu thống nhất sau tải lại |
+| Buyer Web + Desktop (Tauri wrapper) | Trang chủ, đăng ký/đăng nhập, danh sách hàng, tìm kiếm/bộ lọc, chi tiết hàng, shop, giỏ, checkout, danh sách/chi tiết đơn, hồ sơ, địa chỉ; đánh giá từ đơn hoàn tất | Chạy US1, US4–8 trên web; desktop dùng lại cùng UI trong webview. Desktop acceptance còn BLOCKED chờ Windows/macOS install/flow evidence và HTTPS origin. |
 | Seller Web | Đăng ký shop, trạng thái duyệt, dashboard, danh sách/tạo/sửa sản phẩm, biến thể/tồn, danh sách/chi tiết/xử lý đơn, doanh thu, cài đặt shop; xem đánh giá | Chạy US2–3, US7–8 trên web với shop mẫu |
 | Admin Web | Dashboard, người dùng, duyệt/quản lý shop, danh mục, kiểm duyệt sản phẩm, tra cứu đơn | Chạy US2, US3, US9 bằng Admin và kiểm tra từ chối vai trò khác |
 
@@ -862,7 +862,7 @@ quy trình sửa giao dịch hoàn tất. Không đưa kiến trúc phân tán v
   bằng tài khoản không có quyền đều bị từ chối, không lộ dữ liệu hoặc đổi dữ liệu.
 - **SC-008:** Toàn bộ số liệu ngày/tháng Seller và tổng sàn khớp bộ dữ liệu mẫu có cả đơn hoàn tất,
   hủy, chưa trả, hoàn mô phỏng; không sai lệch tiền hoặc đếm trùng Order tổng/SellerOrder.
-- **SC-009:** Chạy thành công hành trình Buyer trên Web (desktop wrapper là kế hoạch, nghiệm thu sau khi build) và quản lý shop trên Web; mỗi thay đổi đã lưu xuất hiện ở cửa sổ/thiết bị còn lại sau tải lại.
+- **SC-009:** Chạy thành công hành trình Buyer trên Web và desktop wrapper dùng cùng storefront, cùng quản lý shop trên Web; mỗi thay đổi đã lưu xuất hiện ở cửa sổ/thiết bị còn lại sau tải lại. Desktop acceptance phải có bằng chứng cài/chạy trên Windows và macOS; hiện trạng BLOCKED cho đến khi đủ evidence.
 - **SC-010:** Một thành viên chưa thiết lập dự án chạy được demo theo hướng dẫn trong 30 phút
   sau khi đã có các công cụ tiền đề; không cần bước bí mật hoặc chỉnh giao dịch thủ công.
 
