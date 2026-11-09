@@ -47,6 +47,21 @@ Playwright emitted non-fatal Next.js view-transition `AbortError: Transition was
 
 The discovery run exposed a development-only CSP mismatch: the API client normalized `localhost` to `127.0.0.1`, while the dev policy allowed only the configured loopback spelling. Development `connect-src` now allows both loopback spellings when the storefront and API use loopback hosts. The root Playwright config also now includes `storefront-shell.spec.ts`, which its explicit test match had omitted.
 
+### T143 cart, checkout, and account checks
+
+| Check               | Result                                                                                                                                                                                                                                                                     |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web regressions     | `pnpm test:e2e:checkout` passed 3/3; `pnpm test:e2e:fulfillment` passed 1/1 against the disposable PostgreSQL/Redis services.                                                                                                                                              |
+| Cross-client state  | A cart item and default address created on Web appeared in the Tauri cart and checkout. The Web-created MOCK and COD orders appeared in Tauri order history after reload.                                                                                                  |
+| Cart and quote      | Tauri showed `Demo Product 01-001 × 1`, the Web-created default address, and a 10.000₫ price/inventory quote.                                                                                                                                                              |
+| MOCK payment        | Tauri simulated success for `ORD-MW9A49GU-B1F986BC`; the order showed paid 10.000₫ and a successful mock transaction.                                                                                                                                                      |
+| COD cancellation    | Tauri cancelled `ORD-MW9A4E7K-90CC98DA` with the disposable reason `T143 test hủy đơn COD`; the order list showed it as cancelled.                                                                                                                                         |
+| Tracking and review | `DEMO-COMPLETED-COD-001` showed the `DEMO-TRACK-DEMO-COMPLETED-COD-001` delivery event and review form entry.                                                                                                                                                              |
+| COD receipt         | Tauri-created `ORD-MW9AG931-A36E4620` was confirmed, packed, tracked through pickup/transit/delivery in the seller UI, and marked COD-collected. Tauri then confirmed receipt; the order changed to complete, retained its shipment timeline, and exposed the review form. |
+| Account and session | Tauri displayed the Web-created default address. The app remained at the same `http://localhost:3000` origin; T141 storage inspection found no access or refresh token in local/session storage, and the shell exposes no native commands/plugins.                         |
+
+The fulfillment run initially stopped at API readiness because the local process lacked `RATE_LIMIT_KEY_SECRET` and `RATE_LIMIT_KEY_PREFIX`. Supplying the disposable test values resolved readiness; the rerun passed. The runs logged non-fatal Next.js view-transition `AbortError: Transition was skipped` warnings.
+
 ## Release evidence still required
 
 Production HTTPS storefront/API origins are not configured in this environment, and no macOS runner or packaged macOS app was available. T145 production and macOS checks remain gated; this document records Windows development evidence only.

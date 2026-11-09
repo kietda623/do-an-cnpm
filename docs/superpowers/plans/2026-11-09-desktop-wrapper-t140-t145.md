@@ -181,10 +181,10 @@
 - All requests use existing DTOs, validation, WebSession transport, and idempotency behavior from the storefront.
 - Cart, checkout, payment, order, tracking, cancel, receive, account, and review routes remain on the web app.
 
-- [ ] Run existing Web regressions: pnpm test:e2e:checkout and pnpm test:e2e:fulfillment.
-- [ ] In the Tauri app, verify cart/quote, mock payment and COD, order history/detail, tracking, cancel/receive, account, addresses, and review entry. Check that no flow calls a native command or stores credentials locally.
-- [ ] Create or update a buyer cart/order on Web, reload Desktop, and confirm both clients show the same server state. Record results and environment in docs/testing/desktop-evidence.md.
-- [ ] Commit this task on the same feature branch with message: test(desktop): verify buyer commerce parity.
+- [x] Run existing Web regressions: pnpm test:e2e:checkout and pnpm test:e2e:fulfillment.
+- [x] In the Tauri app, verify cart/quote, mock payment and COD, order history/detail, tracking, cancel/receive, account, addresses, and review entry. Check that no flow calls a native command or stores credentials locally.
+- [x] Create or update a buyer cart/order on Web, reload Desktop, and confirm both clients show the same server state. Record results and environment in docs/testing/desktop-evidence.md.
+- [x] Commit this task on the same feature branch with message: test(desktop): verify buyer commerce parity.
 
 **Expected result:** The wrapper presents the existing checkout and account flows, and Web and Desktop show the same server-backed buyer data.
 
