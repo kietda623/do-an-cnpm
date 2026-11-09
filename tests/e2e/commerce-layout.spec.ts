@@ -137,3 +137,52 @@ test("primary and destructive action labels keep AA contrast in both themes", as
     }
   }
 });
+
+test("catalog filter controls fit their full placeholder and selected label", async ({
+  page,
+}) => {
+  await catalog(page);
+  for (const width of [1440, 1024, 768, 390, 360]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/products");
+    const search = page.getByPlaceholder("Tên hoặc mô tả sản phẩm");
+    await expect(search).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const clipped = await page
+      .locator(".mp-filter input, .mp-filter select")
+      .evaluateAll((elements) =>
+        elements.flatMap((element) => {
+          const input = element as HTMLInputElement | HTMLSelectElement;
+          const style = getComputedStyle(input);
+          const text =
+            input instanceof HTMLSelectElement
+              ? (input.selectedOptions[0]?.textContent ?? "")
+              : input.placeholder;
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d")!;
+          ctx.font = style.font;
+          const available =
+            input.clientWidth -
+            parseFloat(style.paddingLeft) -
+            parseFloat(style.paddingRight);
+          return ctx.measureText(text).width > available + 1 ? [text] : [];
+        }),
+      );
+    expect(clipped, `clipped filter text at ${width}px`).toEqual([]);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+  }
+});
+
+test("catalog entrance motion respects reduced motion", async ({ page }) => {
+  await catalog(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/products");
+  const card = page.locator(".mp-product-card").first();
+  await expect(card).toBeVisible();
+  await expect(card).toHaveCSS("animation-name", "none");
+  await expect(page.locator(".mp-filter")).toHaveCSS("animation-name", "none");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect(card).toHaveCSS("animation-name", "mp-product-arrive");
+});

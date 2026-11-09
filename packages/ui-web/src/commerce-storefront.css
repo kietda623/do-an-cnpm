@@ -465,7 +465,7 @@
 @media (min-width: 1024px) {
   .mp-catalog:not(.mp-home) .mp-catalog__body,
   .mp-shop .mp-catalog__body {
-    grid-template-columns: 190px minmax(0, 1fr);
+    grid-template-columns: clamp(280px, 24vw, 312px) minmax(0, 1fr);
     align-items: start;
   }
   .mp-catalog:not(.mp-home) .mp-catalog__body > *,
@@ -526,10 +526,10 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .mp-filter {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .mp-filter__search {
-    grid-column: auto;
+    grid-column: 1 / -1;
   }
   .mp-market-categories .mp-chips {
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -682,5 +682,50 @@
   }
   .mp-auth__card {
     padding: 20px 16px;
+  }
+}
+/* Fit the full filter prompt instead of shrinking its text or truncating it. */
+.mp-filter .mp-field__input {
+  min-height: 48px;
+}
+.mp-filter .mp-field {
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .mp-filter {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+    gap: 16px;
+  }
+  .mp-filter__search {
+    grid-column: auto;
+  }
+}
+@keyframes mp-product-arrive {
+  from {
+    opacity: 0.8;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mp-product-card {
+    animation: mp-product-arrive 260ms ease-out;
+  }
+  .mp-filter {
+    animation: mp-commerce-enter 180ms ease-out;
+  }
+  .mp-filter .mp-field__input {
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease;
+  }
+  @media (hover: hover) {
+    .mp-product-card:hover .mp-product-card__media img {
+      transform: scale(1.025);
+    }
   }
 }

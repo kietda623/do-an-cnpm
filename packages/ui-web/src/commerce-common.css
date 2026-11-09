@@ -652,3 +652,11 @@ body,
     transition: none;
   }
 }
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .mp-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  .mp-button:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+}
