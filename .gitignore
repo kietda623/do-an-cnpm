@@ -1,6 +1,12 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/icons/android/
+apps/desktop/src-tauri/icons/ios/
+apps/desktop/src-tauri/icons/StoreLogo.png
+apps/desktop/src-tauri/icons/Square*Logo.png
 .yarn/
 
 # Build output and caches
