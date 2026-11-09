@@ -38,6 +38,7 @@
   padding-block: 16px 10px;
 }
 .mp-header .mp-brand {
+  min-height: 44px;
   grid-column: 1;
   grid-row: 1 / 3;
   color: inherit;
@@ -66,7 +67,7 @@
   margin: 0;
 }
 .mp-search__input {
-  min-height: 48px;
+  min-height: 52px;
   border-radius: var(--radius-control);
   border-color: var(--color-border);
   background: var(--color-muted);
@@ -75,7 +76,7 @@
   border-radius: var(--radius-control);
   background: var(--color-accent);
   min-width: 68px;
-  min-height: 40px;
+  min-height: 44px;
 }
 .mp-header__nav {
   grid-column: 2;
@@ -648,7 +649,12 @@
     display: none;
   }
   .mp-search__input {
-    min-height: 42px;
+    min-height: 52px;
+  }
+  .mp-footer__nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
   .mp-home {
     gap: 12px;

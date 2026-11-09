@@ -545,6 +545,7 @@ body,
 }
 .mp-auth__description {
   line-height: 1.7;
+  text-wrap: pretty;
 }
 .mp-auth__card {
   border-radius: var(--radius-panel);

@@ -57,6 +57,8 @@ Use capped, centered containers. Buyer has a neutral search-led masthead, readab
 
 Seller and Admin retain the shared neutral navigation shell. Group filters with their records, align numeric columns, and let wide tables scroll locally. Keep the current mobile drawer and its accessible controls. Inspect all routes at 1440, 768 and 390px; critical fields also at 360px. Do not hide overflow to conceal broken grids. html/body use overflow-x: clip.
 
+The desktop console rail is 224px and becomes a drawer below 1050px. Touch-sized small buttons and panel action links remain 44px through the tablet breakpoint. The Admin user table retains at least 760px with a 240px identity column inside its existing horizontal scroll container. Seller's wide catalog separates the creation form from the record/filter area; phone layouts stack them without changing the form.
+
 ## Elevation & Depth
 
 Use tonal separation and fine neutral borders for everyday structure. Reserve shadows for floating menus, dialogs and modest hover elevation. Avoid nested bordered cards, colored glows, glass layers and decorative gradients. Loading shimmer is a purposeful transient state, not permanent decoration.
@@ -72,6 +74,8 @@ Preserve all routes, hooks, state, handlers, API calls, names, validation, permi
 Empty, loading, unauthorized and failed requests remain distinguishable. Keep retry actions and entered form values. Dialog focus behavior, menu dismissal, keyboard navigation and reduced-motion support are part of the component contract.
 
 Animate transform and opacity only: finite short route entrances, a restrained product lift/image zoom, button press feedback and menu/dialog settling. Keep content visible without animation. Reduced motion removes decorative displacement, stagger and shimmer. Do not introduce timers, counting state or new interaction logic to decorate data.
+
+Actual chart bars settle once over 360ms with a small scale/opacity entrance; SVG charts use a short translation/opacity entrance. Their final geometry and numerical labels remain truthful. No charts or intermediate counters are invented for empty datasets.
 
 ## Do's and Don'ts
 

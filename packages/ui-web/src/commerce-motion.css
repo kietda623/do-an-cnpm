@@ -88,7 +88,23 @@
   }
 }
 
+@keyframes mp-chart-arrive {
+  from { opacity: .7; transform: scaleY(.94); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+@keyframes mp-data-arrive {
+  from { opacity: .8; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (prefers-reduced-motion: no-preference) {
+  .mp-chart__bar {
+    transform-origin: bottom;
+    animation: mp-chart-arrive 360ms var(--ease-out-expo);
+  }
+  .mp-chart__svg {
+    animation: mp-data-arrive 360ms var(--ease-out-expo);
+  }
   .mp-button,
   .mp-chip,
   .mp-tab,
