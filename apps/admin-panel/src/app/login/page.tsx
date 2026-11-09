@@ -35,12 +35,12 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="mp-auth mp-auth--console">
+    <main className="mp-auth mp-auth--console mp-admin-auth">
       <section className="mp-auth__intro">
         <span className="mp-auth__eyebrow">
           <Shield size={16} aria-hidden="true" /> Marketplace Admin
         </span>
-        <h1 className="mp-auth__title">Điều hành nền tảng với dữ liệu thật.</h1>
+        <h1 className="mp-auth__title">Marketplace Admin</h1>
         <p className="mp-auth__description">
           Duyệt cửa hàng, kiểm duyệt sản phẩm, khóa tài khoản và tra cứu giao dịch trong một không
           gian quản trị tập trung.

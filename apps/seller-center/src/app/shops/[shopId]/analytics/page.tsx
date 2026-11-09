@@ -57,7 +57,7 @@ export default function AnalyticsPage() {
   usePolling(loadStats, { intervalMs: 60_000, enabled: range !== null });
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-seller-page">
       <PageHeader
         title="Doanh thu"
         description="Theo dõi doanh thu đã hoàn thành theo tháng, đối chiếu từng kỳ và xuất báo cáo nội bộ."

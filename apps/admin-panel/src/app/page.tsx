@@ -63,7 +63,10 @@ type AuditRow = {
 function rangeParams(): string {
   const now = new Date();
   const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  return new URLSearchParams({ from: from.toISOString(), to: now.toISOString() }).toString();
+  return new URLSearchParams({
+    from: from.toISOString(),
+    to: now.toISOString(),
+  }).toString();
 }
 
 export default function AdminDashboardPage() {
@@ -203,10 +206,10 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-admin-page mp-admin-dashboard">
       <PageHeader
         title="Tổng quan nền tảng"
-        description="Số liệu 30 ngày gần nhất trên toàn Marketplace, kèm hồ sơ cửa hàng chờ duyệt và hoạt động quản trị."
+        description="Theo dõi hồ sơ chờ duyệt, hàng hoàn và hoạt động trên toàn Marketplace."
         actions={
           <Link className="mp-button mp-button--secondary mp-button--md" href="/orders/returns">
             <span className="mp-button__label">Xác nhận hàng hoàn</span>
@@ -215,12 +218,44 @@ export default function AdminDashboardPage() {
         }
       />
 
+      <Panel
+        className="mp-admin-queue"
+        title="Cửa hàng chờ duyệt"
+        description="Hồ sơ mới nhất cần quyết định."
+        actions={
+          <Link className="mp-link" href="/shops">
+            Xem tất cả <ArrowRight size={14} aria-hidden="true" />
+          </Link>
+        }
+        flush
+      >
+        <DataTable
+          columns={shopColumns}
+          rows={shops}
+          rowKey={(row) => row.id}
+          caption="Cửa hàng chờ duyệt"
+          loading={shopsLoading}
+          error={shopsError || null}
+          onRetry={() => void loadShops()}
+          dense
+          empty={
+            <div className="mp-panel__pad">
+              <EmptyState
+                icon={<Store size={22} />}
+                title="Không có hồ sơ chờ duyệt"
+                description="Mọi hồ sơ cửa hàng đã được xử lý."
+              />
+            </div>
+          }
+        />
+      </Panel>
+
       {statsError ? (
         <p role="alert" className="mp-alert-inline">
           {statsError}
         </p>
       ) : !stats ? (
-        <div className="mp-kpi-grid" role="status">
+        <div className="mp-kpi-grid mp-admin-kpis" role="status">
           <span className="mp-visually-hidden">Đang tải thống kê nền tảng…</span>
           {Array.from({ length: 4 }, (_, index) => (
             <Skeleton key={index} className="mp-skeleton--block" />
@@ -228,7 +263,7 @@ export default function AdminDashboardPage() {
         </div>
       ) : (
         <>
-          <section aria-label="Thống kê nền tảng" className="mp-kpi-grid mp-stagger">
+          <section aria-label="Thống kê nền tảng" className="mp-kpi-grid mp-admin-kpis">
             <StatCard
               label="Người dùng"
               value={formatNumber(stats.userCount)}
@@ -270,9 +305,9 @@ export default function AdminDashboardPage() {
         </>
       )}
 
-      <div className="mp-dashboard-grid">
+      <div className="mp-admin-distribution">
         <Panel
-          className="mp-reveal"
+          className="mp-admin-section"
           title="Phân bố trạng thái"
           description="Số lượng bản ghi theo từng trạng thái trong toàn hệ thống."
           actions={<BarChart3 size={18} aria-hidden="true" />}
@@ -304,7 +339,9 @@ export default function AdminDashboardPage() {
                             <span className="mp-status-bars__track">
                               <span
                                 className="mp-status-bars__fill"
-                                style={{ width: `${total ? (count / total) * 100 : 0}%` }}
+                                style={{
+                                  width: `${total ? (count / total) * 100 : 0}%`,
+                                }}
                               />
                             </span>
                             <span className="mp-status-bars__value" data-numeric>
@@ -320,42 +357,10 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </Panel>
-
-        <Panel
-          className="mp-reveal"
-          title="Cửa hàng chờ duyệt"
-          description="Hồ sơ mới nhất cần quyết định."
-          actions={
-            <Link className="mp-link" href="/shops">
-              Xem tất cả <ArrowRight size={14} aria-hidden="true" />
-            </Link>
-          }
-          flush
-        >
-          <DataTable
-            columns={shopColumns}
-            rows={shops}
-            rowKey={(row) => row.id}
-            caption="Cửa hàng chờ duyệt"
-            loading={shopsLoading}
-            error={shopsError || null}
-            onRetry={() => void loadShops()}
-            dense
-            empty={
-              <div className="mp-panel__pad">
-                <EmptyState
-                  icon={<Store size={22} />}
-                  title="Không có hồ sơ chờ duyệt"
-                  description="Mọi hồ sơ cửa hàng đã được xử lý."
-                />
-              </div>
-            }
-          />
-        </Panel>
       </div>
 
       <Panel
-        className="mp-reveal"
+        className="mp-admin-section"
         title="Hoạt động gần đây"
         description="8 bản ghi nhật ký quản trị mới nhất."
         actions={

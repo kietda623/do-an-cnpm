@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Be_Vietnam_Pro, IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import { Be_Vietnam_Pro, IBM_Plex_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 import "@marketplace/design-tokens/styles.css";
 import "@marketplace/ui-web/styles.css";
@@ -7,13 +7,6 @@ import "./globals.css";
 import { RouteTransition } from "@marketplace/ui-web";
 import { Providers } from "./providers";
 import { AdminShell } from "./admin-shell";
-
-const display = Space_Grotesk({
-  subsets: ["latin", "vietnamese"],
-  weight: ["500", "700"],
-  display: "swap",
-  variable: "--font-space-grotesk",
-});
 
 const sans = Be_Vietnam_Pro({
   subsets: ["latin", "vietnamese"],
@@ -39,8 +32,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   colorScheme: "light dark",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#EDF1EF" },
-    { media: "(prefers-color-scheme: dark)", color: "#0A100E" },
+    { media: "(prefers-color-scheme: light)", color: "#F5F5F5" },
+    { media: "(prefers-color-scheme: dark)", color: "#171717" },
   ],
 };
 
@@ -48,7 +41,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html
       lang="vi"
-      className={`${display.variable} ${sans.variable} ${mono.variable}`}
+      className={`${sans.variable} ${mono.variable}`}
       suppressHydrationWarning
     >
       <head>

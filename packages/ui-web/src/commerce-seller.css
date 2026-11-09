@@ -1,0 +1,149 @@
+/* Hallmark · Marketplace Commerce · shape: app screen · redesign: full */
+/* Critique: prioritize pending work, keep revenue and recent orders readable, and wrap catalog actions on phones. */
+/* Seller Centre composition. Shared commerce controls provide colors and density. */
+.mp-seller-workspace {
+  min-width: 0;
+}
+.mp-seller-page,
+.mp-seller-dashboard {
+  min-width: 0;
+}
+.mp-seller-dashboard .mp-page-header {
+  margin-bottom: 0;
+}
+.mp-seller-dashboard .mp-range-form {
+  align-items: end;
+}
+.mp-seller-dashboard .mp-range-form > * {
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .mp-seller-dashboard .mp-range-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mp-seller-dashboard .mp-range-form .mp-button {
+    width: fit-content;
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+.mp-seller-kpis {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+.mp-seller-task {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--color-foreground);
+  text-decoration: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+.mp-seller-task .mp-stat {
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.mp-seller-task__action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-accent-strong);
+  font-size: 0.75rem;
+}
+.mp-seller-task:hover {
+  border-color: var(--color-accent);
+}
+.mp-seller-task:focus-visible {
+  outline: 3px solid var(--color-ring);
+  outline-offset: 3px;
+}
+.mp-seller-dashboard__reports {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+.mp-seller-dashboard__reports > * {
+  min-width: 0;
+}
+.mp-seller-dashboard .mp-quick-links {
+  margin-top: 0;
+}
+.mp-seller-workspace .mp-product-list {
+  gap: 12px;
+}
+.mp-seller-workspace .mp-product {
+  border-radius: var(--radius-control);
+  box-shadow: none;
+}
+.mp-seller-workspace .mp-product__head {
+  align-items: center;
+  gap: 16px;
+}
+.mp-seller-workspace .mp-product__media {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mp-seller-workspace .mp-product__thumb,
+.mp-seller-workspace .mp-product__media-empty {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-control);
+}
+.mp-seller-workspace .mp-product__title {
+  min-width: 0;
+}
+.mp-seller-workspace .mp-product__title h3 {
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+.mp-seller-workspace .mp-product__actions {
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.mp-seller-auth .mp-auth__intro {
+  max-width: 480px;
+}
+.mp-seller-auth .mp-auth__title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.35;
+}
+@media (max-width: 1200px) {
+  .mp-seller-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .mp-seller-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .mp-seller-kpis > :last-child {
+    grid-column: 1 / -1;
+  }
+  .mp-seller-task__action {
+    padding: 10px 12px;
+  }
+  .mp-seller-dashboard__reports {
+    gap: 12px;
+  }
+  .mp-seller-workspace .mp-product__head {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .mp-seller-workspace .mp-product__title {
+    flex: 1 1 140px;
+  }
+  .mp-seller-workspace .mp-product__actions {
+    width: 100%;
+    margin-left: 0;
+  }
+}

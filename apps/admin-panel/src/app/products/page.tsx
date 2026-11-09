@@ -167,13 +167,13 @@ export default function AdminProductsPage() {
   const pageCount = page + (hasNext ? 1 : 0);
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-admin-page">
       <PageHeader
         title="Kiểm duyệt sản phẩm"
         description="Rà soát sản phẩm trên toàn sàn và ẩn những niêm yết vi phạm chính sách."
       />
 
-      <Panel title="Bộ lọc" description="Tìm theo tên, cửa hàng hoặc trạng thái kiểm duyệt.">
+      <Panel className="mp-admin-filters" title="Bộ lọc" description="Tìm theo tên, cửa hàng hoặc trạng thái kiểm duyệt.">
         <form className="mp-form" onSubmit={submit}>
           <div className="mp-form-grid">
             <TextField

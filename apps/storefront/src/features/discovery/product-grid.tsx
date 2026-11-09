@@ -37,7 +37,13 @@ type Result = {
 const flatten = (items: Category[]): Category[] =>
   items.flatMap((item) => [item, ...flatten(item.children ?? [])]);
 
-export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
+export function ProductGrid({
+  endpoint = "/products",
+  compactFilters = false,
+}: {
+  endpoint?: string;
+  compactFilters?: boolean;
+}) {
   const { api } = useApi();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -103,76 +109,88 @@ export function ProductGrid({ endpoint = "/products" }: { endpoint?: string }) {
 
   return (
     <section aria-label="Danh sách sản phẩm" className="mp-catalog__body">
-      <form
-        className="mp-filter"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const next = new URLSearchParams(search);
-          for (const [key, value] of [
-            ["q", query],
-            ["minPrice", minPrice],
-            ["maxPrice", maxPrice],
-          ]) {
-            if (value) next.set(key, value);
-            else next.delete(key);
-          }
-          next.set("page", "1");
-          router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-        }}
+      <details
+        className="mp-market-filters"
+        open={compactFilters ? undefined : true}
       >
-        <div className="mp-filter__search">
+        <summary
+          className={
+            compactFilters ? "mp-market-filters__toggle" : "mp-visually-hidden"
+          }
+        >
+          Tìm kiếm và lọc sản phẩm
+        </summary>
+        <form
+          className="mp-filter"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const next = new URLSearchParams(search);
+            for (const [key, value] of [
+              ["q", query],
+              ["minPrice", minPrice],
+              ["maxPrice", maxPrice],
+            ]) {
+              if (value) next.set(key, value);
+              else next.delete(key);
+            }
+            next.set("page", "1");
+            router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+          }}
+        >
+          <div className="mp-filter__search">
+            <TextField
+              label="Tìm sản phẩm"
+              name="q"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Tên hoặc mô tả sản phẩm"
+              autoComplete="off"
+            />
+          </div>
+          <SelectField
+            label="Danh mục"
+            value={params.get("categoryId") ?? ""}
+            placeholder="Tất cả danh mục"
+            onChange={(event) => update("categoryId", event.target.value)}
+          >
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField
+            label="Sắp xếp"
+            value={params.get("sort") ?? "NEWEST"}
+            onChange={(event) => update("sort", event.target.value)}
+          >
+            <option value="NEWEST">Mới nhất</option>
+            <option value="PRICE_ASC">Giá tăng dần</option>
+            <option value="PRICE_DESC">Giá giảm dần</option>
+          </SelectField>
           <TextField
-            label="Tìm sản phẩm"
-            name="q"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Tên hoặc mô tả sản phẩm"
-            autoComplete="off"
+            label="Giá từ"
+            inputMode="numeric"
+            value={minPrice}
+            onChange={(event) =>
+              setMinPrice(event.target.value.replace(/\D/g, ""))
+            }
+            placeholder="0"
           />
-        </div>
-        <SelectField
-          label="Danh mục"
-          value={params.get("categoryId") ?? ""}
-          placeholder="Tất cả danh mục"
-          onChange={(event) => update("categoryId", event.target.value)}
-        >
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </SelectField>
-        <SelectField
-          label="Sắp xếp"
-          value={params.get("sort") ?? "NEWEST"}
-          onChange={(event) => update("sort", event.target.value)}
-        >
-          <option value="NEWEST">Mới nhất</option>
-          <option value="PRICE_ASC">Giá tăng dần</option>
-          <option value="PRICE_DESC">Giá giảm dần</option>
-        </SelectField>
-        <TextField
-          label="Giá từ"
-          inputMode="numeric"
-          value={minPrice}
-          onChange={(event) =>
-            setMinPrice(event.target.value.replace(/\D/g, ""))
-          }
-          placeholder="0"
-        />
-        <TextField
-          label="Giá đến"
-          inputMode="numeric"
-          value={maxPrice}
-          onChange={(event) =>
-            setMaxPrice(event.target.value.replace(/\D/g, ""))
-          }
-          placeholder="Không giới hạn"
-        />
-        <div className="mp-filter__submit">
-          <Button type="submit">Tìm kiếm</Button>
-        </div>
-      </form>
+          <TextField
+            label="Giá đến"
+            inputMode="numeric"
+            value={maxPrice}
+            onChange={(event) =>
+              setMaxPrice(event.target.value.replace(/\D/g, ""))
+            }
+            placeholder="Không giới hạn"
+          />
+          <div className="mp-filter__submit">
+            <Button type="submit">Tìm kiếm</Button>
+          </div>
+        </form>
+      </details>
 
       {loading && (
         <>

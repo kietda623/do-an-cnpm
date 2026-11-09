@@ -1,0 +1,116 @@
+/* Marketplace Admin: compact operational workspaces. Shared console controls live in commerce.css. */
+.mp-admin-page {
+  min-width: 0;
+  gap: 16px;
+}
+.mp-admin-page > * {
+  min-width: 0;
+}
+.mp-admin-page .mp-page-header {
+  margin-bottom: 0;
+}
+.mp-admin-page .mp-panel__header {
+  padding: 16px 20px;
+}
+.mp-admin-page .mp-panel__title {
+  font-family: var(--font-sans);
+  font-size: 16px;
+}
+.mp-admin-filters .mp-panel__header {
+  padding-bottom: 0;
+}
+.mp-admin-filters .mp-form {
+  gap: 12px;
+}
+.mp-admin-filters .mp-form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 12px;
+}
+.mp-admin-filters .mp-form-actions {
+  justify-content: flex-start;
+  padding-top: 0;
+}
+.mp-admin-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.mp-admin-kpis .mp-stat {
+  padding: 16px;
+  min-height: 0;
+  box-shadow: none;
+  background: var(--color-surface);
+}
+.mp-admin-kpis .mp-stat__top {
+  align-items: flex-start;
+}
+.mp-admin-kpis .mp-stat__value {
+  font-family: var(--font-sans);
+  font-size: clamp(18px, 1.7vw, 26px);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.mp-admin-kpis .mp-stat__label {
+  font-size: 12px;
+}
+.mp-admin-kpis .mp-stat__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-control);
+}
+.mp-admin-queue {
+  border-top: 2px solid var(--color-accent);
+}
+.mp-admin-distribution .mp-status-bars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 20px;
+}
+.mp-admin-distribution .mp-status-bars__group {
+  padding: 0;
+  border: 0;
+}
+.mp-admin-distribution .mp-status-bars__group > header strong {
+  font-family: var(--font-sans);
+}
+.mp-admin-page .mp-table__secondary {
+  overflow-wrap: anywhere;
+}
+.mp-admin-category-editor,
+.mp-admin-return-editor {
+  gap: 16px;
+}
+.mp-admin-auth .mp-auth__title {
+  font-family: var(--font-sans);
+  font-size: clamp(28px, 3vw, 40px);
+}
+@media (max-width: 1100px) {
+  .mp-admin-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .mp-admin-page {
+    gap: 12px;
+  }
+  .mp-admin-page .mp-panel__header {
+    padding: 14px;
+    flex-wrap: wrap;
+  }
+  .mp-admin-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .mp-admin-kpis .mp-stat {
+    padding: 12px;
+  }
+  .mp-admin-kpis .mp-stat:last-child {
+    grid-column: 1 / -1;
+  }
+  .mp-admin-filters .mp-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .mp-admin-filters .mp-form-actions {
+    flex-wrap: wrap;
+  }
+}

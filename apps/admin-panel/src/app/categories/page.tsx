@@ -45,7 +45,7 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-admin-page">
       <PageHeader
         title="Quản lý danh mục"
         description="Dựng cây danh mục dùng chung cho toàn Marketplace và ẩn những nhánh ngừng sử dụng."

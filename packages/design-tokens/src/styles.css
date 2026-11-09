@@ -1,32 +1,38 @@
-/* Hallmark · Signal Dispatch · tokens: locked DESIGN.md · shape: app screen */
+/* Hallmark · Marketplace Commerce · tokens: approved commerce design · shape: app screen */
 /* Critique: semantic roles are shared by every marketplace surface and theme. */
 :root {
-  --color-on-solid: #f7fffc;
-  --color-shadow-ink: #0f1a17;
+  --color-brand: #ee4d2d;
+  --color-masthead: #c9361b;
+  --color-brand-foreground: #ffffff;
+  --color-commerce-tint: #fff1eb;
+  --color-price: #c9361b;
+  --color-on-solid: #ffffff;
+  --color-shadow-ink: #252525;
   --color-danger-strong: #8f211b;
   --color-danger-ink: #2a0d0b;
   --color-backdrop: rgb(15 26 23 / 55%);
   color-scheme: light;
 
-  /* Signal Dispatch palette — light */
-  --color-canvas: #edf1ef;
-  --color-surface: #fbfcfb;
+  /* Marketplace Commerce palette — light */
+  --color-canvas: #f5f5f5;
+  --color-surface: #ffffff;
   --color-raised: #ffffff;
   --color-background: #ffffff;
-  --color-ink: #0f1a17;
-  --color-foreground: #0f1a17;
-  --color-ink-muted: #52625c;
-  --color-muted-foreground: #52625c;
-  --color-muted: #e5ebe8;
-  --color-line: #d5ded9;
-  --color-border: #b9c7c1;
-  --color-accent: #0d7a63;
-  --color-accent-foreground: #f7fffc;
-  --color-accent-strong: #09604e;
-  --color-accent-soft: #d9f2ea;
+  --color-ink: #252525;
+  --color-foreground: #252525;
+  --color-ink-muted: #666666;
+  --color-muted-foreground: #666666;
+  --color-muted: #f0f0f0;
+  --color-line: #e4e4e4;
+  --color-border: #929292;
+  --color-accent: #c9361b;
+  --color-accent-foreground: #ffffff;
+  --color-accent-strong: #a72d17;
+  --color-accent-soft: #fff1eb;
   --color-signal: #c2410c;
   --color-signal-soft: #fde8de;
   --color-danger: #b3261e;
+  --color-danger-foreground: #ffffff;
   --color-danger-soft: #fbe7e5;
   --color-info: #135f9e;
   --color-info-soft: #e2effa;
@@ -34,25 +40,27 @@
   --color-success-soft: #dff3e8;
   --color-warning: #8a5300;
   --color-warning-soft: #fdf0d4;
-  --color-ring: #0d7a63;
+  --color-ring: #c9361b;
 
   /* Typography */
   --font-display:
-    var(--font-space-grotesk), "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    var(--font-be-vietnam-pro), "Be Vietnam Pro", ui-sans-serif, system-ui,
+    sans-serif;
   --font-sans:
-    var(--font-be-vietnam-pro), "Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
+    var(--font-be-vietnam-pro), "Be Vietnam Pro", ui-sans-serif, system-ui,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono:
-    var(--font-ibm-plex-mono), "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    var(--font-ibm-plex-mono), "IBM Plex Mono", ui-monospace, SFMono-Regular,
+    Menlo, monospace;
 
   /* Shape */
-  --radius-control: 0.625rem;
-  --radius-panel: 1rem;
+  --radius-control: 0.25rem;
+  --radius-panel: 0.375rem;
   --radius-pill: 999px;
 
   /* Depth */
-  --shadow-card: 0 1px 2px rgb(15 26 23 / 5%), 0 10px 30px rgb(15 26 23 / 6%);
-  --shadow-raised: 0 2px 4px rgb(15 26 23 / 6%), 0 18px 42px rgb(15 26 23 / 10%);
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 4%);
+  --shadow-raised: 0 4px 16px rgb(0 0 0 / 8%);
   --shadow-popover: 0 18px 48px rgb(15 26 23 / 16%);
 
   /* Motion */
@@ -111,26 +119,30 @@
 }
 
 html[data-theme="dark"] {
+  --color-commerce-tint: #34221b;
+  --color-price: #ff9a7a;
   color-scheme: dark;
 
-  --color-canvas: #0a100e;
-  --color-surface: #101815;
-  --color-raised: #16211d;
-  --color-background: #16211d;
-  --color-ink: #e9f1ed;
-  --color-foreground: #e9f1ed;
-  --color-ink-muted: #9db0a9;
-  --color-muted-foreground: #9db0a9;
-  --color-muted: #1b2621;
-  --color-line: #26332e;
-  --color-border: #35473f;
-  --color-accent: #4fd6b3;
-  --color-accent-foreground: #04211a;
-  --color-accent-strong: #7ce7ca;
-  --color-accent-soft: #123a31;
+  --color-canvas: #171717;
+  --color-surface: #212121;
+  --color-raised: #2a2a2a;
+  --color-background: #2a2a2a;
+  --color-ink: #f5f5f5;
+  --color-foreground: #f5f5f5;
+  --color-ink-muted: #b4b4b4;
+  --color-muted-foreground: #b4b4b4;
+  --color-muted: #303030;
+  --color-line: #3e3e3e;
+  --color-border: #727272;
+  --color-accent: #ff9a7a;
+  --color-accent-foreground: #341309;
+  --color-accent-strong: #ffb59d;
+  --color-accent-soft: #48251a;
   --color-signal: #ff8a5c;
   --color-signal-soft: #3a1d12;
   --color-danger: #ff8a80;
+  --color-danger-foreground: #2a0d0b;
+  --color-danger-strong: #ffb0a8;
   --color-danger-soft: #331413;
   --color-info: #7cc4ff;
   --color-info-soft: #102334;
@@ -138,7 +150,7 @@ html[data-theme="dark"] {
   --color-success-soft: #10291f;
   --color-warning: #f2c46b;
   --color-warning-soft: #2e2412;
-  --color-ring: #4fd6b3;
+  --color-ring: #ff9a7a;
 
   --shadow-card: 0 1px 2px rgb(0 0 0 / 40%), 0 12px 32px rgb(0 0 0 / 32%);
   --shadow-raised: 0 2px 4px rgb(0 0 0 / 45%), 0 20px 46px rgb(0 0 0 / 42%);
@@ -149,24 +161,26 @@ html[data-theme="dark"] {
   html:not([data-theme]) {
     color-scheme: dark;
 
-    --color-canvas: #0a100e;
-    --color-surface: #101815;
-    --color-raised: #16211d;
-    --color-background: #16211d;
-    --color-ink: #e9f1ed;
-    --color-foreground: #e9f1ed;
-    --color-ink-muted: #9db0a9;
-    --color-muted-foreground: #9db0a9;
-    --color-muted: #1b2621;
-    --color-line: #26332e;
-    --color-border: #35473f;
-    --color-accent: #4fd6b3;
-    --color-accent-foreground: #04211a;
-    --color-accent-strong: #7ce7ca;
-    --color-accent-soft: #123a31;
+    --color-canvas: #171717;
+    --color-surface: #212121;
+    --color-raised: #2a2a2a;
+    --color-background: #2a2a2a;
+    --color-ink: #f5f5f5;
+    --color-foreground: #f5f5f5;
+    --color-ink-muted: #b4b4b4;
+    --color-muted-foreground: #b4b4b4;
+    --color-muted: #303030;
+    --color-line: #3e3e3e;
+    --color-border: #727272;
+    --color-accent: #ff9a7a;
+    --color-accent-foreground: #341309;
+    --color-accent-strong: #ffb59d;
+    --color-accent-soft: #48251a;
     --color-signal: #ff8a5c;
     --color-signal-soft: #3a1d12;
     --color-danger: #ff8a80;
+    --color-danger-foreground: #2a0d0b;
+    --color-danger-strong: #ffb0a8;
     --color-danger-soft: #331413;
     --color-info: #7cc4ff;
     --color-info-soft: #102334;
@@ -174,7 +188,7 @@ html[data-theme="dark"] {
     --color-success-soft: #10291f;
     --color-warning: #f2c46b;
     --color-warning-soft: #2e2412;
-    --color-ring: #4fd6b3;
+    --color-ring: #ff9a7a;
   }
 }
 
@@ -238,6 +252,6 @@ pre {
 
 [data-numeric],
 .tabular-nums {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
 }

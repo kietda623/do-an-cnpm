@@ -99,7 +99,7 @@ export function ReturnConfirmation() {
   }
 
   return (
-    <div className="mp-stack mp-stack--loose">
+    <div className="mp-stack mp-admin-return-editor">
       <Panel
         title="Xác nhận hàng hoàn về"
         description="Chỉ xác nhận kiện FAILED đã thực sự quay về kho. Tồn kho và hoàn mô phỏng được cập nhật một lần."

@@ -138,13 +138,13 @@ export default function AdminAuditPage() {
   const pageCount = page + (hasNext ? 1 : 0);
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-admin-page">
       <PageHeader
         title="Nhật ký quản trị"
         description="Nhật ký bất biến. Metadata chỉ được xem trong hộp thoại chi tiết."
       />
 
-      <Panel className="mp-reveal" title="Bộ lọc" description="Lọc theo tài nguyên, actor hoặc thời gian.">
+      <Panel className="mp-admin-filters" title="Bộ lọc" description="Lọc theo tài nguyên, actor hoặc thời gian.">
         <form className="mp-form" onSubmit={submit}>
           <div className="mp-form-grid">
             <TextField

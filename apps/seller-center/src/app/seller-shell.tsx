@@ -54,7 +54,7 @@ export function SellerShell({ children }: { children: ReactNode }) {
     if (status === "anonymous" && !isAuthPage) router.replace("/login");
   }, [isAuthPage, router, status]);
 
-  if (isAuthPage) return <>{children}</>;
+  if (isAuthPage) return <div className="mp-seller-auth">{children}</div>;
 
   if (status === "loading" || status === "anonymous") {
     return (
@@ -174,7 +174,7 @@ export function SellerShell({ children }: { children: ReactNode }) {
           </button>
         </p>
       )}
-      {children}
+      <div className="mp-seller-workspace">{children}</div>
     </ConsoleShell>
   );
 }

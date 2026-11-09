@@ -5,6 +5,7 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: [
+    "commerce-layout.spec.ts",
     "buyer-account.spec.ts",
     "fulfillment-buyer.spec.ts",
     "polling-buyer.spec.ts",

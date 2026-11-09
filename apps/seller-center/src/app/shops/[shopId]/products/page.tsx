@@ -139,7 +139,7 @@ export default function ProductsPage() {
   ];
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-seller-page">
       <PageHeader
         title="Sản phẩm của cửa hàng"
         description="Quản lý ảnh, biến thể, giá bán và tồn kho trên một màn hình."

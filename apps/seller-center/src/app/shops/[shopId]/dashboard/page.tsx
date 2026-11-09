@@ -139,12 +139,12 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-seller-dashboard">
       <PageHeader
         title="Tổng quan cửa hàng"
         description="Nắm nhanh đơn cần xử lý, doanh thu hoàn tất và nhịp bán hàng trong khoảng thời gian bạn chọn."
         actions={
-          <Link className="mp-button mp-button--secondary mp-button--md" href={`/shops/${shopId}/orders`}>
+          <Link className="mp-button mp-button--primary mp-button--md" href={`/shops/${shopId}/orders`}>
             <ReceiptText size={16} aria-hidden="true" />
             <span className="mp-button__label">Mở hàng đợi đơn</span>
           </Link>
@@ -175,25 +175,19 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          <section aria-label="Thống kê cửa hàng" className="mp-kpi-grid mp-stagger">
-            <StatCard
-              label="Sản phẩm"
-              value={formatNumber(stats.productCount)}
-              icon={<Box size={18} />}
-              tone="accent"
-            />
-            <StatCard
-              label="Chờ xác nhận"
-              value={formatNumber(stats.pendingCount)}
-              icon={<Clock size={18} />}
-              tone="warning"
-            />
-            <StatCard
-              label="Đang xử lý"
-              value={formatNumber(stats.processingCount)}
-              icon={<ReceiptText size={18} />}
-              tone="info"
-            />
+          <section aria-label="Thống kê cửa hàng" className="mp-kpi-grid mp-seller-kpis">
+            <Link className="mp-seller-task" href={`/shops/${shopId}/orders`}>
+              <StatCard label="Chờ xác nhận" value={formatNumber(stats.pendingCount)} icon={<Clock size={18} />} tone="warning" />
+              <span className="mp-seller-task__action">Xem đơn hàng <ArrowRight size={14} aria-hidden="true" /></span>
+            </Link>
+            <Link className="mp-seller-task" href={`/shops/${shopId}/orders`}>
+              <StatCard label="Đang xử lý" value={formatNumber(stats.processingCount)} icon={<ReceiptText size={18} />} tone="info" />
+              <span className="mp-seller-task__action">Xem đơn hàng <ArrowRight size={14} aria-hidden="true" /></span>
+            </Link>
+            <Link className="mp-seller-task" href={`/shops/${shopId}/products`}>
+              <StatCard label="Sản phẩm" value={formatNumber(stats.productCount)} icon={<Box size={18} />} tone="accent" />
+              <span className="mp-seller-task__action">Quản lý sản phẩm <ArrowRight size={14} aria-hidden="true" /></span>
+            </Link>
             <StatCard
               label="Hoàn thành"
               value={formatNumber(stats.completedCount)}
@@ -217,7 +211,7 @@ export default function DashboardPage() {
         </>
       )}
 
-      <div className="mp-dashboard-grid">
+      <div className="mp-seller-dashboard__reports">
         <RevenuePanel
           groupBy={revenue.groupBy}
           onGroupByChange={revenue.setGroupBy}
@@ -226,8 +220,8 @@ export default function DashboardPage() {
           error={revenue.error}
         />
         <Panel
-          title="Cần xử lý"
-          description="Các đơn gần nhất của cửa hàng."
+          title="Đơn hàng gần nhất"
+          description="Theo dõi trạng thái và mở danh sách để xử lý đơn."
           actions={
             <Link className="mp-link" href={`/shops/${shopId}/orders`}>
               Xem tất cả <ArrowRight size={14} aria-hidden="true" />
@@ -264,7 +258,7 @@ export default function DashboardPage() {
           <ArrowRight size={16} aria-hidden="true" />
         </Link>
         <Link className="mp-quick-link" href={`/shops/${shopId}/reviews`}>
-          <Badge tone="accent">Mới</Badge>
+          <ReceiptText size={18} aria-hidden="true" />
           <span>
             <strong>Đánh giá của người mua</strong>
             <span className="mp-muted">Lọc theo sản phẩm và số sao</span>
