@@ -182,7 +182,32 @@ test("catalog entrance motion respects reduced motion", async ({ page }) => {
   const card = page.locator(".mp-product-card").first();
   await expect(card).toBeVisible();
   await expect(card).toHaveCSS("animation-name", "none");
+  await card.hover();
+  await expect(card).toHaveCSS("transform", "none");
   await expect(page.locator(".mp-filter")).toHaveCSS("animation-name", "none");
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await expect(card).toHaveCSS("animation-name", "mp-product-arrive");
+});
+
+test("mobile navigation motion stays usable and honors reduced motion", async ({
+  page,
+}) => {
+  await catalog(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/products");
+  const trigger = page.locator(".mp-mobile-menu > summary");
+  await trigger.click();
+  const menu = page.locator(".mp-mobile-menu__panel");
+  await expect(menu).toBeVisible();
+  await expect(menu).toHaveCSS("animation-name", "mp-popover-enter");
+  await expect(
+    menu.getByRole("link", { name: "Sản phẩm", exact: true }),
+  ).toHaveAttribute("href", "/products");
+  await trigger.click();
+  await expect(menu).toBeHidden();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await trigger.click();
+  await expect(menu).toBeVisible();
+  await expect(menu).toHaveCSS("animation-name", "none");
 });

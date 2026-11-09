@@ -45,12 +45,13 @@ packages/ui-web/src/styles.css is an ordered import entry point:
 3. commerce-storefront.css — shopping masthead, catalog, product and Buyer composition.
 4. commerce-seller.css — scoped Seller operational hierarchy.
 5. commerce-admin.css — scoped Admin operational hierarchy.
+6. commerce-motion.css — interaction finish shared by the three apps, including finite entrances and hover/press feedback.
 
 Change the owning file rather than appending another redesign layer. App metadata theme colors and Tailwind font mappings match these tokens. Root layouts import tokens and shared CSS exactly once.
 
 ## Motion and accessibility
 
-Linked merchandise can lift 2px and its image can zoom gently within the frame. Buttons have a restrained press state. Page movement never starts content at opacity zero. No scroll-driven hiding of products or giant stagger sequence. Reduced motion disables nonessential movement. Keyboard focus is immediately visible, headings wrap, menus/dialogs remain operable without hover, and html/body clip horizontal page overflow while tables own their local scrolling.
+Linked merchandise can lift 4px and its image can zoom gently within the frame on precise hover devices. Buttons have a restrained scale/press wave. Native menus settle in over 220ms; dialogs enter over 300ms with a separate 180ms backdrop fade. Active console navigation has a small selection marker. Page movement never starts content at opacity zero. Route choreography uses two cancellable animation frames rather than forcing synchronous layout, and is entirely skipped under reduced motion. No scroll-driven hiding of products, looping attention effects or giant stagger sequence. Reduced motion disables both decorative animation and hover displacement. Keyboard focus is immediately visible, headings wrap, menus/dialogs remain operable without hover, and html/body clip horizontal page overflow while tables own their local scrolling.
 
 Check text and action contrast, including masthead links in both themes. Do not copy an inaccessible reference color pair to achieve visual similarity. Preserve all permissions and unauthorized redirects.
 

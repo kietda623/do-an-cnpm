@@ -1,7 +1,8 @@
 /* Hallmark · Marketplace Commerce · shape: app screen · redesign: full */
-/* Critique: one shared foundation with explicit commerce composition ownership. */
+/* Critique: one shared foundation, explicit composition ownership and accessible motion. */
 @import "./base.css";
 @import "./commerce-common.css";
 @import "./commerce-storefront.css";
 @import "./commerce-seller.css";
 @import "./commerce-admin.css";
+@import "./commerce-motion.css";
