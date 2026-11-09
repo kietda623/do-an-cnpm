@@ -95,7 +95,7 @@ export default function ShopsPage() {
   }
 
   return (
-    <div className="mp-page mp-seller-page">
+    <div className="mp-page mp-seller-page mp-seller-shop-profile">
       <PageHeader
         title="Cửa hàng của tôi"
         description="Đăng ký mở gian hàng, theo dõi trạng thái duyệt và cập nhật hồ sơ công khai."

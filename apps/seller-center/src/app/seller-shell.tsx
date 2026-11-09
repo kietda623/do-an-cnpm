@@ -154,11 +154,11 @@ export function SellerShell({ children }: { children: ReactNode }) {
       navGroups={navGroups}
       shopSwitcher={switcher}
       topbar={
-        <div className="mp-console__context">
-          <span className="mp-console__eyebrow">Kênh người bán</span>
+        <div className="mp-console__context mp-seller-context">
           <span className="mp-console__context-name">
             {activeShop?.shopName ?? "Chọn cửa hàng để bắt đầu"}
           </span>
+          <span className="mp-seller-context__label">Kênh người bán</span>
         </div>
       }
     >

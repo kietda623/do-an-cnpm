@@ -212,13 +212,6 @@ export default function DashboardPage() {
       )}
 
       <div className="mp-seller-dashboard__reports">
-        <RevenuePanel
-          groupBy={revenue.groupBy}
-          onGroupByChange={revenue.setGroupBy}
-          series={revenue.series}
-          loading={revenue.loading}
-          error={revenue.error}
-        />
         <Panel
           title="Đơn hàng gần nhất"
           description="Theo dõi trạng thái và mở danh sách để xử lý đơn."
@@ -246,6 +239,13 @@ export default function DashboardPage() {
             }
           />
         </Panel>
+        <RevenuePanel
+          groupBy={revenue.groupBy}
+          onGroupByChange={revenue.setGroupBy}
+          series={revenue.series}
+          loading={revenue.loading}
+          error={revenue.error}
+        />
       </div>
 
       <div className="mp-quick-links">

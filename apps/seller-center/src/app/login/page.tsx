@@ -34,10 +34,10 @@ export default function SellerLoginPage() {
   return (
     <main className="mp-auth mp-auth--console">
       <section className="mp-auth__intro">
-        <span className="mp-auth__eyebrow">
+        <h1 className="mp-auth__title">Quản lý cửa hàng trong một màn hình.</h1>
+        <span className="mp-seller-auth__identity">
           <Store size={16} aria-hidden="true" /> Seller Center
         </span>
-        <h1 className="mp-auth__title">Quản lý cửa hàng trong một màn hình.</h1>
         <p className="mp-auth__description">
           Theo dõi đơn cần xử lý, cập nhật sản phẩm và xem doanh thu hoàn tất bằng dữ liệu thật
           từ Marketplace.

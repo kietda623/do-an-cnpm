@@ -43,10 +43,10 @@ export default function SellerRegisterPage() {
   return (
     <main className="mp-auth mp-auth--console">
       <section className="mp-auth__intro">
-        <span className="mp-auth__eyebrow">
+        <h1 className="mp-auth__title">Bắt đầu bán hàng trên Marketplace.</h1>
+        <span className="mp-seller-auth__identity">
           <Store size={16} aria-hidden="true" /> Seller Center
         </span>
-        <h1 className="mp-auth__title">Bắt đầu bán hàng trên Marketplace.</h1>
         <p className="mp-auth__description">
           Tạo tài khoản, gửi hồ sơ cửa hàng và theo dõi kết quả duyệt.
         </p>
