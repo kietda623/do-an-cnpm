@@ -28,6 +28,7 @@ export function createCspPolicy({
 
   const pageUrl = new URL(requestUrl);
   httpOrigin(pageUrl.origin, "Storefront", development);
+  const apiUrlValue = new URL(apiUrl);
   const apiOrigin = httpOrigin(apiUrl, "API", development);
   const assetOrigin = assetUrl
     ? httpOrigin(assetUrl, "Asset", development)
@@ -35,6 +36,17 @@ export function createCspPolicy({
 
   const connectSources = new Set(["'self'", apiOrigin]);
   if (development) {
+    const loopbackHosts = new Set(["localhost", "127.0.0.1"]);
+    if (
+      loopbackHosts.has(pageUrl.hostname) &&
+      loopbackHosts.has(apiUrlValue.hostname)
+    ) {
+      const apiAlias = new URL(apiOrigin);
+      apiAlias.hostname =
+        apiUrlValue.hostname === "localhost" ? "127.0.0.1" : "localhost";
+      connectSources.add(apiAlias.origin);
+    }
+
     const websocketProtocol = pageUrl.protocol === "https:" ? "wss:" : "ws:";
     connectSources.add(`${websocketProtocol}//${pageUrl.host}`);
   }

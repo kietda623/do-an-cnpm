@@ -55,6 +55,27 @@ test("development CSP permits eval and only its own development websocket", () =
   assert.ok(!sourceMap["upgrade-insecure-requests"]);
 });
 
+test("development CSP permits both loopback spellings for the API", () => {
+  const aliases = [
+    ["http://127.0.0.1:3100/", "http://localhost:4000/api/v1"],
+    ["http://localhost:3100/", "http://127.0.0.1:4000/api/v1"],
+  ];
+
+  for (const [requestUrl, apiUrl] of aliases) {
+    const sourceMap = directives(
+      createCspPolicy({
+        nonce: "ZGV2Tm9uY2U0NTY=",
+        requestUrl,
+        apiUrl,
+        development: true,
+      }),
+    );
+
+    assert.ok(sourceMap["connect-src"].includes("http://localhost:4000"));
+    assert.ok(sourceMap["connect-src"].includes("http://127.0.0.1:4000"));
+  }
+});
+
 test("rejects insecure production URLs, credentials, and invalid nonce characters", () => {
   assert.throws(() =>
     createCspPolicy({

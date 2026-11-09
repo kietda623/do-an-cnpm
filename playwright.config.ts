@@ -8,6 +8,7 @@ export default defineConfig({
     "buyer-account.spec.ts",
     "fulfillment-buyer.spec.ts",
     "polling-buyer.spec.ts",
+    "storefront-shell.spec.ts",
     "storefront-security-headers.spec.ts",
     "theme-storefront.spec.ts",
   ],

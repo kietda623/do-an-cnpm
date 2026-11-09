@@ -157,10 +157,10 @@
 - The Tauri shell serves the same storefront routes. No desktop-only route or page is added.
 - Existing search, filters, gallery, variants, shop, and public review behavior remains owned by the storefront.
 
-- [ ] Run the existing Web regression: pnpm test:e2e:discovery and pnpm exec playwright test tests/e2e/storefront-shell.spec.ts --config=playwright.config.ts.
-- [ ] Install and launch the debug Tauri app on the available target OS. Verify home, search/filter, product gallery/variant, shop, and public review screens load in the same remote origin.
-- [ ] Record build URL, OS/WebView version, route results, and any failures in docs/testing/desktop-evidence.md. Do not create a separate discovery UI or a new executable automation framework; T160 remains an unapproved follow-up.
-- [ ] Commit this task on the same feature branch with message: test(desktop): verify buyer discovery parity.
+- [x] Run the existing Web regression: pnpm test:e2e:discovery and pnpm exec playwright test tests/e2e/storefront-shell.spec.ts --config=playwright.config.ts.
+- [x] Install and launch the debug Tauri app on the available target OS. Verify home, search/filter, product gallery/variant, shop, and public review screens load in the same remote origin.
+- [x] Record build URL, OS/WebView version, route results, and any failures in docs/testing/desktop-evidence.md. Do not create a separate discovery UI or a new executable automation framework; T160 remains an unapproved follow-up.
+- [x] Commit this task on the same feature branch with message: test(desktop): verify buyer discovery parity.
 
 **Expected result:** Buyer discovery screens are the existing web screens inside the desktop window and retain their saved server data after reload.
 
