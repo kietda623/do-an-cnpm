@@ -27,7 +27,7 @@ The full API Jest suites passed with Windows worktree discovery overrides:
 
 ```text
 node apps/api/scripts/run-tests.mjs unit '--testMatch=**/*.spec.ts' '--testPathIgnorePatterns=test[/\\]integration'
-  22 suites, 115 tests passed
+  22 suites, 116 tests passed
 
 node apps/api/scripts/run-tests.mjs contracts '--testMatch=**/tests/contracts/**/*.spec.ts' '--testPathIgnorePatterns=(?!)'
   12 suites, 322 tests passed

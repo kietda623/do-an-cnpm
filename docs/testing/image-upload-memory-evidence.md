@@ -10,8 +10,8 @@
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Asset upload regressions | `corepack pnpm@12.14.0 --filter @marketplace/api test "--testMatch=**/*.spec.ts" "--testPathIgnorePatterns=test[/\\]integration" --testPathPatterns=asset-storage.spec.ts` | PASS, 1 suite / 11 tests |
-| API unit suite | `corepack pnpm@12.14.0 --filter @marketplace/api test "--testMatch=**/*.spec.ts" "--testPathIgnorePatterns=test[/\\]integration"` | PASS, 19 suites / 98 tests |
+| Asset upload regressions | `node apps/api/scripts/run-tests.mjs unit '--testMatch=**/*.spec.ts' '--testPathIgnorePatterns=test[/\\]integration' '--testPathPatterns=asset-storage.spec.ts'` | PASS, 1 suite / 12 tests, including WebP byte and metadata preservation |
+| API unit suite | `node apps/api/scripts/run-tests.mjs unit '--testMatch=**/*.spec.ts' '--testPathIgnorePatterns=test[/\\]integration'` | PASS, 22 suites / 116 tests |
 | Workspace lint | `corepack pnpm@12.14.0 lint:workspaces` | PASS, 9 tasks |
 | Workspace typecheck | `corepack pnpm@12.14.0 typecheck` | PASS, 9 tasks |
 | Workspace build | `corepack pnpm@12.14.0 build` | PASS, 4 tasks |

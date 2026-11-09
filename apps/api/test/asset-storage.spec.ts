@@ -138,6 +138,26 @@ describe("AssetService local driver", () => {
     expect(await readFile(join(directory, created[0]!.objectKey))).toEqual(image);
   });
 
+  it("preserves WebP metadata and original uploaded bytes", async () => {
+    const { service, created } = localService(directory);
+    const image = await sharp({
+      create: { width: 3, height: 2, channels: 4, background: "#336699" },
+    })
+      .webp()
+      .toBuffer();
+
+    const result = await service.upload(
+      userId,
+      { buffer: image, originalname: "logo.webp", mimetype: "image/webp" },
+      "SHOP_LOGO",
+    );
+
+    expect(result.mimeType).toBe("image/webp");
+    expect(result.width).toBe(3);
+    expect(result.height).toBe(2);
+    expect(await readFile(join(directory, created[0]!.objectKey))).toEqual(image);
+  });
+
   it("streams encoded output without requesting or collecting raw pixels", async () => {
     const { service } = localService(directory);
     const image = await sharp({
