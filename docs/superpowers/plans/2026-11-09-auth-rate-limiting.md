@@ -49,7 +49,8 @@
 
 - [x] **Step 2: Run focused tests to verify the missing policy fails**
 
-  Run: `pnpm --filter @marketplace/api test --testPathPatterns=rate-limiter.service.spec.ts`  
+  Run: `pnpm --filter @marketplace/api test --testPathPatterns=rate-limiter.service.spec.ts`
+
   Expected: FAIL because the policy module and injected limiter are not implemented yet.
 
 - [x] **Step 3: Implement the policy module**
@@ -58,7 +59,8 @@
 
 - [x] **Step 4: Run the focused tests and commit**
 
-  Run: `pnpm --filter @marketplace/api test --testPathPatterns=rate-limiter.service.spec.ts`  
+  Run: `pnpm --filter @marketplace/api test --testPathPatterns=rate-limiter.service.spec.ts`
+
   Expected: PASS. Commit as `feat(api): define auth rate-limit policy`.
 
 ### Task 2: Add the Redis store and atomic TTL tests
@@ -82,7 +84,8 @@
 
 - [x] **Step 2: Add Redis test infrastructure and run the red suite**
 
-  Add an explicit Redis service with a health check to Compose and GitHub Actions. Run: `pnpm --filter @marketplace/api test:integration --testPathPatterns=rate-limit-store.integration.spec.ts`  
+  Add an explicit Redis service with a health check to Compose and GitHub Actions. Run: `pnpm --filter @marketplace/api test:integration --testPathPatterns=rate-limit-store.integration.spec.ts`
+
   Expected: FAIL because the Redis adapter is missing.
 
 - [x] **Step 3: Implement the Redis adapter**
@@ -91,7 +94,8 @@
 
 - [x] **Step 4: Run Redis integration tests and commit**
 
-  Run: `pnpm --filter @marketplace/api test:integration --testPathPatterns=rate-limit-store.integration.spec.ts`  
+  Run: `pnpm --filter @marketplace/api test:integration --testPathPatterns=rate-limit-store.integration.spec.ts`
+
   Expected: PASS across two store instances. Commit as `feat(api): add shared Redis rate-limit store`.
 
 ### Task 3: Wire auth routes, trusted IPs, and error responses
@@ -121,7 +125,8 @@
 
 - [x] **Step 2: Run the focused suites and record red**
 
-  Run: `pnpm --filter @marketplace/api test "--testPathPatterns=identity.service.spec.ts|rate-limit.http.spec.ts"`; `pnpm --filter @marketplace/api test:contracts --testPathPatterns=identity.contract.spec.ts`; and `pnpm --filter @marketplace/api test:integration "--testPathPatterns=identity.integration.spec.ts|auth-rate-limit.integration.spec.ts"`  
+  Run: `pnpm --filter @marketplace/api test "--testPathPatterns=identity.service.spec.ts|rate-limit.http.spec.ts"`; `pnpm --filter @marketplace/api test:contracts --testPathPatterns=identity.contract.spec.ts`; and `pnpm --filter @marketplace/api test:integration "--testPathPatterns=identity.integration.spec.ts|auth-rate-limit.integration.spec.ts"`
+
   Expected: FAIL because the auth routes do not use Redis policy and the contract has no `Retry-After` header or auth 503 response.
 
 - [x] **Step 3: Wire rate limits without changing auth semantics**

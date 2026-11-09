@@ -44,7 +44,8 @@
 
 - [x] **Step 2: Run the focused unit suite and record baseline**
 
-  Run: `pnpm --filter @marketplace/api test --testPathPatterns=asset-storage.spec.ts`  
+  Run: `pnpm --filter @marketplace/api test --testPathPatterns=asset-storage.spec.ts`
+
   Expected: existing cases pass; the new assertions establish the behavior that the streaming implementation must preserve. The memory property is verified separately in Task 3 because RSS thresholds are not stable enough for a CI assertion.
 
 - [x] **Step 3: Commit the regression coverage**
@@ -70,7 +71,8 @@
 
 - [x] **Step 2: Run the focused unit suite**
 
-  Run: `pnpm --filter @marketplace/api test --testPathPatterns=asset-storage.spec.ts`  
+  Run: `pnpm --filter @marketplace/api test --testPathPatterns=asset-storage.spec.ts`
+
   Expected: PASS, including no Asset/object creation for corrupt image data and byte-for-byte preservation for valid uploads.
 
 - [x] **Step 3: Commit the streaming decoder change**
@@ -92,7 +94,8 @@
 
 - [x] **Step 1: Run the API unit tests**
 
-  Run: `pnpm --filter @marketplace/api test`  
+  Run: `pnpm --filter @marketplace/api test`
+
   Expected: all API unit tests pass.
 
 - [x] **Step 2: Inspect for raw-buffer collection and run one 40 MP smoke check**
@@ -101,7 +104,8 @@
 
 - [x] **Step 3: Run workspace checks**
 
-  Run: `pnpm lint:workspaces`, `pnpm typecheck`, `pnpm build`  
+  Run: `pnpm lint:workspaces`, `pnpm typecheck`, `pnpm build`
+
   Expected: all workspace tasks pass.
 
 - [x] **Step 4: Record evidence**

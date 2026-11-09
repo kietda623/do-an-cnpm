@@ -1,6 +1,6 @@
 # Image Upload Memory Hardening Design
 
-**Status:** Approved  
+**Status:** Approved
 **Target baseline:** GitHub `main` at `44abf5aaf40eb4ffcf49feb67fc5b5637cdb39a1`. The current workspace branch is an ancestor of that baseline and must be synced before implementation.
 
 ## Intent

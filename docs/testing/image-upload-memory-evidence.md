@@ -31,4 +31,3 @@ A 2 ms sampler tracked `process.memoryUsage().rss` after module loading and fixt
 For comparison, before the refinement the same solid PNG through `AssetService` with raw output streaming reached 275,103,744 B from a 95,432,704 B baseline (179,671,040 B peak growth). A direct Sharp raw `.toBuffer()` run on the high-entropy JPEG reached 231,854,080 B from 56,553,472 B (175,300,608 B peak growth). The final PNG stream reduced peak growth by about 144 MB on the solid fixture and about 45 MB on the high-entropy fixture. The high-entropy case still uses substantial native working memory.
 
 The final decoder streams temporary PNG-encoded output into a 64 KiB writable sink and discards it. It stores the exact original uploaded bytes. The smoke covers the built service path in a fresh Node process rather than booting the full Nest HTTP server. RSS sampling can miss short-lived spikes; native decoder memory also depends on image content.
-
