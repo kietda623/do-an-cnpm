@@ -43,20 +43,20 @@
 - The policy consumes the IP bucket before an email bucket. This counts requests toward the IP budget first and avoids creating per-email keys after the IP budget is exhausted. Email and IP limits both apply; the denial response uses the longest retry delay among denied buckets.
 - Export a `RATE_LIMIT_STORE` injection token with the interface. The policy maps a denied counter to the existing API error envelope with `RATE_LIMITED`; store connectivity errors map to `503` without retrying the authentication operation.
 
-- [ ] **Step 1: Write policy tests against a fake store**
+- [x] **Step 1: Write policy tests against a fake store**
 
   Pin exact bucket keys through a test HMAC secret, the six default limits, email normalization, per-family isolation, IP-first behavior, and conversion of a denied bucket into `RATE_LIMITED` with `Retry-After` seconds.
 
-- [ ] **Step 2: Run focused tests to verify the missing policy fails**
+- [x] **Step 2: Run focused tests to verify the missing policy fails**
 
   Run: `pnpm --filter @marketplace/api test --testPathPatterns=rate-limiter.service.spec.ts`  
   Expected: FAIL because the policy module and injected limiter are not implemented yet.
 
-- [ ] **Step 3: Implement the policy module**
+- [x] **Step 3: Implement the policy module**
 
   Add `assertRegisterAllowed`, `assertLoginAllowed`, `assertRefreshIpAllowed`, and `assertRefreshFamilyAllowed` with 60-second fixed windows. HMAC the scope and identifier before calling the store. Read defaults from `ConfigService` using `RATE_LIMIT_REGISTER_EMAIL_PER_MINUTE`, `RATE_LIMIT_REGISTER_IP_PER_MINUTE`, `RATE_LIMIT_LOGIN_EMAIL_PER_MINUTE`, `RATE_LIMIT_LOGIN_IP_PER_MINUTE`, `RATE_LIMIT_REFRESH_FAMILY_PER_MINUTE`, and `RATE_LIMIT_REFRESH_IP_PER_MINUTE`.
 
-- [ ] **Step 4: Run the focused tests and commit**
+- [x] **Step 4: Run the focused tests and commit**
 
   Run: `pnpm --filter @marketplace/api test --testPathPatterns=rate-limiter.service.spec.ts`  
   Expected: PASS. Commit as `feat(api): define auth rate-limit policy`.
@@ -76,20 +76,20 @@
 - Consumes: the policy store interface from Task 1.
 - Produces: a Redis `RateLimitStore` adapter with `consume()` and `ping()`; each counter is atomically incremented, expires after its window, and reports remaining TTL.
 
-- [ ] **Step 1: Add Redis adapter integration tests**
+- [x] **Step 1: Add Redis adapter integration tests**
 
   Use two independently created stores against the same Redis URL and a random per-test prefix. Test concurrent increments at the cap, TTL reset, key isolation between prefixes, and connection failure. Tests must delete only generated keys and must not call `FLUSHDB`.
 
-- [ ] **Step 2: Add Redis test infrastructure and run the red suite**
+- [x] **Step 2: Add Redis test infrastructure and run the red suite**
 
   Add an explicit Redis service with a health check to Compose and GitHub Actions. Run: `pnpm --filter @marketplace/api test:integration --testPathPatterns=rate-limit-store.integration.spec.ts`  
   Expected: FAIL because the Redis adapter is missing.
 
-- [ ] **Step 3: Implement the Redis adapter**
+- [x] **Step 3: Implement the Redis adapter**
 
   Add the exact-pinned official `redis` Node client. Implement one atomic Lua operation for `INCR`, first-write `PEXPIRE`, capped counter growth, and `PTTL`; return `allowed` and `retryAfterSeconds`. Expose `ping()` for readiness. Prefix keys with environment and an explicit `RATE_LIMIT_KEY_PREFIX`; close the client during Nest shutdown. Allow the API process to finish booting when Redis is unavailable so health can report the outage and auth mutations can return `503`. Never fall back to a process-local map.
 
-- [ ] **Step 4: Run Redis integration tests and commit**
+- [x] **Step 4: Run Redis integration tests and commit**
 
   Run: `pnpm --filter @marketplace/api test:integration --testPathPatterns=rate-limit-store.integration.spec.ts`  
   Expected: PASS across two store instances. Commit as `feat(api): add shared Redis rate-limit store`.
@@ -115,24 +115,24 @@
 - Consumes: the policy module and Redis adapter from Tasks 1–2.
 - Produces: auth controller passes `req.ip`; AuthService checks register/login before expensive work, refresh IP before token lookup, and refresh family after resolving the stored family ID but before the existing rotation transaction.
 
-- [ ] **Step 1: Write service, HTTP, controller, and contract tests**
+- [x] **Step 1: Write service, HTTP, controller, and contract tests**
 
   Add AuthService tests proving register/login checks run before Argon2 or database work. Test 429 plus `Retry-After`; 503 on Redis outage; distinct session families; family key stability across token rotation; and untrusted `X-Forwarded-For` behavior when `API_TRUST_PROXY_HOPS=0`.
 
-- [ ] **Step 2: Run the focused suites and record red**
+- [x] **Step 2: Run the focused suites and record red**
 
   Run: `pnpm --filter @marketplace/api test "--testPathPatterns=identity.service.spec.ts|rate-limit.http.spec.ts"`; `pnpm --filter @marketplace/api test:contracts --testPathPatterns=identity.contract.spec.ts`; and `pnpm --filter @marketplace/api test:integration "--testPathPatterns=identity.integration.spec.ts|auth-rate-limit.integration.spec.ts"`  
   Expected: FAIL because the auth routes do not use Redis policy and the contract has no `Retry-After` header or auth 503 response.
 
-- [ ] **Step 3: Wire rate limits without changing auth semantics**
+- [x] **Step 3: Wire rate limits without changing auth semantics**
 
   Pass `req.ip` from register/login/refresh controllers. Normalize email before account-key generation. In refresh, check the IP bucket first, look up the session family by the refresh-token hash, check that family bucket, then run the existing locked rotation transaction unchanged. Configure Express trusted proxy hops from `API_TRUST_PROXY_HOPS`, default `0`.
 
-- [ ] **Step 4: Add 429/503 contract behavior**
+- [x] **Step 4: Add 429/503 contract behavior**
 
   Add a rate-limit exception carrying `retryAfterSeconds`; make `ContractErrorFilter` emit an integer `Retry-After` header. Declare that header on the auth 429 responses and add 503 responses to register/login/refresh in OpenAPI. Keep the standard error envelope.
 
-- [ ] **Step 5: Run focused suites, regenerate, and commit**
+- [x] **Step 5: Run focused suites, regenerate, and commit**
 
   Run all three focused commands from Step 2, then `pnpm --filter @marketplace/api-client generate:types` and `git diff --exit-code -- packages/api-client/src/generated/index.ts`. Expected: all tests pass and generated types match OpenAPI. Commit as `feat(auth): apply shared rate limits to auth routes`.
 
@@ -156,19 +156,19 @@
 - Consumes: `RateLimitStore.ping()` from Task 2 and env contracts from Task 3.
 - Produces: development, CI, and production readiness all require configured Redis; local Redis binds only to loopback.
 
-- [ ] **Step 1: Add configuration and readiness tests**
+- [x] **Step 1: Add configuration and readiness tests**
 
   Verify missing/short production `RATE_LIMIT_KEY_SECRET` is rejected, Redis ping failure marks `/health/ready` down, and a successful ping reports `rateLimiter: "up"`. Verify local Compose uses an isolated key prefix and loopback-only Redis port. Keep test coverage in the new readiness spec and existing configuration tests, if present.
 
-- [ ] **Step 2: Add runtime configuration**
+- [x] **Step 2: Add runtime configuration**
 
   Add `RATE_LIMIT_REDIS_URL`, `RATE_LIMIT_KEY_SECRET` (minimum 32 characters), `RATE_LIMIT_KEY_PREFIX`, `API_TRUST_PROXY_HOPS` (default 0), and the six numeric limit overrides to env examples. Set Compose and CI values; use an explicit Redis image tag and health check; make API/API-test depend on Redis health. Add Redis ping to `ReadinessService`.
 
-- [ ] **Step 3: Document setup and safe test cleanup**
+- [x] **Step 3: Document setup and safe test cleanup**
 
   Update local setup, Docker quickstart and fixture documentation with the Redis port/URL, required secret, key prefix, trusted-proxy setting, and no-`FLUSHDB` rule. Tests must use only their own prefixes.
 
-- [ ] **Step 4: Run the full verification set and commit**
+- [x] **Step 4: Run the full verification set and commit**
 
   Run: `pnpm lint:workspaces`, `pnpm typecheck`, `pnpm test`, `pnpm --filter @marketplace/api test:contracts`, `pnpm build`, `pnpm --filter @marketplace/api test:integration`, and `pnpm --filter @marketplace/api prisma:schema:check`. Expected: all commands pass; schema check reports no migration changes. Commit as `chore(api): configure Redis auth rate limiting`.
 
@@ -181,10 +181,10 @@
 - Consumes: observed CI/local results from Tasks 1–4.
 - Produces: evidence for policy limits, multi-instance atomicity, outage behavior, and readiness.
 
-- [ ] **Step 1: Record actual commands and observed results**
+- [x] **Step 1: Record actual commands and observed results**
 
   Include Redis version/tag, environment, per-suite results, 429/Retry-After behavior, two-client concurrency, TTL reset, Redis outage, spoofed proxy header, and schema-parity output. Do not substitute expected results for observed results.
 
-- [ ] **Step 2: Commit evidence**
+- [x] **Step 2: Commit evidence**
 
   Commit as `docs(testing): record auth rate-limit evidence`.
