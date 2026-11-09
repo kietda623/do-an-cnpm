@@ -78,7 +78,7 @@ Three families, all loaded with the Vietnamese subset via `next/font/google` and
 | Body / UI | Be Vietnam Pro (`--font-sans`) | 400, 500, 600, 700 | Body copy, controls, navigation |
 | Data | IBM Plex Mono (`--font-mono`) | 400, 500 | Order IDs, shop slugs, SKUs, money, timestamps, rail labels, table numerics |
 
-Scale: display `clamp(2.6rem, 7vw, 5.5rem)` / 0.92; h1 2rem; h2 1.5rem; h3 1.125rem; body 1rem / 1.6; small .875rem; mono label .75rem with .08em tracking and uppercase.
+Scale: display `clamp(2.6rem, 7vw, 5.5rem)` / 0.92; h1 2rem; h2 1.5rem; h3 1.125rem; body 1rem / 1.6; small .875rem; mono label .75rem with normal tracking and sentence case for readable Vietnamese labels.
 
 Rules: `text-wrap: balance` on headings; metrics use tabular numerals; no gradient text; body measure 65–75ch.
 

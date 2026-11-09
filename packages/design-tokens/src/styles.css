@@ -1,4 +1,11 @@
+/* Hallmark · Signal Dispatch · tokens: locked DESIGN.md · shape: app screen */
+/* Critique: semantic roles are shared by every marketplace surface and theme. */
 :root {
+  --color-on-solid: #f7fffc;
+  --color-shadow-ink: #0f1a17;
+  --color-danger-strong: #8f211b;
+  --color-danger-ink: #2a0d0b;
+  --color-backdrop: rgb(15 26 23 / 55%);
   color-scheme: light;
 
   /* Signal Dispatch palette — light */
@@ -175,6 +182,11 @@ html[data-theme="dark"] {
   box-sizing: border-box;
 }
 
+html,
+body {
+  overflow-x: clip;
+}
+
 html {
   min-width: 320px;
   background: var(--color-canvas);
@@ -196,6 +208,8 @@ h3,
 h4 {
   font-family: var(--font-display);
   text-wrap: balance;
+  overflow-wrap: break-word;
+  min-width: 0;
 }
 
 ::selection {
