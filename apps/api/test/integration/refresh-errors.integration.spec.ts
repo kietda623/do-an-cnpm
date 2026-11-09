@@ -89,6 +89,9 @@ describe("refresh error codes over native and browser transports", () => {
         );
       const rotated = await refresh(token);
       expect(rotated.status).toBe(200);
+      if (platform === "WEB") {
+        expect(rotated.body.data.refreshToken).toBeNull();
+      }
       const next =
         platform === "WEB"
           ? cookieToken(rotated)
@@ -171,7 +174,11 @@ describe("refresh error codes over native and browser transports", () => {
       .set("Authorization", `Bearer ${registered.body.data.accessToken}`)
       .send({ clientPlatform: "WEB" });
     expect(logout.status).toBe(204);
-    expect(logout.headers["set-cookie"]?.[0]).toContain("refresh_token=;");
+    const clearedRefreshCookie = logout.headers["set-cookie"]?.find(
+      (value: string) => value.startsWith("refresh_token=;"),
+    );
+    expect(clearedRefreshCookie).toContain("Path=/api/v1/auth");
+    expect(clearedRefreshCookie).toContain("Max-Age=0");
 
     const refreshAfterLogout = await request(app.getHttpServer())
       .post("/api/v1/auth/refresh")
