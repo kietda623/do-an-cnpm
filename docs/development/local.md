@@ -2,7 +2,7 @@
 
 ## Trạng thái
 
-Workspace đã có manifests/lockfile, TypeScript config, lint/format, `.env.example` và API bootstrap NestJS. Health liveness và Swagger đã được smoke test; readiness chỉ trả sẵn sàng khi cấu hình thiết yếu và PostgreSQL reachable. Source nghiệp vụ, Docker Compose, migrations và các script test nghiệp vụ chưa có, nên các hướng dẫn về service bên dưới vẫn là contract cho các task tiếp theo.
+Workspace có API NestJS, PostgreSQL migrations, Docker Compose và các bộ unit/contract/integration/E2E. API readiness yêu cầu cấu hình hợp lệ, PostgreSQL và Redis reachable; Redis là store dùng chung cho giới hạn request xác thực.
 
 ## Toolchain cần dùng
 
@@ -11,8 +11,9 @@ Workspace đã có manifests/lockfile, TypeScript config, lint/format, `.env.exa
 | Node.js | 24.18.0 theo `.nvmrc` (`>=24.15.0 <25`) |
 | pnpm | 12.14.0 theo `packageManager` |
 | Git | Bản hỗ trợ nhánh feature và pull request |
-| Docker Engine + Compose plugin | Cần cho PostgreSQL và service containers khi Compose được thêm |
+| Docker Engine + Compose plugin | Cần cho PostgreSQL, Redis và service containers |
 | PostgreSQL | 17 theo plan; dev/test database phải tách biệt |
+| Redis | Compose dùng `redis:8.10.3-alpine`; service local và test chỉ bind loopback |
 | S3-compatible storage | Chỉ cần cho upload E2E khi có bucket; để trống S3 thì dev ghi file vào `ASSET_LOCAL_DIR` (mặc định `apps/api/uploads/`) và phục vụ qua `PUBLIC_API_URL/api/v1/assets`, production vẫn bắt buộc S3 |
 
 Kiểm tra phiên bản bằng `node --version` và `pnpm --version`. `pnpm install --frozen-lockfile` chỉ dùng với pnpm 12 và sau khi package build-script policy của workspace được chấp thuận. Không thay đổi package manager toàn máy để chạy repo.
@@ -25,9 +26,10 @@ Kiểm tra phiên bản bằng `node --version` và `pnpm --version`. `pnpm inst
 | Seller Center web | 3001 | Local development |
 | Admin panel web | 3002 | Local development |
 | API | 4000 | Local development; prefix `/api/v1`, Swagger `/api/docs`, liveness `/health/live`, readiness `/health/ready` |
-| PostgreSQL | 5432 | Chỉ bind loopback/local trong development; không public ra Internet |
+| PostgreSQL development / test | 55432 / 55433 | Chỉ bind loopback; test chạy trong Compose profile `test` |
+| Redis development / test | 56379 / 56380 | Chỉ bind loopback; test chạy trong Compose profile `test` |
 
-Không chạy đồng thời hai app trên cùng port. Trình duyệt trên host dùng `localhost`; API container gọi PostgreSQL bằng service name `postgres`. Buyer desktop (khi được triển khai) mở storefront URL này trong webview Tauri.
+Không chạy đồng thời hai app trên cùng port. Trình duyệt trên host dùng `localhost`; API container gọi PostgreSQL/Redis bằng service name `postgres`/`redis`. Buyer desktop (khi được triển khai) mở storefront URL này trong webview Tauri.
 
 ## Environment
 
@@ -37,7 +39,9 @@ Tạo file local từ mẫu:
 Copy-Item .env.example .env
 ```
 
-Điền `DATABASE_URL`, JWT signing secret và các thông tin dịch vụ chỉ trong `.env`. Kết nối từ host dùng hostname `localhost`; API trong Compose dùng hostname `postgres`. Giá trị mẫu trong `.env.example` không phải credentials đã provision. JWT previous secret chỉ dùng verify trong thời gian rotation. Để trống S3/bootstrap admin nếu chưa được cấp quyền và chưa chủ đích cấu hình seed.
+Điền `DATABASE_URL`, JWT signing secret và các thông tin dịch vụ chỉ trong `.env`. Tạo `RATE_LIMIT_KEY_SECRET` riêng, ngẫu nhiên, dài ít nhất 32 ký tự; không dùng lại JWT secret. Kết nối từ host dùng `localhost` (`RATE_LIMIT_REDIS_URL=redis://localhost:56379`); API trong Compose dùng hostname `postgres` và `redis`. `API_TRUST_PROXY_HOPS` mặc định `0`; chỉ đặt số hop tin cậy khi triển khai sau proxy đã kiểm soát. JWT previous secret chỉ dùng verify trong thời gian rotation. Để trống S3/bootstrap admin nếu chưa được cấp quyền và chưa chủ đích cấu hình seed.
+
+Để chạy API từ source với PostgreSQL/Redis Compose, tạo `.env.compose` từ `.env.compose.example`, thay các secret mẫu, rồi chạy `docker compose --env-file .env.compose up -d postgres redis`. Redis chỉ mở ở `127.0.0.1:56379` trên máy local. Integration test dùng Redis riêng tại `127.0.0.1:56380` và prefix `marketplace-test`.
 
 `PUBLIC_API_URL` và `NEXT_PUBLIC_API_URL` chỉ chứa URL công khai. Buyer desktop dùng cùng API URL với web. Không đặt JWT, database password, S3 access key hay bootstrap password vào biến có prefix `NEXT_PUBLIC_`.
 
@@ -50,15 +54,16 @@ Copy-Item .env.example .env
 | `pnpm typecheck` | Đã cấu hình qua Turbo; workspace chưa có TypeScript sẽ báo skip |
 | `pnpm format` / `pnpm format:check` | Đã cấu hình cho source và workspace config |
 | `pnpm --filter @marketplace/api build` / `start` | NestJS bootstrap đã cấu hình; `start` cần build trước |
-| `pnpm dev`, `pnpm build`, `pnpm test`, `pnpm clean` | Root orchestration đã có; package tasks tương ứng chưa được triển khai |
-| `pnpm test:unit`, `test:integration`, `test:contract`, `test:e2e`, `test:concurrency`, `test:security`, `test:performance` | Contract mục tiêu trong quickstart; chưa có script thực thi |
-| API `db:migrate:deploy`, `db:seed:demo`, `test:expiry`; Desktop `tauri`, `build:desktop` | Contract mục tiêu; desktop buyer chưa có workspace và chưa triển khai, các lệnh còn lại chưa có script/service tương ứng |
+| `pnpm dev`, `pnpm build`, `pnpm test`, `pnpm clean` | Root orchestration cho workspace |
+| `pnpm test:contracts`, `pnpm --filter @marketplace/api test:integration` | Contract và PostgreSQL/Redis integration suites |
+| API `prisma:migrate:deploy`, `prisma:seed:demo`, `test:expiry` | Migrations/seeds/API expiry tests; kiểm tra database namespace trước thao tác disposable |
+| Desktop `tauri`, `build:desktop` | Buyer desktop chưa có workspace và chưa triển khai |
 
 Cập nhật quickstart cùng task implementation nếu tên script hoặc service đổi. Không báo test pass khi lệnh chưa tồn tại hoặc chưa chạy được.
 
 ## Khi nền tảng chạy được
 
-Quickstart mô tả luồng dự kiến: copy `.env.example`, cài frozen lockfile, khởi động PostgreSQL, migrate/seed qua script API, rồi chạy API và ba web app. API bootstrap có thể build/start riêng; hiện chưa có Compose/migrations nên các lệnh database và web container chưa chạy được. Khi được triển khai, xác nhận database URL và namespace trước khi migrate hoặc seed.
+Quickstart: copy `.env.example`, cấu hình database/JWT/Redis secrets, cài frozen lockfile, khởi động PostgreSQL và Redis, deploy migration rồi build/start API và web apps. Docker Compose cung cấp Redis health check; `api` chờ PostgreSQL và Redis khỏe trước khi chạy. Xác nhận database URL và namespace trước khi migrate hoặc seed.
 
 ### Bảo vệ dữ liệu
 
