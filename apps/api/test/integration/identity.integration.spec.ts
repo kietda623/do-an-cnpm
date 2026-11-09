@@ -1,14 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
-import { RequestMethod } from "@nestjs/common";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import request from "supertest";
 import type { Pool } from "pg";
 import { AppModule } from "../../src/app.module.js";
 import { DatabaseService } from "../../src/database/prisma.service.js";
-import { CsrfRequestMiddleware } from "../../src/common/http/csrf-request.middleware.js";
-import { ContractErrorFilter } from "../../src/common/http/error.filter.js";
+import { configureHttp } from "../../src/common/http/configure-http.js";
 import { createTestPool, resetAndDeployMigrations } from "../helpers/database.js";
 
 type TokenResponse = {
@@ -18,8 +16,6 @@ type TokenResponse = {
 
 const password = "Correct horse battery staple 9!";
 const uniqueEmail = () => `identity-${randomUUID()}@example.test`;
-// Keep the red test-first baseline out of CI until the identity endpoints are implemented.
-const identityDescribe = process.env.CI === "true" ? describe.skip : describe;
 
 async function register(app: INestApplication, email = uniqueEmail()): Promise<TokenResponse> {
   return request(app.getHttpServer())
@@ -27,7 +23,16 @@ async function register(app: INestApplication, email = uniqueEmail()): Promise<T
     .send({ email, password, fullName: "Integration Buyer", clientPlatform: "ANDROID" });
 }
 
-identityDescribe("Buyer identity PostgreSQL integration", () => {
+async function familyFor(pool: Pool, refreshToken: string): Promise<string | undefined> {
+  const refreshHash = createHash("sha256").update(refreshToken).digest("hex");
+  const result = await pool.query<{ family_id: string }>(
+    `SELECT family_id::text FROM sessions WHERE refresh_hash = $1`,
+    [refreshHash],
+  );
+  return result.rows[0]?.family_id;
+}
+
+describe("Buyer identity PostgreSQL integration", () => {
   let app: INestApplication;
   let pool: Pool;
 
@@ -36,15 +41,7 @@ identityDescribe("Buyer identity PostgreSQL integration", () => {
     pool = await createTestPool();
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication({ logger: false });
-    app.setGlobalPrefix("api/v1", {
-      exclude: [
-        { path: "health/live", method: RequestMethod.GET },
-        { path: "health/ready", method: RequestMethod.GET },
-      ],
-    });
-    const csrf = app.get(CsrfRequestMiddleware);
-    app.use(csrf.use.bind(csrf));
-    app.useGlobalFilters(new ContractErrorFilter());
+    configureHttp(app);
     await app.init();
   }, 120_000);
 
@@ -58,12 +55,14 @@ identityDescribe("Buyer identity PostgreSQL integration", () => {
     const created = await register(app, email);
     expect(created.status).toBe(201);
     const originalRefresh = created.body.data.refreshToken;
+    const originalFamily = await familyFor(pool, originalRefresh);
 
     const rotated = await request(app.getHttpServer())
       .post("/api/v1/auth/refresh")
       .send({ refreshToken: originalRefresh, clientPlatform: "ANDROID" });
     expect(rotated.status).toBe(200);
     expect(rotated.body.data.refreshToken).not.toBe(originalRefresh);
+    expect(await familyFor(pool, rotated.body.data.refreshToken)).toBe(originalFamily);
 
     const logout = await request(app.getHttpServer())
       .post("/api/v1/auth/logout")

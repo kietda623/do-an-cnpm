@@ -10,6 +10,7 @@ import { AppModule } from "../../apps/api/src/app.module.js";
 import { DatabaseService } from "../../apps/api/src/database/prisma.service.js";
 
 type Schema = {
+  $ref?: string;
   type?: string;
   format?: string;
   enum?: unknown[];
@@ -22,7 +23,13 @@ type Schema = {
 
 type Operation = {
   operationId?: string;
-  responses?: Record<string, unknown>;
+  responses?: Record<
+    string,
+    {
+      content?: Record<string, { schema?: Schema }>;
+      headers?: Record<string, { schema?: Schema }>;
+    }
+  >;
 };
 
 type OpenApiDocument = {
@@ -123,6 +130,36 @@ describe("identity OpenAPI and runtime contract", () => {
       expect(operation?.responses?.[status]).toBeDefined();
     },
   );
+
+  it.each([
+    ["/auth/register", "post"],
+    ["/auth/login", "post"],
+    ["/auth/refresh", "post"],
+  ] as const)("documents rate-limit responses for %s", (path, method) => {
+    const operation = contract.paths[path]?.[method];
+    const tooManyRequests = operation?.responses?.["429"];
+    const unavailable = operation?.responses?.["503"];
+
+    expect(tooManyRequests?.headers?.["Retry-After"]?.schema).toMatchObject({
+      type: "integer",
+      minimum: 1,
+    });
+    expect(tooManyRequests?.content?.["application/json"]?.schema?.$ref).toBe(
+      "#/components/schemas/ErrorEnvelope",
+    );
+    expect(unavailable?.content?.["application/json"]?.schema?.$ref).toBe(
+      "#/components/schemas/ErrorEnvelope",
+    );
+
+    const runtimeOperation = runtimeDocument.paths[path]?.[method] as Operation | undefined;
+    expect(
+      runtimeOperation?.responses?.["429"]?.headers?.["Retry-After"]?.schema,
+    ).toMatchObject({ type: "integer", minimum: 1 });
+    expect(runtimeOperation?.responses?.["429"]?.content?.["application/json"]?.schema?.$ref)
+      .toBe("#/components/schemas/ErrorEnvelope");
+    expect(runtimeOperation?.responses?.["503"]?.content?.["application/json"]?.schema?.$ref)
+      .toBe("#/components/schemas/ErrorEnvelope");
+  });
 
   it.each(identityOperations)("exposes %s %s from the Nest runtime", (method, path) => {
     expect(runtimeDocument.paths[path]?.[method]).toBeDefined();
