@@ -22,7 +22,7 @@
     "typescript": "catalog:"
   },
   "scripts": {
-    "build": "next build --webpack",
+    "build": "next build",
     "dev": "next dev --hostname 0.0.0.0",
     "lint": "node ../../packages/config/lint.mjs",
     "start": "next start --hostname 0.0.0.0",

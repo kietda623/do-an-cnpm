@@ -20,6 +20,8 @@ Screenshots are retained under `test-results/seller-variant-form-varian-c31c8-et
 
 The initial push workflow (`42764863022`) failed during the Storefront production build, with six Space Grotesk virtual-font resolution errors: `next/font/google queries have exactly one entry`. The PR workflow for the same commit (`42764939608`) passed, confirming the failure was intermittent rather than a variant-form type or test failure.
 
-All three web apps use the same font pipeline. Their production build scripts now explicitly use Next.js's supported `next build --webpack` mode to avoid the failing Turbopack Google-font resolver. Development commands, font selections, framework versions and application behavior remain unchanged.
+An initial Webpack workaround passed all three local production builds, but PR workflow `42766577356` then exposed another Google-font loader failure (`Cannot read properties of null (reading '1')` in the remote font URL-extension parser). Changing the bundler alone did not remove the external font dependency.
 
-Local verification of the fix: production builds for Storefront, Seller Center and Admin all passed (3/3 uncached tasks), including compilation, TypeScript, prerendering and build traces. JSON formatting and `git diff --check` also passed.
+The final fix ships the same seven font files through `@marketplace/ui-web/fonts` and `next/font/local`. Licensed, unmodified files are stored once in `packages/design-tokens/fonts`, with the official source commit, SHA-256 provenance and complete SIL licenses. All three layouts retain the same CSS variables and font-display behavior. Default `next build`/Turbopack commands are restored; neither development nor production needs Google Fonts responses.
+
+Final local verification: all three default production builds passed (3/3 uncached tasks), including compilation, TypeScript and prerendering. Shared UI typecheck/lint passed. Font checks verified every SHA-256 digest and Vietnamese glyph coverage in all seven faces. Runtime source contains no Google Fonts imports. JSON formatting and `git diff --check` passed.

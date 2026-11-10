@@ -49,7 +49,7 @@ Use the semantic CSS variables in packages/design-tokens/src/styles.css. Cyan is
 
 ## Typography
 
-Space Grotesk is the display face, Be Vietnam Pro the UI face and IBM Plex Mono the numeric/code face; load the Vietnamese subsets. Headings are compact and wrap naturally, without a tiny tracked uppercase label above them. Body, labels and controls retain readable Vietnamese diacritics. Use tabular mono numerals for money, metrics and record identifiers, not ordinary prose.
+Space Grotesk is the display face, Be Vietnam Pro the UI face and IBM Plex Mono the numeric/code face. Vietnamese-capable local font files live in packages/design-tokens/fonts and are loaded through @marketplace/ui-web/fonts. Headings are compact and wrap naturally, without a tiny tracked uppercase label above them. Body, labels and controls retain readable Vietnamese diacritics. Use tabular mono numerals for money, metrics and record identifiers, not ordinary prose.
 
 ## Layout
 
