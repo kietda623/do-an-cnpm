@@ -1,6 +1,6 @@
 # ADR-0003: Toàn vẹn dữ liệu giao dịch marketplace
 
-- **Trạng thái:** Accepted as MVP design baseline
+- **Trạng thái:** Accepted as MVP design baseline; migration/restore rehearsal verified 2026-11-10
 - **Ngày:** 2026-10-21
 - **Ngữ cảnh:** Checkout nhiều shop đồng thời chạm cart, catalog, stock, order và payment; callback, expiry, cancel và retry có thể đua nhau. Cần bảo toàn tiền/tồn/snapshot qua retry và crash.
 
@@ -25,4 +25,13 @@ Row locks và conditional updates phù hợp với quy mô MVP và giữ các in
 - Cancellation thắng callback và callback thắng cancellation đều kết thúc nhất quán; late success được bù trừ.
 - Cross-shop FK/authorization, snapshot immutability, migration fresh/upgrade và crash/restart idempotency được xác minh bằng PostgreSQL integration tests.
 
-Các mục trên là tiêu chí thiết kế; chưa có bằng chứng thực thi vì chưa tạo source schema/migration. Xem [data design](../database/data-design.md) và [model/transaction detail](../../specs/001-marketplace-mvp/data-model.md).
+Các mục trên là tiêu chí thiết kế và có phạm vi rộng hơn riêng rehearsal T149. Bằng chứng migration/integrity/restore được ghi riêng bên dưới; concurrency, crash/restart và các luồng nghiệp vụ cần đối chiếu evidence của task tương ứng trước release.
+
+### Bằng chứng migration và restore T149 — 2026-11-10
+
+- Fresh install trên PostgreSQL 18.1 áp dụng đủ chín migration đã commit; deploy lặp lại vẫn up to date. Rehearsal upgrade áp dụng `0001`–`0008`, sau đó Prisma chỉ áp dụng `0009_backfill_expired_order_status`; MOCK order hết hạn đủ điều kiện chuyển thành `CANCELLED`, version 1.
+- Migration integration suite PASS 6 tests về FK, unique, check, hình dạng/bất biến payment snapshot, lịch sử append-only và backfill idempotent.
+- Backup custom format được restore vào một database disposable trống khác. Migration ledger, schema parity, số constraint/index, số dòng fixture, trạng thái/version order và payment-attempt snapshot đều khớp. Probe FK, unique, check và sửa snapshot đều bị bản restore từ chối.
+- Rehearsal dùng cluster local mới chỉ bind loopback và fixture test; không dùng hoặc sửa database ứng dụng, staging hay production, không chỉnh migration đã commit. Môi trường, lệnh, kết quả và giới hạn nằm trong [migration rehearsal](../database/migration-rehearsal.md).
+
+Xem thêm [data design](../database/data-design.md) và [model/transaction detail](../../specs/001-marketplace-mvp/data-model.md).

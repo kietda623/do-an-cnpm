@@ -1,6 +1,6 @@
 # Thiết kế dữ liệu Marketplace MVP
 
-**Trạng thái:** Baseline thiết kế, chưa có migration được chạy.  
+**Trạng thái:** Baseline thiết kế; migration/restore rehearsal trên database cô lập PASS ngày 2026-11-10.
 **Nguồn chi tiết:** [`specs/001-marketplace-mvp/data-model.md`](../../specs/001-marketplace-mvp/data-model.md). Tài liệu này ghi quyết định ERD, integrity, transaction và migration review cho W003; model nguồn là field dictionary đầy đủ.
 
 ## Mô hình dữ liệu và quyền sở hữu
@@ -56,6 +56,8 @@ Checkout, cancel/return stock, settlement/refund, shipment/order transitions và
 
 Migration tạo shared audit/idempotency trước, rồi Identity/Session/Address, Asset/Shop/Catalog, Inventory/Cart, Order/Payment/Shipment/Review theo FK ownership. Nếu FK đích chưa tồn tại, thêm theo migration sở hữu bảng đích như ghi trong tasks; không dùng orphan rows/fake parent. Mỗi migration có fresh-install và upgrade validation; migration đã áp dụng lên môi trường dùng chung không sửa lại mà tạo migration mới. Sequence và fields đầy đủ nằm trong [data model](../../specs/001-marketplace-mvp/data-model.md).
 
-## Bằng chứng review
+## Bằng chứng review và migration
 
-Tabletop concurrency phải chứng minh 20 buyers/stock 5 cho 5 commit/15 conflict, tổng stock không âm và movement đúng. Replay cùng idempotency key không tạo order/payment/refund thứ hai; key khác payload bị conflict. Duplicate default address, callback/cancel race, retry refund và cross-shop composite FK phải có kiểm thử integration trước khi implementation task tương ứng được nghiệm thu. Đây là acceptance criteria, chưa phải kết quả chạy test hoặc migration.
+Tabletop concurrency phải chứng minh 20 buyers/stock 5 cho 5 commit/15 conflict, tổng stock không âm và movement đúng. Replay cùng idempotency key không tạo order/payment/refund thứ hai; key khác payload bị conflict. Duplicate default address, callback/cancel race, retry refund và cross-shop composite FK cần đối chiếu integration evidence của từng luồng; không suy ra các kết quả đó chỉ từ rehearsal migration.
+
+Migration được rehearsal riêng ở [migration-rehearsal.md](migration-rehearsal.md): fresh deploy chín migration, upgrade `0008` → `0009`, idempotent deploy, schema parity và backup/restore sang DB disposable khác đều PASS trên PostgreSQL 18.1. Evidence này không thay cho các kiểm tra concurrency/callback/checkout ở trên và chưa xác nhận tương thích PostgreSQL 17.11 của CI.
