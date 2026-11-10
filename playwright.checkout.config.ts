@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: [
     "multi-shop-checkout.spec.ts",
+    "t148-checkout-walkthrough.spec.ts",
     "storefront-checkout-bootstrap.spec.ts",
   ],
   fullyParallel: false,

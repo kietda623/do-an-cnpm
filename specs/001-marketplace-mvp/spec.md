@@ -853,9 +853,10 @@ quy trình sửa giao dịch hoàn tất. Không đưa kiến trúc phân tán v
   đúng 5 đơn được chấp nhận, 15 nhận thông báo hết hàng và tồn cuối bằng 0.
 - **SC-004:** Gửi lại cùng checkout, thanh toán hoặc hủy 10 lần chỉ tạo một hiệu lực nghiệp vụ;
   100% số tiền, số đơn và lượng hàng cuối cùng khớp kết quả xử lý một lần.
-- **SC-005:** Với giỏ hợp lệ gồm 5 dòng thuộc 2 shop và địa chỉ sẵn có,
-  ít nhất 4/5 người dùng thử hoàn thành checkout trong 3 phút mà không cần người hướng dẫn;
-  mỗi người chạy một lần, không tính thời gian chờ Admin/Seller.
+- **SC-005 (phạm vi demo):** Với fixture có giỏ hợp lệ gồm 5 dòng thuộc 2 shop và địa chỉ sẵn có,
+  một lượt Playwright UI walkthrough đi từ giỏ tới trang chi tiết đơn hoàn tất trong 3 phút;
+  ghi thời gian và blockers. Đây là kiểm thử kỹ thuật theo yêu cầu đồ án, không phải nghiên cứu
+  usability và không đại diện cho trải nghiệm người dùng thật.
 - **SC-006:** Trên bộ demo 1.000 sản phẩm/10 shop, 20 người dùng đồng thời, trong 100 lần
   tìm kiếm hoặc mở danh sách, ít nhất 95 lần thấy kết quả trong 2 giây ở môi trường đo đã ghi rõ.
 - **SC-007:** Mọi thử truy cập hồ sơ/đơn người khác, shop không được cấp quyền và chức năng Admin

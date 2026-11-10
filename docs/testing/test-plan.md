@@ -12,7 +12,7 @@
 | E2E | Guest→Buyer→shops→catalog→multi-shop checkout→payment→delivery/review | Real API + PostgreSQL; fixture isolated; no manual DB mutation. |
 | Security | Buyer IDOR, seller cross-shop, role spoof, locked session, price/state spoof, CSRF, upload, logs | Requests as each role; assert no read/write side effect and redaction. |
 | Concurrency | Last stock, duplicate checkout/payment/cancel/refund, expiry/callback/order races | Real PostgreSQL; 20 parallel requests/stock 5; replay 10; persist rows/totals. |
-| UI/usability | L/E/X/S/unauthorized, keyboard, 360/1280, five-line/two-shop checkout | Browser/device observations and screen captures when appropriate; 5 participants for SC-005. |
+| UI/usability | L/E/X/S/unauthorized, keyboard, 360/1280, five-line/two-shop checkout | Browser/device observations and screen captures when appropriate; one timed Playwright UI walkthrough for SC-005 (technical demo evidence only, not a human usability study). |
 | Performance | Product list/search demo fixture | 1,000 products / 10 shops / 20 concurrent users / 100 observations; record host/network and each latency. |
 | Desktop/recovery | Buyer desktop Tauri wrapper trên Windows; reload, restart, restore | Record Windows version, app/API SHA, tool versions and exact flow; restore database copy isolated. T140–T145 and SC-009 are accepted for the Windows local demo; no public HTTPS or installer is required. |
 
@@ -99,7 +99,7 @@ Specific test IDs preserve one-to-one traceability for each functional requireme
 | SC-002 | FR acceptance matrix and release defect report | All 50 FR accepted; no open correctness/security blocker in rights, price, stock or history |
 | SC-003 | Barrier concurrency log + DB before/after + movement rows | 20 requests, stock 5: 5 commits, 15 out-of-stock, final stock 0 |
 | SC-004 | Same-key replay results for checkout/payment/cancel and row/totals diff | 10 requests per operation, one business effect; exact amount/order/stock match |
-| SC-005 | Five independent timed usability runs with 5 valid lines/2 shops/address ready | At least 4 of 5 complete within 3 minutes without guidance |
+| SC-005 | One Playwright UI walkthrough with 5 valid lines/2 shops/address ready | Checkout reaches order detail within 3 minutes; report technical demo evidence without generalizing to real users |
 | SC-006 | 100 raw search/list latencies, fixture and host/network description | At least 95 results <=2s under 20 concurrent users, 1,000 products/10 shops |
 | SC-007 | Role-based read/write attack matrix and persisted-state diff | All wrong-owner/shop/admin requests denied; zero unauthorized data or mutation |
 | SC-008 | Reproducible known-ledger fixture and day/month/system reports | Exact match for complete/cancel/unpaid/refunded values; no order double count |
