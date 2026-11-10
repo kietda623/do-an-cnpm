@@ -72,7 +72,7 @@
 - [ ] Run the focused performance integration test against an explicitly confirmed disposable database.
   - Expected: fixture totals reconcile, 100 valid observations are recorded, and at least 95 responses complete in under 2,000 ms. Local run is unavailable until a disposable test database is configured; rely on the PR PostgreSQL service for observed evidence.
 - [x] Measure 100 searches in five waves of 20; verify result count, `minimumPrice`, and availability for every response.
-- [x] Capture representative discovery and shop-filter plans with `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` using normal planner settings; remove the old forced `enable_seqscan = off` assertion with the moved performance case.
+- [x] Capture the actual discovery count and paged-item plans with `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)`, including the repository CTEs, optional filters and default sort; remove the old forced `enable_seqscan = off` assertion with the moved performance case.
 - [ ] Run the focused performance integration test in CI.
 - [ ] Run the behavioral discovery integration tests.
   - Expected: existing category, visibility, pagination, and ownership behavior remains green.

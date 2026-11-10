@@ -152,41 +152,56 @@ describe("T147 discovery performance on PostgreSQL", () => {
     await pool.query("ANALYZE inventory");
     await pool.query("ANALYZE shops");
 
-    const searchPlan = await pool.query(
+    // Mirror both SQL statements in DiscoveryRepository.list for q=Load item and default filters.
+    const discoveryCtes = `WITH RECURSIVE visible_categories AS (
+      SELECT id, parent_id FROM categories WHERE status = 'VISIBLE' AND parent_id IS NULL
+      UNION ALL
+      SELECT child.id, child.parent_id
+      FROM categories child JOIN visible_categories parent ON child.parent_id = parent.id
+      WHERE child.status = 'VISIBLE'
+    ), selected_categories AS (
+      SELECT id FROM visible_categories WHERE id = $1::uuid
+      UNION ALL
+      SELECT child.id FROM categories child JOIN selected_categories parent ON child.parent_id = parent.id
+      WHERE child.status = 'VISIBLE'
+    ), eligible_products AS (
+      SELECT p.id, p.shop_id, p.name, p.description, p.category_id, s.name AS shop_name, p.created_at,
+        MIN(v.price) AS minimum_price,
+        BOOL_OR(COALESCE(i.available_quantity, 0) > 0) AS available
+      FROM products p
+      JOIN shops s ON s.id = p.shop_id AND s.status = 'ACTIVE'
+      JOIN visible_categories vc ON vc.id = p.category_id
+      JOIN product_variants v ON v.product_id = p.id AND v.shop_id = p.shop_id AND v.sale_status = 'ACTIVE'
+      LEFT JOIN inventory i ON i.variant_id = v.id AND i.shop_id = v.shop_id
+      WHERE p.sale_status = 'ACTIVE' AND p.admin_hidden = false
+        AND ($2::uuid IS NULL OR p.shop_id = $2::uuid)
+        AND ($1::uuid IS NULL OR p.category_id IN (SELECT id FROM selected_categories))
+        AND ($3::text IS NULL OR p.name ILIKE '%' || $3::text || '%'
+          OR p.description ILIKE '%' || $3::text || '%')
+      GROUP BY p.id, s.name
+      HAVING ($4::numeric IS NULL OR MIN(v.price) >= $4::numeric)
+        AND ($5::numeric IS NULL OR MIN(v.price) <= $5::numeric)
+    )`;
+    const queryParams = [null, null, "Load item", null, null, "NEWEST", 20, 0];
+    const countPlan = await pool.query(
       `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
-       WITH RECURSIVE visible_categories AS (
-         SELECT id, parent_id FROM categories WHERE status = 'VISIBLE' AND parent_id IS NULL
-         UNION ALL
-         SELECT child.id, child.parent_id
-         FROM categories child JOIN visible_categories parent ON child.parent_id = parent.id
-         WHERE child.status = 'VISIBLE'
-       ), eligible_products AS (
-         SELECT p.id, p.shop_id, s.name AS shop_name, p.created_at,
-           MIN(v.price) AS minimum_price,
-           BOOL_OR(COALESCE(i.available_quantity, 0) > 0) AS available
-         FROM products p
-         JOIN shops s ON s.id = p.shop_id AND s.status = 'ACTIVE'
-         JOIN visible_categories vc ON vc.id = p.category_id
-         JOIN product_variants v ON v.product_id = p.id
-           AND v.shop_id = p.shop_id AND v.sale_status = 'ACTIVE'
-         LEFT JOIN inventory i ON i.variant_id = v.id AND i.shop_id = v.shop_id
-         WHERE p.sale_status = 'ACTIVE' AND p.admin_hidden = false
-           AND ($1::text IS NULL OR p.name ILIKE '%' || $1 || '%'
-             OR p.description ILIKE '%' || $1 || '%')
-         GROUP BY p.id, s.name
-       )
-       SELECT id, shop_name, minimum_price, available, created_at
-       FROM eligible_products
-       ORDER BY created_at DESC, id ASC
-       LIMIT $2 OFFSET 0`,
-      ["Load item", 20],
+       ${discoveryCtes}
+       SELECT COUNT(*)::int AS total FROM eligible_products`,
+      queryParams.slice(0, 5),
     );
-    const shopPlan = await pool.query(
+    const itemsPlan = await pool.query(
       `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
-       SELECT id FROM products
-       WHERE shop_id = $1::uuid AND sale_status = 'ACTIVE' AND admin_hidden = false
-       ORDER BY created_at DESC, id ASC LIMIT 20`,
-      [shopIds[0]],
+       ${discoveryCtes}
+       SELECT id, shop_name AS "shopName", minimum_price::text AS "minimumPrice", available,
+         created_at AS "createdAt"
+       FROM eligible_products
+       ORDER BY
+         CASE WHEN $6::text = 'PRICE_ASC' THEN minimum_price END ASC,
+         CASE WHEN $6::text = 'PRICE_DESC' THEN minimum_price END DESC,
+         CASE WHEN $6::text = 'NEWEST' THEN created_at END DESC,
+         id ASC
+       LIMIT $7::int OFFSET $8::int`,
+      queryParams,
     );
 
     const observations: Array<{ latencyMs: number; valid: boolean }> = [];
@@ -202,8 +217,10 @@ describe("T147 discovery performance on PostgreSQL", () => {
               response.status === 200 &&
               response.body.meta.total === 1_000 &&
               response.body.data.length === 20 &&
-              response.body.data[0]?.minimumPrice === "100000" &&
-              response.body.data[0]?.available === true;
+              response.body.data.every(
+                (item: { minimumPrice?: string; available?: boolean }) =>
+                  item.minimumPrice === "100000" && item.available === true,
+              );
             observations.push({
               latencyMs: performance.now() - startedAt,
               valid,
@@ -245,8 +262,8 @@ describe("T147 discovery performance on PostgreSQL", () => {
         node: process.version,
         postgres: serverVersion,
         transport: "Supertest in-process",
-        searchPlan: searchPlan.rows[0]?.["QUERY PLAN"],
-        shopPlan: shopPlan.rows[0]?.["QUERY PLAN"],
+        countPlan: countPlan.rows[0]?.["QUERY PLAN"],
+        itemsPlan: itemsPlan.rows[0]?.["QUERY PLAN"],
       })}\n`,
     );
     expect(metrics.sampleCount).toBe(100);
