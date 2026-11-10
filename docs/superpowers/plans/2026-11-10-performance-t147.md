@@ -69,12 +69,12 @@
 
 - [x] Write the dedicated test to seed 10 shops × 100 products, price each at 100,000 VND, stock each at 5, and assert 1,000 products, 100,000,000 summed unit prices, and 5,000 units.
 - [x] Add the repository-level Jest entrypoint and API integration root; the existing `test/**/*.ts` include typechecks the package-local suite.
-- [ ] Run the focused performance integration test against an explicitly confirmed disposable database.
-  - Expected: fixture totals reconcile, 100 valid observations are recorded, and at least 95 responses complete in under 2,000 ms. Local run is unavailable until a disposable test database is configured; rely on the PR PostgreSQL service for observed evidence.
+- [x] Run the focused performance integration test against an explicitly confirmed disposable database.
+  - Result: the CI PostgreSQL service passed the guarded disposable-database helper; fixture totals reconciled, 100/100 responses were valid and under 2,000 ms, and p95 was 136.1 ms. No local test database was configured.
 - [x] Measure 100 searches in five waves of 20; verify result count, `minimumPrice`, and availability for every response.
 - [x] Capture the actual discovery count and paged-item plans with `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)`, including the repository CTEs, optional filters and default sort; remove the old forced `enable_seqscan = off` assertion with the moved performance case.
-- [ ] Run the focused performance integration test in CI.
-- [ ] Run the behavioral discovery integration tests.
+- [x] Run the focused performance integration test in CI.
+- [x] Run the behavioral discovery integration tests.
   - Expected: existing category, visibility, pagination, and ownership behavior remains green.
 
 ### Task 3: Capture SC-003, SC-004, and SC-008 timings with integrity outcomes
@@ -93,8 +93,8 @@
 - [x] Measure the existing ten-way checkout/payment/cancel replays and assert the 2,500 VND allocation/refund and stock transition 6 → 4 → 6 remain exact.
 - [x] Measure the existing SC-008 stats/day/month report calls and retain exact 303 VND total with 101/202 VND daily and monthly points.
 - [x] Print one concise machine-readable line per SC scenario with sample count, elapsed/percentile values, and reconciled business totals.
-- [ ] Run focused PostgreSQL cases for checkout contention, payment/cancellation replay, and reviews/revenue.
-  - Expected: all business assertions pass and each scenario prints its observed values.
+- [x] Run focused PostgreSQL cases for checkout contention, payment/cancellation replay, and reviews/revenue.
+  - Result: full API integration and the dedicated payment/cancellation concurrency step passed in CI; each scenario printed its observed values.
 
 ### Task 4: Publish evidence, review indexes, and close T147
 
@@ -106,15 +106,16 @@
 
 **Steps:**
 
-- [ ] Run `EXPLAIN ANALYZE` output from the actual performance fixture and record the natural planner choices for discovery and the actual seller-revenue aggregation predicate.
-- [ ] If a candidate index has evidence, test the plan/latency before adding it; otherwise record why the existing indexed plan or acceptable sequential scan is sufficient at the 1,000-product target. Do not add a cache.
-- [ ] Write `docs/testing/performance-evidence.md` with SC-003/004/006/008 observations, query plans, fixture reconciliation, host/runtime/PostgreSQL/transport, and limits.
-- [ ] Run focused performance, checkout contention, replay, and revenue integration tests, then the full API integration suite when CI provides its PostgreSQL service.
-  - Expected: the PostgreSQL integration workflow succeeds; the report cites actual test output, not an estimate.
-- [ ] Run API unit tests, API typecheck/lint, changed-file formatting, and `git diff --check`.
-  - Expected: all changed-file checks pass and no unrelated files are modified.
-- [ ] Mark T147 complete only after evidence includes the observed CI or disposable-DB result.
-- [ ] Request one whole-branch code review, fix any Critical/Important findings test-first, and rerun affected suites.
+- [x] Run `EXPLAIN ANALYZE` output from the actual performance fixture and record the natural planner choices for discovery and the actual seller-revenue aggregation predicate.
+- [x] Review index candidates against actual plans and latency; the sequential scans fit the 1,000-row broad-match fixture, the seller revenue index is used, and p95 is well under target. No index or cache change is justified.
+- [x] Write `docs/testing/performance-evidence.md` with SC-003/004/006/008 observations, query plans, fixture reconciliation, host/runtime/PostgreSQL/transport, and limits.
+- [x] Run focused performance, checkout contention, replay, and revenue integration tests, then the full API integration suite when CI provides its PostgreSQL service.
+  - Result: CI run 42756121824 passed the API PostgreSQL integration and payment/cancellation concurrency steps; the evidence report cites the observed output.
+- [x] Run API unit tests, API typecheck/lint, changed-file formatting, and `git diff --check`.
+  - Result: local API unit 25 suites/170 passed/1 skipped, typecheck, lint, Prettier, and diff checks passed; CI also passed workspace lint/typecheck/build.
+- [x] Mark T147 complete after evidence includes the observed CI result.
+- [x] Request one whole-branch code review, fix any Critical/Important findings test-first, and rerun affected suites.
+  - Result: review confirmed the EXPLAIN SQL mirrors both production repository queries and every returned item is checked. No findings remained; CI run 42756121824 passed on the reviewed code.
 
 ## Index decision gate
 
