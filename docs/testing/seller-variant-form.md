@@ -15,3 +15,11 @@ The product-creation JSON textarea is replaced by controlled, labeled fields. Th
 `pnpm test:e2e:catalog` starts the Seller and Admin test servers at 3101/3102. To use already-running servers, set `PLAYWRIGHT_BASE_URL` and `PLAYWRIGHT_ADMIN_URL` to their origins. Browser tests intercept API requests; they do not seed/reset or mutate the user's database.
 
 Screenshots are retained under `test-results/seller-variant-form-varian-c31c8-et-and-phone-in-both-themes/`. Generated Next type-reference changes are excluded from this feature.
+
+## CI font-build follow-up
+
+The initial push workflow (`42764863022`) failed during the Storefront production build, with six Space Grotesk virtual-font resolution errors: `next/font/google queries have exactly one entry`. The PR workflow for the same commit (`42764939608`) passed, confirming the failure was intermittent rather than a variant-form type or test failure.
+
+All three web apps use the same font pipeline. Their production build scripts now explicitly use Next.js's supported `next build --webpack` mode to avoid the failing Turbopack Google-font resolver. Development commands, font selections, framework versions and application behavior remain unchanged.
+
+Local verification of the fix: production builds for Storefront, Seller Center and Admin all passed (3/3 uncached tasks), including compilation, TypeScript, prerendering and build traces. JSON formatting and `git diff --check` also passed.
