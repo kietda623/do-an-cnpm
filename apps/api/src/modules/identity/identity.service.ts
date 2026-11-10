@@ -5,8 +5,6 @@ import {
   NotFoundException,
   UnauthorizedException,
   UnprocessableEntityException,
-  HttpException,
-  HttpStatus,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
@@ -14,6 +12,7 @@ import * as argon2 from "argon2";
 import { SignJWT, jwtVerify } from "jose";
 import { DatabaseService } from "../../database/prisma.service.js";
 import type { AccessContext } from "../../common/auth/access-context.js";
+import { RateLimiterService } from "./rate-limiter.service.js";
 
 const DAY = 24 * 60 * 60 * 1000;
 const ACCESS_SECONDS = 600;
@@ -23,11 +22,10 @@ type ClientPlatform = "WEB" | "ANDROID" | "IOS" | "WINDOWS" | "MACOS";
 
 @Injectable()
 export class AuthService {
-  private readonly limiter = new Map<string, { count: number; reset: number }>();
-
   constructor(
     private readonly db: DatabaseService,
     private readonly config: ConfigService,
+    private readonly rateLimiter: RateLimiterService,
   ) {}
 
   async csrf(): Promise<{ csrfToken: string; cookie: string }> {
@@ -51,8 +49,8 @@ export class AuthService {
     password: string;
     fullName: string;
     clientPlatform: ClientPlatform;
-  }) {
-    this.rateLimit(`register:${input.email.toLowerCase()}`, 5);
+  }, ip: string) {
+    await this.rateLimiter.assertRegisterAllowed(ip, input.email);
     const email = input.email.trim().toLowerCase();
     if (input.password.length < 1 || input.password.length > 128) {
       throw new UnprocessableEntityException({
@@ -81,8 +79,8 @@ export class AuthService {
     }
   }
 
-  async login(input: { email: string; password: string; clientPlatform: ClientPlatform }) {
-    this.rateLimit(`login:${input.email.toLowerCase()}`, 10);
+  async login(input: { email: string; password: string; clientPlatform: ClientPlatform }, ip: string) {
+    await this.rateLimiter.assertLoginAllowed(ip, input.email);
     const user = await this.db.prisma.user.findUnique({
       where: { emailNormalized: input.email.trim().toLowerCase() },
     });
@@ -97,10 +95,15 @@ export class AuthService {
     return this.createSession(user, input.clientPlatform);
   }
 
-  async refresh(refreshToken: string | undefined, clientPlatform: ClientPlatform) {
-    this.rateLimit("refresh", 30);
+  async refresh(refreshToken: string | undefined, clientPlatform: ClientPlatform, ip: string) {
+    await this.rateLimiter.assertRefreshIpAllowed(ip);
     if (!refreshToken) throw new UnauthorizedException();
     const hash = this.hashRefresh(refreshToken);
+    const family = await this.db.prisma.session.findUnique({
+      where: { refreshHash: hash },
+      select: { familyId: true },
+    });
+    if (family) await this.rateLimiter.assertRefreshFamilyAllowed(family.familyId);
     let reused = false;
     const result = await this.db.prisma.$transaction(async (tx) => {
       const sessions = await tx.$queryRaw<
@@ -449,16 +452,6 @@ export class AuthService {
   }
   private hashRefresh(value: string): string {
     return createHash("sha256").update(value).digest("hex");
-  }
-  private rateLimit(key: string, limit: number): void {
-    const now = Date.now();
-    const current = this.limiter.get(key);
-    if (!current || current.reset < now) this.limiter.set(key, { count: 1, reset: now + 60_000 });
-    else if (++current.count > limit)
-      throw new HttpException(
-        { code: "RATE_LIMITED", message: "Too many requests. Try again shortly." },
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
   }
   private isUniqueError(error: unknown): boolean {
     return typeof error === "object" && error !== null && "code" in error && error.code === "P2002";

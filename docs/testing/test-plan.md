@@ -14,7 +14,7 @@
 | Concurrency | Last stock, duplicate checkout/payment/cancel/refund, expiry/callback/order races | Real PostgreSQL; 20 parallel requests/stock 5; replay 10; persist rows/totals. |
 | UI/usability | L/E/X/S/unauthorized, keyboard, 360/1280, five-line/two-shop checkout | Browser/device observations and screen captures when appropriate; 5 participants for SC-005. |
 | Performance | Product list/search demo fixture | 1,000 products / 10 shops / 20 concurrent users / 100 observations; record host/network and each latency. |
-| Desktop/recovery | Buyer desktop (Tauri wrapper, future); reload, restart, restore | Record per OS, app/API SHA, tool versions, exact flow; restore database copy isolated. Desktop evidence remains BLOCKED until the wrapper is built. |
+| Desktop/recovery | Buyer desktop Tauri wrapper trên Windows; reload, restart, restore | Record Windows version, app/API SHA, tool versions and exact flow; restore database copy isolated. T140–T145 and SC-009 are accepted for the Windows local demo; no public HTTPS or installer is required. |
 
 ## Functional coverage index
 
@@ -103,7 +103,7 @@ Specific test IDs preserve one-to-one traceability for each functional requireme
 | SC-006 | 100 raw search/list latencies, fixture and host/network description | At least 95 results <=2s under 20 concurrent users, 1,000 products/10 shops |
 | SC-007 | Role-based read/write attack matrix and persisted-state diff | All wrong-owner/shop/admin requests denied; zero unauthorized data or mutation |
 | SC-008 | Reproducible known-ledger fixture and day/month/system reports | Exact match for complete/cancel/unpaid/refunded values; no order double count |
-| SC-009 | Per target OS/device record, flows and cross-client reload evidence | Buyer Web succeeds and data persists; Buyer Desktop remains BLOCKED until the Tauri wrapper ships. Seller/Admin Web succeed. No mobile clients. |
+| SC-009 | Windows version/device, flow and cross-client reload evidence | Buyer Web succeeds and data persists; the Tauri buyer demo on Windows uses the same local storefront/API and preserves server data after reload. Accepted for this demo scope. Seller/Admin Web succeed. No mobile clients. |
 | SC-010 | Clean clone setup timed from prerequisites ready | New member completes demo <=30 minutes without undocumented setup or data edits |
 
 ## Required race/failure cases
@@ -115,10 +115,10 @@ Use fixtures in `fixture-design.md`. Run 20 concurrent checkout calls against qu
 | Platform | Minimum flow evidence | Sensitive data check |
 | --- | --- | --- |
 | Buyer Web | Register/login → search/detail → cart → multi-shop checkout → order/pay/delivery/review | Cookie flags, CSRF, no refresh token in JS storage/logs |
-| Buyer Desktop (planned) | Same Buyer flow inside packaged Tauri WebView once the wrapper exists | Webview URL allow-list/CSP, cookie flags, no shell escape |
+| Buyer Desktop (Windows local demo accepted) | Same Buyer flow inside Tauri WebView2 using local storefront/API | Windows/WebView2 version, URL allow-list/CSP, cookie flags, no shell escape; no packaged installer or public HTTPS required |
 | Seller Web | Create/manage shop/product/stock/order/stats/review | Cross-shop requests denied by server |
 | Admin Web | Shop approval, moderation, order inquiry, returns, audit | Admin-only mutations denied for non-admin and audited |
 
 ## Reporting template
 
-For each case record: test ID and FR/SC, code SHA, environment/OS/device, fixture version, command or user action, expected, observed, exit/result, sanitized log/artifact link, defect and reviewer. Missing Mac/device/bucket records BLOCKED with owner/date; never convert missing evidence into PASS.
+For each case record: test ID and FR/SC, code SHA, environment/OS/device, fixture version, command or user action, expected, observed, exit/result, sanitized log/artifact link, defect and reviewer. Missing required Windows/device/bucket evidence for an applicable test stays BLOCKED with owner/date; never convert missing evidence into PASS.

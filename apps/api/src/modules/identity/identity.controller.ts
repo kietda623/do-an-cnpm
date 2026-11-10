@@ -17,7 +17,15 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiProperty,
+  ApiPropertyOptional,
+  ApiResponse as ApiDocResponse,
+  ApiTags,
+  getSchemaPath,
+} from "@nestjs/swagger";
 import {
   IsBoolean,
   IsEmail,
@@ -90,6 +98,24 @@ class AddressPatchDto {
   @IsOptional() @IsString() @MaxLength(20) postalCode?: string;
 }
 
+class ErrorDetail {
+  @ApiPropertyOptional({ maxLength: 200 }) field?: string;
+  @ApiProperty({ maxLength: 100 }) code!: string;
+  @ApiProperty({ maxLength: 1000 }) message!: string;
+}
+
+class ApiError {
+  @ApiProperty({ maxLength: 100 }) code!: string;
+  @ApiProperty({ maxLength: 1000 }) message!: string;
+  @ApiPropertyOptional({ type: [ErrorDetail] }) details?: ErrorDetail[];
+  @ApiProperty({ maxLength: 100 }) requestId!: string;
+}
+
+class ErrorEnvelope {
+  @ApiProperty({ type: ApiError }) error!: ApiError;
+}
+
+@ApiExtraModels(ErrorDetail, ApiError, ErrorEnvelope)
 @ApiTags("auth")
 @Controller("auth")
 export class AuthController {
@@ -114,27 +140,107 @@ export class AuthController {
   @Post("register")
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Register a buyer" })
-  async register(@Body() body: RegisterDto, @Res({ passthrough: true }) res: ApiResponse) {
-    const result = await this.auth.register(body);
+  @ApiDocResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: "The request exceeded an authentication rate limit.",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorEnvelope) },
+      },
+    },
+    headers: {
+      "Retry-After": {
+        description: "Seconds until the request can be retried.",
+        schema: { type: "integer", minimum: 1 },
+      },
+    },
+  })
+  @ApiDocResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description: "Rate limiting is unavailable.",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorEnvelope) },
+      },
+    },
+  })
+  async register(
+    @Body() body: RegisterDto,
+    @Req() req: ApiRequest,
+    @Res({ passthrough: true }) res: ApiResponse,
+  ) {
+    const result = await this.auth.register(body, req.ip);
     return this.browserTokens(body.clientPlatform, result, res);
   }
   @Post("login")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Authenticate a user" })
-  async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: ApiResponse) {
-    const result = await this.auth.login(body);
+  @ApiDocResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: "The request exceeded an authentication rate limit.",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorEnvelope) },
+      },
+    },
+    headers: {
+      "Retry-After": {
+        description: "Seconds until the request can be retried.",
+        schema: { type: "integer", minimum: 1 },
+      },
+    },
+  })
+  @ApiDocResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description: "Rate limiting is unavailable.",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorEnvelope) },
+      },
+    },
+  })
+  async login(
+    @Body() body: LoginDto,
+    @Req() req: ApiRequest,
+    @Res({ passthrough: true }) res: ApiResponse,
+  ) {
+    const result = await this.auth.login(body, req.ip);
     return this.browserTokens(body.clientPlatform, result, res);
   }
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Rotate a refresh credential" })
+  @ApiDocResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: "The request exceeded an authentication rate limit.",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorEnvelope) },
+      },
+    },
+    headers: {
+      "Retry-After": {
+        description: "Seconds until the request can be retried.",
+        schema: { type: "integer", minimum: 1 },
+      },
+    },
+  })
+  @ApiDocResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description: "Rate limiting is unavailable.",
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(ErrorEnvelope) },
+      },
+    },
+  })
   async refresh(
     @Body() body: RefreshDto,
     @Req() req: ApiRequest,
     @Res({ passthrough: true }) res: ApiResponse,
   ) {
     const refreshToken = body.refreshToken ?? cookieValue(req.headers.cookie, "refresh_token");
-    const result = await this.auth.refresh(refreshToken, body.clientPlatform);
+    const result = await this.auth.refresh(refreshToken, body.clientPlatform, req.ip);
     return this.browserTokens(body.clientPlatform, result, res);
   }
   @Post("logout")

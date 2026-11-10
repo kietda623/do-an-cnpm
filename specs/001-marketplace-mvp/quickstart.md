@@ -16,10 +16,9 @@ DoD chỉ đạt khi command/evidence thật được ghi lại; không dùng gu
   exact patch/version metadata trong lockfile/runtime matrix W008/W017.
 - S3-compatible dev/demo bucket với credentials scoped, endpoints/region/namespace cấu hình riêng.
   Unit tests có adapter mock, upload E2E phải có bucket thật; không tự mặc định MinIO legacy.
-- Windows Desktop (kế hoạch): Rust/MSVC/WebView2 theo Tauri prerequisites; macOS: Rust/Xcode runner.
-  Desktop buyer chưa được build trong MVP hiện tại; không yêu cầu toolchain này để chạy web/API.
-- Không có app mobile (Android/iOS); không cần emulator, simulator hay macOS/Xcode cho buyer.
-  Không yêu cầu đưa app lên store trong MVP.
+- Windows Desktop demo: Rust/MSVC/WebView2 theo Tauri prerequisites. Desktop chạy local cùng storefront/API;
+  không cần URL public hay installer. Toolchain desktop không bắt buộc để chạy web/API.
+- Không có app mobile (Android/iOS), không cần emulator/simulator; không yêu cầu đưa app lên store trong MVP.
 - CPU/RAM/disk đủ chạy containers; môi trường không trùng tên/database production.
   Web/desktop phải truy cập được API qua URL hợp lệ.
 
@@ -31,7 +30,7 @@ API package `@marketplace/api` có `test:unit` và `test:integration` (Jest/Supe
 migration và `prisma:migrate:dev|deploy|status`; integration test chỉ nhận `TEST_DATABASE_URL` riêng.
 `@marketplace/api-client` có `generate:types` và `test`; `@marketplace/contracts` là workspace package cho OpenAPI/examples.
 Database demo seed, contract/E2E/concurrency/security, performance và expiry suites sẽ được bổ sung ở các task tương ứng.
-`@marketplace/desktop`: chưa có workspace trong baseline; desktop buyer là kế hoạch Tauri wrapper sẽ được tạo khi triển khai. Không còn workspace mobile.
+`@marketplace/desktop`: có `desktop:dev` và `desktop:test` cho Tauri buyer demo trên Windows. `desktop:dev` mặc định mở storefront local; xem phần Desktop validation bên dưới. Không còn workspace mobile.
 Compose services: postgres, api, storefront, seller-center, admin-panel; profile `test` có PostgreSQL/API test riêng.
 Contract này là công việc W011/015–17/033/040/057.
 
@@ -125,23 +124,25 @@ V07 dùng test clock chỉ trong test process và fixture disposable, không end
 Expiry kiểm tại request và sweep30s; worker trễ không cho payment sau deadline.
 Báo cáo tách target expected với observed results, không tick acceptance khi chưa có evidence.
 
-## Desktop validation (kế hoạch — chưa chạy)
+## Desktop validation (Windows local demo — đã nghiệm thu)
 
-Desktop buyer chưa có workspace, `tauri.conf.json` hay script build; các lệnh dưới là contract tương lai:
+Desktop buyer dùng Tauri wrapper quanh storefront hiện có. Chạy development shell và bộ kiểm tra riêng:
 
 ```powershell
-pnpm --filter @marketplace/desktop tauri dev
-pnpm --filter @marketplace/desktop build:desktop
+pnpm --filter @marketplace/desktop desktop:dev
+pnpm --filter @marketplace/desktop desktop:test
 ```
 
-Khi triển khai, wrapper trỏ storefront URL và dùng lại webview/cookie của web. Acceptance cần build
-trên OS đích (Windows Rust/MSVC/WebView2 hoặc macOS Xcode/Rust targets), ghi OS/tool versions,
-app/API SHA và thời điểm chạy. Build pass không thay flow pass; thiếu evidence thì ghi BLOCKED.
+Desktop demo không cần cấu hình URL: `desktop:dev` mặc định dùng `http://localhost:3000`.
+Khởi động API, PostgreSQL/Redis và storefront theo các bước local bên trên trước khi mở Tauri.
+Ghi Windows/WebView2/tool versions, các flow đã chạy và kết quả trong
+[desktop-evidence.md](../../docs/testing/desktop-evidence.md). Đây là demo local, không tạo installer
+hay phát hành ứng dụng.
 
 - Buyer desktop: US1,4–8 trong webview, gồm reload/session restore, cookie HttpOnly/CSRF, không token plaintext.
 - Seller/Admin: chỉ web; không có desktop hay mobile client riêng.
 
-Trên mỗi target ghi thao tác, response redacted, screenshots/video khi phù hợp và record/totals evidence từ server.
+Ghi Windows/WebView2 version, thao tác, response redacted, screenshots/video khi phù hợp và record/totals evidence từ server. SC-009 đã nghiệm thu cho phạm vi demo local; không yêu cầu cài installer hoặc truy cập HTTPS production.
 
 ## Demo release và recovery rehearsal
 
@@ -160,5 +161,5 @@ image digests và smoke results. Kiểm tra object assets đọc lại sau resto
 Mỗi test/run: ticket/FR/SC, release SHA, environment+OS+dataset, exact command,
 exit code hoặc thao tác, expected/observed, link sanitized logs/screenshots,
 remaining defects và reviewer. Kết luận PASS chỉ từ bằng chứng thực tế.
-Nếu không có Mac/device/bucket hoặc command chưa được cung cấp, ghi BLOCKED và owner/date xử lý;
+Nếu thiếu Windows/device/bucket evidence cho một kiểm tra cần thiết hoặc command chưa được cung cấp, ghi BLOCKED và owner/date xử lý;
 không đánh dấu yêu cầu hoàn tất bằng giả định.

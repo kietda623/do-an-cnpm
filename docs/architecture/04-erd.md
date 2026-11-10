@@ -164,6 +164,8 @@ erDiagram
   }
 ```
 
+`client_platform` liệt kê các giá trị API/schema có thể ghi nhận, không phải ma trận nền tảng được hỗ trợ. Phạm vi demo desktop được nghiệm thu chỉ là Windows local; không tuyên bố hỗ trợ desktop trên hệ điều hành khác.
+
 **Ràng buộc đáng chú ý:** `email_normalized` unique; `refresh_hash` unique; `UNIQUE(actor_scope, operation, idempotency_key)` trên `idempotency_records`; chỉ **một** địa chỉ mặc định/user (kiểm tra bằng unique một phần/service); xóa địa chỉ là xóa mềm.
 
 ### 3.2. Cửa hàng, danh mục, sản phẩm, biến thể, tồn kho

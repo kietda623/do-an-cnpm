@@ -7,14 +7,16 @@
 Setup resolver trả logical context `001-marketplace-mvp`; Git thực tế vẫn là `main`.
 Không tạo/chuyển branch; toàn bộ công việc trong bước này chỉ là tài liệu thiết kế.
 
+**Implementation status update 2026-11-10:** Phạm vi desktop được chốt là demo buyer trên Windows với storefront/API local (`http://localhost:3000`). T140–T145 được nghiệm thu bằng Windows demo/session/commerce evidence; không yêu cầu URL public, MSI hay hỗ trợ desktop trên nền tảng khác. Xem [tasks.md](tasks.md) và [desktop-evidence.md](../../docs/testing/desktop-evidence.md).
+
 ## Summary
 
-16 tuần/8 Sprint, 5 thành viên, Modular Monolith, 50 FR trên Web + Desktop buyer (wrapper, kế hoạch).
+16 tuần/8 Sprint, 5 thành viên, Modular Monolith, 50 FR trên Web + Desktop buyer (wrapper được lên kế hoạch khi lập tài liệu này).
 64 work packages, tổng 157 person-day (PD) trong ngân sách 180 PD net feature delivery;
 đây là estimate có điều kiện, không cam kết chắc chắn hoàn thành.
 Đọc cùng [research](research.md), [WBS](wbs.md), [task allocation](task-allocation.md), [data model](data-model.md),
 [API contract](contracts/api.md), [UI plan](ui-plan.md), [quickstart](quickstart.md).
-Chưa có source ứng dụng hoặc kết quả kiểm thử implementation.
+At plan creation, chưa có source ứng dụng hoặc kết quả kiểm thử implementation; trạng thái mới nhất nằm trong implementation update phía trên.
 
 ## Technical Context
 
@@ -28,7 +30,7 @@ Lý do, alternatives và nguồn: research R01–08.
 Không Redis/BullMQ/search engine trước khi có nhu cầu đo được. Không MinIO archived làm mặc định.
 **Testing**: Jest/Supertest, PostgreSQL integration thật, Playwright Web, desktop wrapper acceptance
 (khi triển khai), contract diff, concurrency barriers, test clock, backup/restore drill.
-**Target Platform**: Linux Docker server; Web responsive cho Buyer/Seller/Admin; desktop buyer
+**Target Platform**: Linux Docker server; Web responsive cho Buyer/Seller/Admin; Windows local demo cho Buyer desktop
 (Tauri wrapper, kế hoạch). Không có client mobile.
 W008 ghi exact min OS theo toolchain desktop đã chọn và runner khả dụng.
 Không hứa hỗ trợ OS đã hết hỗ trợ hoặc app store publishing.
@@ -76,11 +78,11 @@ specs/001-marketplace-mvp/
   quickstart.md
 ```
 
-`tasks.md` đã được tạo: 158 task chưa thực hiện, nhóm theo 10 user stories. `task-allocation.md` ghi owner/reviewer, Sprint và phân bổ đúng 157 PD từ WBS; không cộng effort hai lần. Phase là nhóm capability; lịch chọn task sẵn sàng theo Sprint và dependency, không chờ hoàn tất Admin để thử desktop buyer.
+`tasks.md` phân rã 158 task theo 10 user stories; trạng thái hiện hành nằm ở checkbox và cập nhật của từng task. `task-allocation.md` ghi owner/reviewer, Sprint và phân bổ đúng 157 PD từ WBS; không cộng effort hai lần. Phase là nhóm capability; lịch chọn task sẵn sàng theo Sprint và dependency, không chờ hoàn tất Admin để thử desktop buyer.
 
 ### Source Code (repository root)
 
-Cây workspace được khởi tạo ở T008; source của từng app/package sẽ được thêm bởi các task triển khai tương ứng:
+Cây workspace được khởi tạo ở T008; source hiện hành của từng app/package nằm trong repo và trạng thái triển khai theo dõi trong `tasks.md`:
 
 ```text
 apps/
@@ -106,7 +108,7 @@ pnpm-workspace.yaml
 turbo.json
 ```
 
-**Structure Decision**: 4 apps (storefront, seller-center, admin-panel, api) và 6 packages = 10 workspace projects. Desktop buyer là kế hoạch: sẽ tạo `apps/desktop` khi triển khai, dùng Tauri webview mở storefront URL và dùng lại `ui-web`/design tokens; không nhân đôi UI.
+**Structure Decision (baseline ban đầu)**: 4 apps (storefront, seller-center, admin-panel, api) và 6 packages = 10 workspace projects. T140 sau đó thêm `apps/desktop`; wrapper dùng Tauri webview mở storefront URL và dùng lại `ui-web`/design tokens, không nhân đôi UI.
 Seller/Admin chỉ dùng web. Không có client mobile. Domain sở hữu repository;
 Order coordinator gọi public services với cùng Prisma transaction context, không import repository
 nội bộ. Không nhúng Next server vào Tauri.
@@ -242,8 +244,8 @@ ID/effort thống nhất WBS, không estimate hai lần.
 | S3 W5–6 | Shop/catalog/stock US2–4 | W018–025 | 20.5 | Identity | Shop→approve→publish variant→Buyer xem; khóa/ẩn đúng | Cross-shop/slug/SKU/MIME/stock adjustment | Upload mismatch → adapter fixture + real bucket test |
 | S4 W7–8 | Discovery/cart US4–5.1 | W026–033 | 20.5 | Catalog/stock | Search/filter/cart, stock UI, checkout policies | Last-stock proof/schema drift/load baseline | Transaction chưa đúng → giữ gate trước order |
 | S5 W9–10 | Commerce US5–7 | W034–041 | 21 | Cart/policies/stock proof | Hai shop split/COD/mock/hủy/fulfill/deliver E2E Web thật | SC003/004, payment/expiry/cancel races | Critical path dày → mock UI sớm, ưu tiên integrity, dùng buffer |
-| S6 W11–12 | Reviews/stats/admin US8–10 | W042–049 | 20 | Order/payment/shipping | Stats/reviews/Admin web; desktop wrapper vẫn là kế hoạch | Known totals/timezone/review unique/role denial | M4/M5 quá tải → M3 hỗ trợ storefront, reuse UI |
-| S7 W13–14 | Full acceptance/stability US1–10 | W050–057 | 20 | S6 feature integrated | Web screens + security/perf/recovery evidence; desktop evidence BLOCKED nếu chưa build | SC001–009,5-user usability, IDOR/CSRF/restore | Thiếu evidence desktop → giữ BLOCKED, không claim pass |
+| S6 W11–12 | Reviews/stats/admin US8–10 | W042–049 | 20 | Order/payment/shipping | Stats/reviews/Admin web; T140–T143 desktop implementation đã xong, acceptance tiếp tục ở T144/T145 | Known totals/timezone/review unique/role denial | M4/M5 quá tải → M3 hỗ trợ storefront, reuse UI |
+| S7 W13–14 | Full acceptance/stability US1–10 | W050–057 | 20 | S6 feature integrated | Web screens + security/perf/recovery evidence; desktop Windows local demo evidence | SC001–009,5-user usability, IDOR/CSRF/restore | Thiếu evidence local services → hoãn desktop demo, web vẫn dùng được |
 | S8 W15–16 | Release/docs/demo | W058–064 | 15.5 | Accepted RC | HTTPS demo, seed/report/slides/runbook | SC010/restore/rollback/full rehearsal | Deploy trễ → lab/video fallback có nhãn, không coi là online pass |
 
 Điều chỉnh roadmap nguồn: inventory nền tảng S3 để hàng có tồn hợp lệ; shipping S5 để
@@ -333,7 +335,7 @@ webview và memory access token. Clear user/shop query caches khi logout.
 | Usability P1 | S3–7 | 360/1280/keyboard/form states;5 người mua5 dòng/2shop | SC005:>=4/5 trong3 phút, record từng lần |
 | Performance P1 | S4 baseline/S7 | 1000 products/10 shops/20users/100 observations | SC006:>=95/100 <=2s, record host/network/fixture |
 | Reports P0 | S6–7 | Completed/cancel/refund/partial COD/midnight | SC008 exact totals không double-count |
-| Desktop P1 (future) | Khi triển khai wrapper | Buyer desktop flow trong Tauri WebView | SC009 chỉ pass khi có bằng chứng build/launch từng OS; chưa triển khai thì BLOCKED |
+| Desktop P1 (demo) | T140–T145 | Buyer local demo flow trong Tauri WebView trên Windows | SC009: chạy local storefront/API, cùng dữ liệu sau reload; không cần URL public hay installer |
 | Recovery P0 | S7–8 | Restart expiry/fresh clone/seed twice/restore/rollback | SC010<=30phút sau prerequisites; lịch sử/totals giữ nguyên |
 
 Không dùng coverage% thay acceptance. Mock cho isolation UI/unit, không thay DB integrity/E2E.
@@ -385,13 +387,13 @@ trước thao tác phá hủy. W053/057/063 chạy rehearsal; không tự thực
 | R02 | DB/migration sai | Medium | High | P0 | FK thiếu/snapshot đổi | ERD/constraints/upgrade tests | Corrective migration/restore drill | M2 |
 | R03 | Checkout/payment bất nhất | High | High | P0 | Âm tồn/trùng thu | Proof S4/shared locks/dedupe | Stop release, buffer/review transaction | M2+M1 |
 | R04 | API/client lệch | Medium | High | P0 | Mock pass/integration fail | Contract/gen-client drift CI | Sửa provider/consumer trong cùng PR | M3+M2 |
-| R05 | Desktop wrapper chưa sẵn sàng | Medium | Medium | P1 | Thiếu Rust/MSVC, chưa có tauri.conf.json | Giữ desktop ngoài CI; theo dõi BLOCKED | Không claim desktop pass; tiếp tục web | M3 |
+| R05 | Local desktop demo services chưa chạy | Medium | Medium | P1 | Storefront/API hoặc PostgreSQL/Redis local chưa sẵn sàng | Dùng quickstart và health checks trước demo | Demo lại sau khi local services sẵn sàng | M3 |
 | R06 | Tauri integration | Low | Medium | P2 | URL/CORS/cookie lỗi trong webview | Cấu hình allow-list/CSP, dùng cùng web session | Sửa cấu hình, không fork UI | M3 |
 | R07 | Auth/ownership bug | Medium | High | P0 | Cross-shop/reuse succeeds | Negative policy tests | Revoke/fix/full security rerun | M1 |
 | R08 | Merge conflicts | High | Medium | P1 | PR>2ngày, cùng DTO | Owner module/small PR/contract-first | Pair resolve/rerun, không overwrite | M4 |
 | R09 | Deploy/budget failure | Medium | High | P0 | OOM/health/bucket fail | Budget/benchmark/staging | Image rollback/lab-video fallback có nhãn | M5 |
 | R10 | Thiếu thời gian test | High | High | P0 | Test dồn S7/defects tăng | Owner tests từng Sprint/buffer | Freeze features, P0 regression trước release | M5 |
-| R11 | Thiếu toolchain desktop | Medium | Medium | P1 | W008 không có Rust/MSVC/WebView2 | Xác nhận máy build trước khi cam kết desktop | Giữ desktop planned hoặc dùng web | M3+M5 |
+| R11 | Desktop demo chạy trên Windows | Low | Low | P2 | Khác biệt WebView2/local service giữa máy demo | Ghi Windows/WebView2 versions và chạy flow trước buổi demo | Dùng web storefront làm fallback | M3+M5 |
 | R12 | Runtime compatibility | Medium | High | P0 | ESM/peer/build lỗi S2 | Exact pin/smoke trước feature | ADR chọn supported compatible version | M2 |
 | R13 | Ít người hơn giả định | Medium | High | P0 | Actual<4.5PD/Sprint | Actual/forecast weekly | Rebalance/reduce optional/extend date | M1 |
 | R14 | Mất dữ liệu/demo | Low | High | P0 | Restore fail/seed reset | Off-host backup/guarded seed | Stop writes/preserve logs/recovery decision | M5 |
@@ -412,7 +414,7 @@ FR/platform hoặc kéo dài lịch bằng sửa spec được chấp thuận, k
 | G4 S4 | Cart/query/stock proof | Last-stock proof, selected cart, order contract frozen |
 | G5 S5 | Team commerce/staging | Hai shop split/paid/cancel/fulfill/deliver, races data đúng |
 | G6 S6 | Reviews/stats/Admin | Known totals, role denial evidence |
-| G7 S7 | RC/tests/web artifacts | Zero P0, SC001–009 web evidence, backup drill; desktop BLOCKED nếu chưa build |
+| G7 S7 | RC/tests/web artifacts | Zero P0, SC001–009 web evidence, backup drill; desktop có Windows local demo evidence |
 | G8 S8 | Source/schema/API/tests/report/slides/runbook | SC010/full demo/limitations/handover |
 
 GitHub Projects đề xuất BACKLOG→READY→IN PROGRESS→IN REVIEW→TESTING→DONE.
@@ -437,7 +439,7 @@ thông báo nhóm trong bước này.
 8. Trình diễn failure/retry/expiry bằng test-clock fixture/report có nhãn;
    không giả vờ chờ15phút đã chạy nếu dùng test clock.
 9. Buyer mở cùng dữ liệu trên web và desktop (khi wrapper có); Seller/Admin trên web; logout/cross-shop denied.
-10. Trình bày SC003/004/007 reports, web evidence, restore và clean-room runbook. Desktop evidence ghi BLOCKED nếu chưa build.
+10. Trình bày SC003/004/007 reports, web evidence, restore và clean-room runbook. Desktop scope là Windows local demo, không phải release build.
 
 Chi tiết lệnh/expected outcomes ở [quickstart.md](quickstart.md).
 
@@ -476,6 +478,6 @@ không tạo migration, không deploy và không tạo tasks.md.
 - T002: kiến trúc/public interfaces, Owner M1/Reviewer M2, W002/S1/2 PD.
 - T003: thiết kế dữ liệu/transaction invariants, Owner M2/Reviewer M1, W003/S1/2.5 PD.
 - T130 (nhánh thử Mobile S4) đã de-scoped cùng việc gỡ app mobile ngày 2026-11-03; không cấp lại W032 cho mobile. Desktop buyer chỉ được triển khai như wrapper sau web, không cần scaffold S4.
-- S6 hoàn thiện web evidence và role denial; desktop acceptance chỉ tính khi wrapper được build trên OS mục tiêu.
+- S6 hoàn thiện web evidence và role denial; T140–T145/SC-009 desktop được nghiệm thu cho demo local Windows theo evidence, không yêu cầu installer hoặc public deployment.
 - Dùng packages/contracts, DTO selling, trạng thái nội bộ sale_status. Owner/reviewer/Sprint và allocation ở từng task; bảng kiểm toán tại [task-allocation.md](task-allocation.md).
-- 158 task vẫn unchecked, tổng effort giữ 157 PD; lần chỉnh này chỉ sửa tài liệu.
+- Tại thời điểm lập baseline ngày 2026-10-20, 158 task ban đầu chưa được thực hiện; tổng effort dự toán là 157 PD. Trạng thái hiện tại được theo dõi trong `tasks.md`.

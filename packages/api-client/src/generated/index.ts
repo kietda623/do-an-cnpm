@@ -2619,6 +2619,8 @@ export interface operations {
       /** @description Rate limit exceeded */
       429: {
         headers: {
+          /** @description Seconds until the request can be retried. */
+          "Retry-After"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -2627,6 +2629,15 @@ export interface operations {
       };
       /** @description Unexpected server error */
       500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description Authentication rate limiting is unavailable. */
+      503: {
         headers: {
           [name: string]: unknown;
         };
@@ -2741,6 +2752,8 @@ export interface operations {
       /** @description Rate limit exceeded */
       429: {
         headers: {
+          /** @description Seconds until the request can be retried. */
+          "Retry-After"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -2749,6 +2762,15 @@ export interface operations {
       };
       /** @description Unexpected server error */
       500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description Authentication rate limiting is unavailable. */
+      503: {
         headers: {
           [name: string]: unknown;
         };
@@ -2864,6 +2886,8 @@ export interface operations {
       /** @description Rate limit exceeded */
       429: {
         headers: {
+          /** @description Seconds until the request can be retried. */
+          "Retry-After"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -2872,6 +2896,15 @@ export interface operations {
       };
       /** @description Unexpected server error */
       500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description Authentication rate limiting is unavailable. */
+      503: {
         headers: {
           [name: string]: unknown;
         };

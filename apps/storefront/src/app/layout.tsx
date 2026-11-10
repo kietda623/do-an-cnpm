@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Be_Vietnam_Pro, IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import type { ReactNode } from "react";
 import "@marketplace/design-tokens/styles.css";
@@ -32,7 +33,8 @@ const themeScript = `(function(){var k="marketplace-theme";var m="system";try{va
 
 export const metadata: Metadata = {
   title: { default: "sopi", template: "%s | sopi" },
-  description: "Sàn thương mại nhiều cửa hàng: mua sắm, theo dõi đơn và thanh toán an toàn.",
+  description:
+    "Sàn thương mại nhiều cửa hàng: mua sắm, theo dõi đơn và thanh toán an toàn.",
 };
 
 export const viewport: Viewport = {
@@ -43,7 +45,11 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html
       lang="vi"
@@ -51,7 +57,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: themeScript }}
+        />
       </head>
       <body>
         <RouteTransition />

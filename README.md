@@ -64,12 +64,14 @@ Không có app mobile (Android/iOS); `apps/mobile` đã được gỡ khỏi wor
 | pnpm | 12.14.0 (pin trong `packageManager`; bật bằng `corepack enable`) |
 | Docker + Compose plugin | Cho PostgreSQL và stack đầy đủ |
 | PostgreSQL | 17 (Compose dùng `postgres:17.11-bookworm`) |
+| Redis | 8 (Compose dùng `redis:8.10.3-alpine`) cho giới hạn request đăng nhập |
 
 ## Chạy nhanh bằng Docker Compose
 
 ```bash
 cp .env.compose.example .env.compose
-# Sửa POSTGRES_PASSWORD và JWT_SIGNING_SECRET trước khi chạy
+# Sửa POSTGRES_PASSWORD, JWT_SIGNING_SECRET và RATE_LIMIT_KEY_SECRET trước khi chạy.
+# RATE_LIMIT_KEY_SECRET phải ngẫu nhiên, riêng biệt và dài ít nhất 32 ký tự.
 corepack pnpm install --frozen-lockfile
 docker compose --env-file .env.compose up -d --build postgres api storefront seller-center admin-panel
 docker compose --env-file .env.compose run --rm api pnpm prisma:migrate:deploy
@@ -83,8 +85,11 @@ docker compose --env-file .env.compose run --rm api pnpm prisma:migrate:deploy
 | API | http://localhost:4000/api/v1 |
 | Swagger | http://localhost:4000/api/docs |
 | Liveness / Readiness | `/health/live`, `/health/ready` |
+| Redis (local only) | `localhost:56379` |
 
-PostgreSQL development của Compose bind `127.0.0.1:55432`; test database bind `127.0.0.1:55433` và chỉ chạy với profile `test`.
+Redis và PostgreSQL development chỉ bind loopback (`127.0.0.1:56379`, `127.0.0.1:55432`); Redis/PostgreSQL cho integration test bind `127.0.0.1:56380` và `127.0.0.1:55433`, chỉ chạy với profile `test`.
+
+API chỉ báo readiness khi cấu hình, PostgreSQL và Redis đều sẵn sàng. Redis lỗi làm endpoint đăng ký, đăng nhập và refresh trả `503`; vượt hạn mức trả `429` cùng `Retry-After`. Mặc định mỗi phút: đăng ký 5/email và 60/IP, đăng nhập 10/email và 180/IP, refresh 30/session family và 300/IP. Có thể chỉnh sáu biến `RATE_LIMIT_*_PER_MINUTE` trong `.env.compose`. `API_TRUST_PROXY_HOPS` mặc định `0`; chỉ tăng khi API nằm sau đúng số proxy tin cậy.
 
 ## Chạy từ source (không Docker)
 
@@ -93,7 +98,10 @@ Cần một PostgreSQL 17 đang chạy. Nếu dùng PostgreSQL của Compose, k�
 ```bash
 corepack pnpm install --frozen-lockfile
 cp .env.example .env
-# Điền DATABASE_URL và JWT_SIGNING_SECRET trong .env
+cp .env.compose.example .env.compose
+# Điền DATABASE_URL, JWT_SIGNING_SECRET và RATE_LIMIT_KEY_SECRET trong .env.
+# Khởi động PostgreSQL và Redis local trước khi chạy API.
+docker compose --env-file .env.compose up -d postgres redis
 ```
 
 Chạy API (package API không có script `dev`; build rồi start):
@@ -183,7 +191,7 @@ corepack pnpm test:e2e:us8
 corepack pnpm test:e2e:us8-live
 ```
 
-Integration test và `prisma:schema:check` chỉ chấp nhận database disposable: copy `.env.test.example` thành `.env.test`, điền `TEST_DATABASE_URL` và đặt `TEST_DATABASE_NAME_CONFIRMATION` đúng bằng tên database. Không trỏ vào database demo hoặc database dùng chung.
+Integration test và `prisma:schema:check` chỉ chấp nhận database disposable: copy `.env.test.example` thành `.env.test`, điền `TEST_DATABASE_URL` và đặt `TEST_DATABASE_NAME_CONFIRMATION` đúng bằng tên database. Integration test cần Redis ở `RATE_LIMIT_REDIS_URL` (mặc định ví dụ là `localhost:56380`) cùng key prefix `marketplace-test`; chạy `docker compose --env-file .env.compose --profile test up -d postgres-test redis-test` trước. `.env.test.example` nâng cap để fixture domain không dùng hết chung bucket IP loopback; unit và Redis rate-limit integration tests kiểm tra policy mặc định/giới hạn riêng. Không trỏ vào database demo hoặc database dùng chung.
 
 Không bao giờ chạy `prisma migrate reset`, `docker compose down -v` hay xóa volume trên database không phải disposable.
 

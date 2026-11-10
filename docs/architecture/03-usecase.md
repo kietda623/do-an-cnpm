@@ -278,7 +278,7 @@ flowchart LR
 | Luồng chính | 1. Guest gửi email, mật khẩu, `clientPlatform`.<br>2. Hệ thống tìm user theo email chuẩn hóa, so khớp hash.<br>3. Tạo Session mới, cấp access token (10 phút) và refresh token (7 ngày).<br>4. Khi access token hết hạn, client gọi `/auth/refresh`; hệ thống **rotate** refresh token (token cũ gắn `replaced_by_session_id`). |
 | Luồng thay thế | 2a. Sai email hoặc mật khẩu → 401 `INVALID_CREDENTIALS` (thông báo chung, không lộ email có tồn tại).<br>2b. Tài khoản LOCKED → 403.<br>2c. Vượt giới hạn tần suất → 429.<br>4a. Refresh token cũ bị dùng lại → thu hồi cả `family_id`, trả 401 `REFRESH_REUSE`. |
 | Hậu điều kiện | Có Session hợp lệ; refresh cũ không dùng lại được. |
-| Ghi chú | Web giữ access token trong bộ nhớ, không dùng localStorage; refresh token nằm trong cookie HttpOnly. Desktop buyer (Tauri wrapper, kế hoạch) dùng lại webview/cookie của storefront. Không có client mobile. |
+| Ghi chú | Web giữ access token trong bộ nhớ, không dùng localStorage; refresh token nằm trong cookie HttpOnly. Demo buyer Tauri trên Windows dùng webview/cookie của storefront và đã nghiệm thu với local storefront/API. Không có client mobile. |
 
 #### UC-01.3 Đăng xuất
 
@@ -741,7 +741,7 @@ UC-11 trong SRS không phải một luồng nghiệp vụ riêng mà là ràng b
 | Nền tảng | Vai trò | Lưu phiên | Phạm vi use case |
 | --- | --- | --- | --- |
 | Web (responsive) | Buyer, Seller, Admin | Access token trong bộ nhớ, refresh cookie HttpOnly + CSRF | Tất cả |
-| Desktop (Tauri wrapper — kế hoạch) | Buyer | Dùng lại cookie HttpOnly của storefront trong webview | UC-01, 04, 05, 06.1, 06.4, 06.5, 07.1, 08.3, 09.1 |
+| Desktop (Tauri — Windows local demo accepted) | Buyer | Dùng lại cookie HttpOnly của storefront trong webview; SC-009 đã nghiệm thu trong phạm vi demo local | UC-01, 04, 05, 06.1, 06.4, 06.5, 07.1, 08.3, 09.1 |
 | Mobile | — | Không còn client mobile | — |
 
 Mỗi màn hình cần đủ trạng thái loading / empty / error / success / thiếu quyền (NFR-02, US10).

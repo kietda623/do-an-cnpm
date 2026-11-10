@@ -178,6 +178,18 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '429':
           description: Rate limit exceeded
+          headers:
+            Retry-After:
+              description: Seconds until the request can be retried.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: Authentication rate limiting is unavailable.
           content:
             application/json:
               schema:
@@ -282,6 +294,18 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '429':
           description: Rate limit exceeded
+          headers:
+            Retry-After:
+              description: Seconds until the request can be retried.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: Authentication rate limiting is unavailable.
           content:
             application/json:
               schema:
@@ -387,6 +411,18 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '429':
           description: Rate limit exceeded
+          headers:
+            Retry-After:
+              description: Seconds until the request can be retried.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: Authentication rate limiting is unavailable.
           content:
             application/json:
               schema:

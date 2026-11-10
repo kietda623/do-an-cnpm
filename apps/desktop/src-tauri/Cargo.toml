@@ -1,0 +1,17 @@
+[package]
+name = "marketplace-desktop"
+version = "0.1.0"
+description = "Tauri shell for the Marketplace buyer storefront"
+edition = "2021"
+rust-version = "1.90"
+
+[lib]
+name = "marketplace_desktop"
+path = "src/lib.rs"
+
+[dependencies]
+tauri = { version = "=2.12.5", features = [] }
+url = "=2.5.8"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.4", features = [] }

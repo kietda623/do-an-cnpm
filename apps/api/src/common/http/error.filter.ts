@@ -35,6 +35,10 @@ export class ContractErrorFilter implements ExceptionFilter {
     const requestId = request.requestId ?? randomUUID();
 
     response.setHeader("X-Request-Id", requestId);
+    const retryAfterSeconds = this.retryAfterSeconds(exception);
+    if (status === HttpStatus.TOO_MANY_REQUESTS && retryAfterSeconds !== undefined) {
+      response.setHeader("Retry-After", String(retryAfterSeconds));
+    }
     response.status(status).json({
       error: {
         code:
@@ -49,6 +53,16 @@ export class ContractErrorFilter implements ExceptionFilter {
         requestId,
       },
     });
+  }
+
+  private retryAfterSeconds(exception: unknown): number | undefined {
+    if (typeof exception !== "object" || exception === null || !("retryAfterSeconds" in exception)) {
+      return undefined;
+    }
+    const seconds = exception.retryAfterSeconds;
+    return typeof seconds === "number" && Number.isSafeInteger(seconds) && seconds > 0
+      ? seconds
+      : undefined;
   }
 
   private readContractError(payload: unknown): ContractError {
