@@ -1,7 +1,7 @@
 # Work Breakdown Structure — Marketplace MVP
 
-Planning baseline 2026-10-20; mọi hàng là công việc dự kiến, chưa hoàn thành.
-**Cập nhật 2026-11-03:** buyer dùng web + desktop wrapper (Tauri, kế hoạch); app mobile đã bị gỡ. W032/W048/W054 trước đây là Buyer Mobile nay là desktop wrapper **chưa triển khai**; W055/W062 trước đây là Seller Desktop nay là packaging/verify desktop buyer **chưa triển khai**. Các hàng này được giữ để tham chiếu effort gốc và không nằm trong baseline build/CI hiện tại; capacity totals bên dưới là baseline lập kế hoạch trước khi retire.
+Planning baseline 2026-10-20; effort và dependencies trong bảng là ước lượng ban đầu, không phải trạng thái hoàn thành hiện tại.
+**Cập nhật 2026-11-10:** buyer dùng web và demo desktop Tauri trên Windows; app mobile đã bị gỡ. T140–T145/SC-009 đã hoàn tất cho demo local Windows (xem [desktop evidence](../../docs/testing/desktop-evidence.md)); không yêu cầu URL public, HTTPS production hay installer. Các hàng WBS bên dưới giữ mô tả/capacity của kế hoạch gốc tại thời điểm lập, kể cả nhãn “kế hoạch/chưa triển khai”; trạng thái hiện hành nằm trong `tasks.md`. Phạm vi desktop được thực hiện là demo Windows local, không phải packaging đa nền tảng.
 Person-day (PD) = 8 giờ tập trung. Effort gồm lập trình/tài liệu và test tại task;
 review chéo, họp, học tập và buffer được trừ riêng trong plan.md.
 P0: chặn phụ thuộc/toàn vẹn/release; P1: bắt buộc MVP có thể xếp sau;
@@ -66,15 +66,15 @@ Task 3–4 PD UI có thể chia theo màn hình mà giữ AC và tổng effort.
 | W051 | 7 | Documentation | OpenAPI và use-case trace freeze | M1 | M4 | P1 | Low | 1.5 | W043,W045,W050 | API docs + FR matrix | 50 FR map endpoint/tests, no drift | Schema validation/examples smoke |
 | W052 | 7 | Testing | Money/stock/state regression + query tuning | M2 | M1 | P0 | High | 3 | W040,W045 | Integrity/performance fixes + evidence | SC003/004/006/008 measured | DB races/p95/known money |
 | W053 | 7 | Database Design | Migration/restore rehearsal + ADR update | M2 | M5 | P0 | Medium | 1 | W052 | Migration compatibility/recovery report | Không sửa migration shared, restore đúng | Fresh/upgrade/restore checks |
-| W054 | 7 | Buyer Desktop (kế hoạch) | Desktop completion và 5-user usability (web parity) | M3 | M5 | P0 | High | 4 | W046,W048,W043 | Desktop wrapper review (chưa triển khai) | US8/10, SC005:4/5 trong 3 phút | Windows purchase/a11y (khi có build) |
-| W055 | 7 | Buyer Desktop (kế hoạch) | Packaging/install contract và storefront parity | M4 | M5 | P0 | High | 4 | W047,W049 | Desktop packages + evidence (chưa triển khai) | US1/4–8 trên Windows (khi có build) | Install/login/place-order/cookie |
+| W054 | 7 | Buyer Desktop (kế hoạch gốc) | Desktop completion và 5-user usability (web parity) | M3 | M5 | P0 | High | 4 | W046,W048,W043 | Windows demo usability review (T148 còn mở) | US8/10, SC005:4/5 trong 3 phút | Windows purchase/a11y trên local demo |
+| W055 | 7 | Buyer Desktop (kế hoạch gốc) | Packaging/install contract và storefront parity | M4 | M5 | P0 | High | 4 | W047,W049 | Windows local launcher/checks và evidence theo T144; packaging không thuộc phạm vi demo | US1/4–8 trên Windows local demo | Launch/login/place-order/cookie |
 | W056 | 7 | Testing | Full E2E matrix và triage | M5 | M3 | P0 | High | 2.5 | W050,W052,W054,W055 | Acceptance report + release blockers | SC001–009 measured or blocked explicitly | Cross-device/retry/permissions |
 | W057 | 7 | Deployment | CI release/backup drill | M5 | M2 | P0 | Medium | 1.5 | W016,W053,W055 | Release candidate pipeline | Secret protected, desktop job optional, restore evidence | Artifacts smoke/rollback rehearsal |
 | W058 | 8 | Documentation | Báo cáo SRS/use-case/architecture/security | M1 | M3 | P1 | Medium | 3 | W051,W056 | Final report chapters + diagrams | Tài liệu khớp code, nêu limitations | Peer consistency review |
 | W059 | 8 | Database Design | Release migrations/seed/schema handover | M2 | M1 | P0 | Medium | 2 | W053,W056 | Final deterministic seed + schema | Fresh demo khớp totals/stock, repeat safe | US1–9/seed twice |
 | W060 | 8 | Deployment | API release image và rollback support | M2 | M5 | P0 | Medium | 1 | W059,W057 | Versioned image/release notes | Pinned digest, health/readiness pass | Previous app/schema compatibility |
 | W061 | 8 | Demo & Presentation | Demo script/slides/video/user guide | M3 | M4 | P1 | Medium | 3 | W054,W056,W058 | 15-min demo + fallback video | Hai shop/payment branches/review | New-user dry run/quickstart |
-| W062 | 8 | Buyer Desktop (kế hoạch) | Desktop artifacts verify + Buyer guide | M4 | M3 | P0 | Medium | 3 | W055,W057,W056 | Win/Mac checksums + buyer desktop guide | Fresh target machine đúng quyền | Install→login→purchase smoke |
+| W062 | 8 | Buyer Desktop (kế hoạch) | Windows local demo + Buyer guide | M4 | M3 | P0 | Medium | 3 | W055,W057,W056 | Local launch + buyer flow evidence | Windows/WebView2 + local services ready | Login→purchase→reload smoke |
 | W063 | 8 | Deployment | HTTPS demo/env/secrets/backup/restore | M5 | M2 | P0 | High | 2 | W057,W059,W060 | Demo instance + deployment runbook | DB private, off-host backup, rollback tested | Health/persistence/restore |
 | W064 | 8 | Demo & Presentation | Final acceptance/clean setup/handover | M5 | M1 | P0 | Medium | 1.5 | W061,W062,W063 | Acceptance matrix + limitations | SC010 <=30 phút sau prerequisites, zero P0 | Full demo/clean clone |
 
@@ -117,8 +117,8 @@ Các nhãn chi tiết trong WBS có thể tách domain nhỏ hơn22 nhóm; mappi
 | 14 Buyer Web | W005, W013, W022, W030, W038, W046 |
 | 15 Seller Center | W006, W014, W023, W031, W039, W044, W047 |
 | 16 Admin Dashboard | W006, W014, W023, W042, W045, W047 |
-| 17 Buyer Desktop (kế hoạch) | W032, W046, W048–049, W054 |
-| 18 Desktop packaging (kế hoạch) | W008, W047, W049, W055, W057, W062 |
+| 17 Buyer Desktop (kế hoạch gốc) | W032, W046, W048–049, W054 |
+| 18 Desktop packaging (kế hoạch gốc; ngoài phạm vi demo hiện tại) | W008, W047, W049, W055, W057, W062 |
 | 19 Testing | W007, W015, W025, W029, W033, W040, W049–057 |
 | 20 Deployment | W008, W016, W041, W057, W060, W063 |
 | 21 Documentation | W001–008, W051, W053, W058–059, W061–064 |

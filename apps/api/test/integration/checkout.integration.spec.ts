@@ -3,13 +3,18 @@ import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import { RequestMethod } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import { performance } from "node:perf_hooks";
 import request from "supertest";
 import { AppModule } from "../../src/app.module.js";
 import { ContractErrorFilter } from "../../src/common/http/error.filter.js";
 import { CsrfRequestMiddleware } from "../../src/common/http/csrf-request.middleware.js";
 import { createContractValidationPipe } from "../../src/common/http/validation.pipe.js";
 import { DatabaseService } from "../../src/database/prisma.service.js";
-import { createTestPool, resetAndDeployMigrations } from "../helpers/database.js";
+import {
+  createTestPool,
+  resetAndDeployMigrations,
+} from "../helpers/database.js";
+import { summarizeLatencies } from "../helpers/performance-metrics.js";
 
 const password = "Correct horse battery staple 9!";
 const email = () => `checkout-${randomUUID()}@example.test`;
@@ -23,7 +28,9 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
   let pool: Awaited<ReturnType<typeof createTestPool>>;
 
   async function startApp() {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     app = moduleRef.createNestApplication({ logger: false });
     app.setGlobalPrefix("api/v1", {
       exclude: [
@@ -51,9 +58,12 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
   });
 
   async function register(name = "Checkout Buyer"): Promise<Auth> {
-    return request(app.getHttpServer())
-      .post("/api/v1/auth/register")
-      .send({ email: email(), password, fullName: name, clientPlatform: "ANDROID" });
+    return request(app.getHttpServer()).post("/api/v1/auth/register").send({
+      email: email(),
+      password,
+      fullName: name,
+      clientPlatform: "ANDROID",
+    });
   }
 
   async function makeShop(): Promise<Shop> {
@@ -156,7 +166,10 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
         ],
       });
     expect(response.status).toBe(201);
-    return { id: response.body.data.id, variantId: response.body.data.variants[0].id };
+    return {
+      id: response.body.data.id,
+      variantId: response.body.data.variants[0].id,
+    };
   }
 
   async function makeAddress(token: string) {
@@ -184,12 +197,19 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
       .send({ variantId, quantity });
     expect(response.status).toBe(201);
     const line = response.body.data.groups
-      .flatMap((group: { items: Array<{ id: string; variantId: string }> }) => group.items)
+      .flatMap(
+        (group: { items: Array<{ id: string; variantId: string }> }) =>
+          group.items,
+      )
       .find((item: { variantId: string }) => item.variantId === variantId);
     return line.id as string;
   }
 
-  async function quote(token: string, addressId: string, cartItemIds: string[]) {
+  async function quote(
+    token: string,
+    addressId: string,
+    cartItemIds: string[],
+  ) {
     return request(app.getHttpServer())
       .post("/api/v1/checkout/quotes")
       .set("Authorization", `Bearer ${token}`)
@@ -222,14 +242,24 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
     expect(unchecked.status).toBe(200);
     const quoted = await quote(token, address.id, [itemA, itemB]);
     expect(quoted.status).toBe(201);
-    expect(quoted.body.data).toMatchObject({ total: "450", valid: true, currency: "VND" });
+    expect(quoted.body.data).toMatchObject({
+      total: "450",
+      valid: true,
+      currency: "VND",
+    });
     expect(
-      (await db.prisma.inventory.findUniqueOrThrow({ where: { variantId: productA.variantId } }))
-        .availableQuantity,
+      (
+        await db.prisma.inventory.findUniqueOrThrow({
+          where: { variantId: productA.variantId },
+        })
+      ).availableQuantity,
     ).toBe(5);
     expect(
-      (await db.prisma.inventory.findUniqueOrThrow({ where: { variantId: productB.variantId } }))
-        .availableQuantity,
+      (
+        await db.prisma.inventory.findUniqueOrThrow({
+          where: { variantId: productB.variantId },
+        })
+      ).availableQuantity,
     ).toBe(3);
     const key = randomUUID();
     const checkedOut = await request(app.getHttpServer())
@@ -240,12 +270,13 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
     expect(checkedOut.status).toBe(201);
     const order = checkedOut.body.data;
     expect(order.sellerOrders).toHaveLength(2);
-    expect(new Date(order.paymentDeadline).getTime() - new Date(order.createdAt).getTime()).toBe(
-      15 * 60_000,
-    );
-    expect(order.sellerOrders.map((part: { shopId: string }) => part.shopId).sort()).toEqual(
-      [shopA.id, shopB.id].sort(),
-    );
+    expect(
+      new Date(order.paymentDeadline).getTime() -
+        new Date(order.createdAt).getTime(),
+    ).toBe(15 * 60_000);
+    expect(
+      order.sellerOrders.map((part: { shopId: string }) => part.shopId).sort(),
+    ).toEqual([shopA.id, shopB.id].sort());
     expect(order.originalTotal).toBe("450");
     expect(
       order.sellerOrders
@@ -256,7 +287,8 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
     ).toEqual(["200", "250"]);
     expect(
       order.sellerOrders.reduce(
-        (sum: number, part: { originalTotal: string }) => sum + Number(part.originalTotal),
+        (sum: number, part: { originalTotal: string }) =>
+          sum + Number(part.originalTotal),
         0,
       ),
     ).toBe(450);
@@ -274,21 +306,30 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
       .send({ quoteId: quoted.body.data.quoteId });
     expect(otherKey.status).toBe(409);
     expect(await db.prisma.marketplaceOrder.count()).toBe(1);
-    expect(await db.prisma.inventoryMovement.count({ where: { kind: "SALE" } })).toBe(2);
     expect(
-      (await db.prisma.inventory.findUniqueOrThrow({ where: { variantId: productA.variantId } }))
-        .availableQuantity,
+      await db.prisma.inventoryMovement.count({ where: { kind: "SALE" } }),
+    ).toBe(2);
+    expect(
+      (
+        await db.prisma.inventory.findUniqueOrThrow({
+          where: { variantId: productA.variantId },
+        })
+      ).availableQuantity,
     ).toBe(3);
     expect(
-      (await db.prisma.inventory.findUniqueOrThrow({ where: { variantId: productB.variantId } }))
-        .availableQuantity,
+      (
+        await db.prisma.inventory.findUniqueOrThrow({
+          where: { variantId: productB.variantId },
+        })
+      ).availableQuantity,
     ).toBe(2);
     const remaining = await request(app.getHttpServer())
       .get("/api/v1/cart")
       .set("Authorization", `Bearer ${token}`);
     expect(
-      remaining.body.data.groups.flatMap((group: { items: Array<{ variantId: string }> }) =>
-        group.items.map((item) => item.variantId),
+      remaining.body.data.groups.flatMap(
+        (group: { items: Array<{ variantId: string }> }) =>
+          group.items.map((item) => item.variantId),
       ),
     ).toEqual([unused.variantId]);
     const otherBuyer = await register();
@@ -324,14 +365,18 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
       .set("Authorization", `Bearer ${token}`);
     expect(
       immutable.body.data.sellerOrders
-        .flatMap((part: { items: Array<{ productName: string }> }) => part.items)
+        .flatMap(
+          (part: { items: Array<{ productName: string }> }) => part.items,
+        )
         .map((item: { productName: string }) => item.productName),
     ).not.toContain("Renamed after checkout");
   }, 120_000);
 
   it("rejects changed prices and rolls back every stock change when one quoted item goes unavailable", async () => {
     const ordersBefore = await db.prisma.marketplaceOrder.count();
-    const salesBefore = await db.prisma.inventoryMovement.count({ where: { kind: "SALE" } });
+    const salesBefore = await db.prisma.inventoryMovement.count({
+      where: { kind: "SALE" },
+    });
     const categoryId = await makeCategory();
     const shop = await makeShop();
     const first = await makeProduct(shop, categoryId, 5, "100");
@@ -343,7 +388,10 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
     const secondItem = await addToCart(token, second.variantId, 1);
     const firstQuote = await quote(token, address.id, [firstItem, secondItem]);
     expect(firstQuote.status).toBe(201);
-    const expiredQuote = await quote(token, address.id, [firstItem, secondItem]);
+    const expiredQuote = await quote(token, address.id, [
+      firstItem,
+      secondItem,
+    ]);
     expect(expiredQuote.status).toBe(201);
     await db.prisma.checkoutQuote.update({
       where: { id: expiredQuote.body.data.quoteId },
@@ -385,8 +433,11 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
     expect(priceChanged.status).toBe(409);
     expect(priceChanged.body.error?.code).toBe("PRICE_CHANGED");
     expect(
-      (await db.prisma.inventory.findUniqueOrThrow({ where: { variantId: first.variantId } }))
-        .availableQuantity,
+      (
+        await db.prisma.inventory.findUniqueOrThrow({
+          where: { variantId: first.variantId },
+        })
+      ).availableQuantity,
     ).toBe(5);
     const secondQuote = await quote(token, address.id, [firstItem, secondItem]);
     expect(secondQuote.status).toBe(201);
@@ -401,16 +452,23 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
       .send({ quoteId: secondQuote.body.data.quoteId });
     expect(noPartial.status).toBe(409);
     expect(await db.prisma.marketplaceOrder.count()).toBe(ordersBefore);
-    expect(await db.prisma.inventoryMovement.count({ where: { kind: "SALE" } })).toBe(salesBefore);
     expect(
-      (await db.prisma.inventory.findUniqueOrThrow({ where: { variantId: first.variantId } }))
-        .availableQuantity,
+      await db.prisma.inventoryMovement.count({ where: { kind: "SALE" } }),
+    ).toBe(salesBefore);
+    expect(
+      (
+        await db.prisma.inventory.findUniqueOrThrow({
+          where: { variantId: first.variantId },
+        })
+      ).availableQuantity,
     ).toBe(5);
     const cart = await request(app.getHttpServer())
       .get("/api/v1/cart")
       .set("Authorization", `Bearer ${token}`);
     expect(
-      cart.body.data.groups.flatMap((group: { items: unknown[] }) => group.items),
+      cart.body.data.groups.flatMap(
+        (group: { items: unknown[] }) => group.items,
+      ),
     ).toHaveLength(2);
   }, 120_000);
 
@@ -423,7 +481,9 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
     const retryAddress = await makeAddress(retryToken);
     const retryItem = await addToCart(retryToken, retryProduct.variantId, 1);
     const retryQuote = await quote(retryToken, retryAddress.id, [retryItem]);
-    const alternateQuote = await quote(retryToken, retryAddress.id, [retryItem]);
+    const alternateQuote = await quote(retryToken, retryAddress.id, [
+      retryItem,
+    ]);
     expect(retryQuote.status).toBe(201);
     expect(alternateQuote.status).toBe(201);
     const retryKey = randomUUID();
@@ -457,8 +517,14 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
     const collisionBuyer = await register("Inventory Collision Buyer");
     const collisionToken = collisionBuyer.body.data.accessToken;
     const collisionAddress = await makeAddress(collisionToken);
-    const collisionItem = await addToCart(collisionToken, collisionProduct.variantId, 1);
-    const collisionQuote = await quote(collisionToken, collisionAddress.id, [collisionItem]);
+    const collisionItem = await addToCart(
+      collisionToken,
+      collisionProduct.variantId,
+      1,
+    );
+    const collisionQuote = await quote(collisionToken, collisionAddress.id, [
+      collisionItem,
+    ]);
     expect(collisionQuote.status).toBe(201);
     const [collisionCheckout, collisionAdjustment] = await Promise.all([
       request(app.getHttpServer())
@@ -471,11 +537,22 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
           `/api/v1/shops/${shop.id}/variants/${collisionProduct.variantId}/inventory-adjustments`,
         )
         .set("Authorization", `Bearer ${shop.token}`)
-        .send({ delta: -1, reason: "Concurrent checkout collision", expectedVersion: 0 }),
+        .send({
+          delta: -1,
+          reason: "Concurrent checkout collision",
+          expectedVersion: 0,
+        }),
     ]);
-    const collisionStatuses = [collisionCheckout.status, collisionAdjustment.status];
-    expect(collisionStatuses.filter((status) => status === 409)).toHaveLength(1);
-    expect(collisionStatuses.filter((status) => status === 200 || status === 201)).toHaveLength(1);
+    const collisionStatuses = [
+      collisionCheckout.status,
+      collisionAdjustment.status,
+    ];
+    expect(collisionStatuses.filter((status) => status === 409)).toHaveLength(
+      1,
+    );
+    expect(
+      collisionStatuses.filter((status) => status === 200 || status === 201),
+    ).toHaveLength(1);
     expect(
       (
         await db.prisma.inventory.findUniqueOrThrow({
@@ -501,30 +578,52 @@ describe("cart, quotes, and checkout PostgreSQL integration", () => {
       expect(createdQuote.status).toBe(201);
       buyers.push({ token, quoteId: createdQuote.body.data.quoteId });
     }
+    const checkoutLatencies: number[] = [];
     const attempts = await Promise.all(
-      buyers.map(({ token, quoteId }) =>
-        request(app.getHttpServer())
+      buyers.map(async ({ token, quoteId }) => {
+        const startedAt = performance.now();
+        const response = await request(app.getHttpServer())
           .post("/api/v1/checkout")
           .set("Authorization", `Bearer ${token}`)
           .set("Idempotency-Key", randomUUID())
-          .send({ quoteId }),
-      ),
+          .send({ quoteId });
+        checkoutLatencies.push(performance.now() - startedAt);
+        return response;
+      }),
     );
     expect(attempts.filter((result) => result.status === 201)).toHaveLength(5);
     expect(attempts.filter((result) => result.status === 409)).toHaveLength(15);
-    expect(
-      (await db.prisma.inventory.findUniqueOrThrow({ where: { variantId: contested.variantId } }))
-        .availableQuantity,
-    ).toBe(0);
-    expect(
-      await db.prisma.inventoryMovement.count({
-        where: { inventoryId: contested.variantId, kind: "SALE" },
-      }),
-    ).toBe(5);
-    expect(
-      await db.prisma.sellerOrder.count({
-        where: { items: { some: { variantId: contested.variantId } } },
-      }),
-    ).toBe(5);
+    const remainingStock = (
+      await db.prisma.inventory.findUniqueOrThrow({
+        where: { variantId: contested.variantId },
+      })
+    ).availableQuantity;
+    expect(remainingStock).toBe(0);
+    const saleMovements = await db.prisma.inventoryMovement.count({
+      where: { inventoryId: contested.variantId, kind: "SALE" },
+    });
+    expect(saleMovements).toBe(5);
+    const sellerOrders = await db.prisma.sellerOrder.findMany({
+      where: { items: { some: { variantId: contested.variantId } } },
+      include: { items: { where: { variantId: contested.variantId } } },
+    });
+    expect(sellerOrders).toHaveLength(5);
+    const grossVnd = sellerOrders
+      .flatMap((sellerOrder) => sellerOrder.items)
+      .reduce((total, item) => total + BigInt(item.lineTotal.toString()), 0n);
+    expect(grossVnd).toBe(1_000n);
+
+    process.stdout.write(
+      `T147_SC003 ${JSON.stringify({
+        ...summarizeLatencies(checkoutLatencies, 2_000),
+        successfulCheckouts: attempts.filter((result) => result.status === 201)
+          .length,
+        outOfStock: attempts.filter((result) => result.status === 409).length,
+        committedOrders: sellerOrders.length,
+        saleMovements,
+        grossVnd: grossVnd.toString(),
+        remainingStock,
+      })}\n`,
+    );
   }, 240_000);
 });

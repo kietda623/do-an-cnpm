@@ -314,8 +314,8 @@ Quote không chứa secret và endpoint không cho đọc quote của Buyer khá
 - `shopNameSnapshot` trả từ SellerOrder.shop_name_snapshot, snapshot khi checkout; đổi tên shop
   không đổi đơn cũ.
 - Session.platform map WEB từ clientPlatform WEB, MOBILE từ ANDROID/IOS,
-  DESKTOP từ WINDOWS/MACOS; lưu thêm
-  `client_platform` đúng enum transport để quản lý thiết bị. Không nhận platform làm nguồn quyền.
+  DESKTOP từ clientPlatform desktop; lưu thêm `client_platform` theo enum transport để quản lý
+  thiết bị. Enum transport không xác định quyền hoặc phạm vi hệ điều hành được nghiệm thu.
 - Product DRAFT là trạng thái nội bộ trước publish; boolean công khai `selling=true` ánh xạ ACTIVE,
   false ánh xạ DISCONTINUED với sản phẩm đã publish. DRAFT chỉ có trong create/edit workflow;
   contract không nhận sale_status tùy ý. admin_hidden là cờ riêng, Seller không được bật lại nó.

@@ -25,6 +25,7 @@
     "build": "next build",
     "dev": "next dev --hostname 0.0.0.0",
     "lint": "node ../../packages/config/lint.mjs",
+    "test": "node --test src/lib/csp-policy.test.mjs",
     "start": "next start --hostname 0.0.0.0",
     "typecheck": "node ../../packages/config/typecheck.mjs"
   }

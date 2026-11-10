@@ -2,6 +2,7 @@ export type ApiRequest = {
   method: string;
   originalUrl?: string;
   path?: string;
+  ip: string;
   requestId?: string;
   headers: Record<string, string | string[] | undefined>;
 };

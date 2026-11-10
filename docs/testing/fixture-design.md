@@ -2,6 +2,10 @@
 
 Fixtures là dữ liệu disposable dùng trong PostgreSQL test namespace riêng. Chúng mô tả expected results; chưa seed hoặc chạy trên DB nào. Không dùng user/token thật, không reset database chia sẻ.
 
+## Redis rate-limit fixtures
+
+Rate-limit unit tests dùng fake store. Suite Redis/auth chuyên biệt dùng Redis trong Compose test profile (`127.0.0.1:56380`), prefix ngẫu nhiên riêng và chỉ xóa key thuộc prefix đó; identity buckets là HMAC nên không ghi email, IP hoặc refresh token thô vào Redis key. Các domain integration khác dùng prefix test cô lập và nâng cap trong `.env.test` vì nhiều fixture đăng ký từ cùng IP loopback; policy defaults vẫn được kiểm tra ở unit suite. Không dùng `FLUSHDB`/`FLUSHALL` và không trỏ test vào Redis dùng chung. Hai Redis client độc lập kiểm tra hạn mức đồng bộ, TTL reset và hành vi khi Redis mất kết nối.
+
 ## Danh tính và shop
 
 | Alias | Vai trò/trạng thái | Mục đích |

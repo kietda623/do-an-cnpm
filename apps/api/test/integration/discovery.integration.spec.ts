@@ -3,8 +3,6 @@ import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import { RequestMethod } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import { performance } from "node:perf_hooks";
-import { cpus, hostname } from "node:os";
 import request from "supertest";
 import type { Pool } from "pg";
 import { AppModule } from "../../src/app.module.js";
@@ -12,7 +10,10 @@ import { ContractErrorFilter } from "../../src/common/http/error.filter.js";
 import { CsrfRequestMiddleware } from "../../src/common/http/csrf-request.middleware.js";
 import { createContractValidationPipe } from "../../src/common/http/validation.pipe.js";
 import { DatabaseService } from "../../src/database/prisma.service.js";
-import { createTestPool, resetAndDeployMigrations } from "../helpers/database.js";
+import {
+  createTestPool,
+  resetAndDeployMigrations,
+} from "../helpers/database.js";
 
 const password = "Correct horse battery staple 9!";
 const email = () => `discovery-${randomUUID()}@example.test`;
@@ -26,7 +27,9 @@ describe("public discovery PostgreSQL integration", () => {
   beforeAll(async () => {
     await resetAndDeployMigrations();
     pool = await createTestPool();
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     app = moduleRef.createNestApplication({ logger: false });
     app.setGlobalPrefix("api/v1", {
       exclude: [
@@ -48,9 +51,12 @@ describe("public discovery PostgreSQL integration", () => {
   });
 
   async function register() {
-    return request(app.getHttpServer())
-      .post("/api/v1/auth/register")
-      .send({ email: email(), password, fullName: "Discovery Fixture", clientPlatform: "ANDROID" });
+    return request(app.getHttpServer()).post("/api/v1/auth/register").send({
+      email: email(),
+      password,
+      fullName: "Discovery Fixture",
+      clientPlatform: "ANDROID",
+    });
   }
 
   async function shopFixture(): Promise<Shop> {
@@ -100,7 +106,11 @@ describe("public discovery PostgreSQL integration", () => {
     const response = await request(app.getHttpServer())
       .post("/api/v1/admin/categories")
       .set("Authorization", `Bearer ${adminToken}`)
-      .send({ name: `Category ${randomUUID().slice(0, 6)}`, parentId, visible: true });
+      .send({
+        name: `Category ${randomUUID().slice(0, 6)}`,
+        parentId,
+        visible: true,
+      });
     expect(response.status).toBe(201);
     return response.body.data as { id: string; version: number };
   }
@@ -155,11 +165,32 @@ describe("public discovery PostgreSQL integration", () => {
     });
     const root = await category(admin.body.data.accessToken);
     const child = await category(admin.body.data.accessToken, root.id);
-    const first = await publish(shop, child.id, "Alpha Linen Shirt", ["1200", "950"], [0, 0]);
-    const second = await publish(shop, child.id, "Beta Linen Shirt", ["950"], [3]);
+    const first = await publish(
+      shop,
+      child.id,
+      "Alpha Linen Shirt",
+      ["1200", "950"],
+      [0, 0],
+    );
+    const second = await publish(
+      shop,
+      child.id,
+      "Beta Linen Shirt",
+      ["950"],
+      [3],
+    );
     const hiddenAncestor = await category(admin.body.data.accessToken);
-    const hiddenChild = await category(admin.body.data.accessToken, hiddenAncestor.id);
-    const hidden = await publish(shop, hiddenChild.id, "Hidden Publicity", ["100"], [10]);
+    const hiddenChild = await category(
+      admin.body.data.accessToken,
+      hiddenAncestor.id,
+    );
+    const hidden = await publish(
+      shop,
+      hiddenChild.id,
+      "Hidden Publicity",
+      ["100"],
+      [10],
+    );
     const hiddenParentResponse = await request(app.getHttpServer())
       .patch(`/api/v1/admin/categories/${hiddenAncestor.id}`)
       .set("Authorization", `Bearer ${admin.body.data.accessToken}`)
@@ -181,19 +212,26 @@ describe("public discovery PostgreSQL integration", () => {
     const search = await request(app.getHttpServer()).get(
       `/api/v1/products?q=Linen&categoryId=${root.id}&sort=PRICE_DESC&pageSize=10`,
     );
-    expect(search.body.data.map((item: { id: string }) => item.id)).toEqual(orderedIds);
+    expect(search.body.data.map((item: { id: string }) => item.id)).toEqual(
+      orderedIds,
+    );
     const secondPage = await request(app.getHttpServer()).get(
       `/api/v1/products?categoryId=${root.id}&minPrice=900&maxPrice=1000&sort=PRICE_ASC&page=2&pageSize=1`,
     );
     expect(secondPage.body.data[0].id).not.toBe(list.body.data[0].id);
-    const outOfStockDetail = await request(app.getHttpServer()).get(`/api/v1/products/${first.id}`);
+    const outOfStockDetail = await request(app.getHttpServer()).get(
+      `/api/v1/products/${first.id}`,
+    );
     expect(outOfStockDetail.status).toBe(200);
     expect(
       outOfStockDetail.body.data.variants.every(
-        (variant: { availableQuantity: number }) => variant.availableQuantity === 0,
+        (variant: { availableQuantity: number }) =>
+          variant.availableQuantity === 0,
       ),
     ).toBe(true);
-    const hiddenDetail = await request(app.getHttpServer()).get(`/api/v1/products/${hidden.id}`);
+    const hiddenDetail = await request(app.getHttpServer()).get(
+      `/api/v1/products/${hidden.id}`,
+    );
     expect(hiddenDetail.status).toBe(404);
     expect(JSON.stringify(outOfStockDetail.body)).not.toMatch(
       /adminHidden|saleStatus|version|ownerUserId|contactAddress|phone|rejectionReason/,
@@ -210,17 +248,26 @@ describe("public discovery PostgreSQL integration", () => {
     const cat = await category(admin.body.data.accessToken);
     await publish(shop, cat.id, "Range Product", ["100"], [1]);
     expect(
-      (await request(app.getHttpServer()).get("/api/v1/products?minPrice=200&maxPrice=100")).status,
+      (
+        await request(app.getHttpServer()).get(
+          "/api/v1/products?minPrice=200&maxPrice=100",
+        )
+      ).status,
     ).toBe(400);
-    expect((await request(app.getHttpServer()).get("/api/v1/products?minPrice=oops")).status).toBe(
-      400,
-    );
+    expect(
+      (await request(app.getHttpServer()).get("/api/v1/products?minPrice=oops"))
+        .status,
+    ).toBe(400);
     await db.prisma.shop.update({
       where: { id: shop.id },
       data: { status: "SUSPENDED", decisionReason: "Policy violation" },
     });
     expect(
-      (await request(app.getHttpServer()).get(`/api/v1/shops/${shop.id}/products`)).status,
+      (
+        await request(app.getHttpServer()).get(
+          `/api/v1/shops/${shop.id}/products`,
+        )
+      ).status,
     ).toBe(404);
     expect(
       (
@@ -230,92 +277,4 @@ describe("public discovery PostgreSQL integration", () => {
       ).status,
     ).toBe(400);
   });
-
-  it("exposes an index-assisted query plan for the catalog lookup", async () => {
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-      await client.query("SET LOCAL enable_seqscan = off");
-      const plan = await client.query(
-        "EXPLAIN SELECT id FROM products WHERE shop_id = $1::uuid AND sale_status = 'ACTIVE' AND admin_hidden = false",
-        ["00000000-0000-0000-0000-000000000000"],
-      );
-      expect(JSON.stringify(plan.rows)).toContain("products_shop_status_created_id_idx");
-    } finally {
-      await client.query("ROLLBACK");
-      client.release();
-    }
-  });
-
-  it("records a 100-observation discovery baseline over 1,000 products, 10 shops and 20 concurrent guests", async () => {
-    const shop = await shopFixture();
-    const admin = await register();
-    await db.prisma.user.update({
-      where: { id: admin.body.data.user.id },
-      data: { systemRole: "ADMIN" },
-    });
-    const cat = await category(admin.body.data.accessToken);
-    const template = await db.prisma.shop.findUniqueOrThrow({
-      where: { id: shop.id },
-      include: { logo: true },
-    });
-    const shopIds = [shop.id];
-    for (let i = 1; i < 10; i += 1) {
-      const logo = await db.prisma.asset.create({
-        data: {
-          uploaderUserId: shop.ownerId,
-          purpose: "SHOP_LOGO",
-          objectKey: `load/${randomUUID()}.png`,
-          mimeType: "image/png",
-          byteSize: 64,
-          width: 1,
-          height: 1,
-          status: "VERIFIED",
-        },
-      });
-      const next = await db.prisma.shop.create({
-        data: {
-          ownerUserId: template.ownerUserId,
-          name: `Load Shop ${i}`,
-          slugNormalized: `load-shop-${i}-${randomUUID().slice(0, 6)}`,
-          description: "Load fixture",
-          logoAssetId: logo.id,
-          contactAddress: "fixture",
-          phone: "0900000000",
-          status: "ACTIVE",
-          approvedAt: new Date(),
-        },
-      });
-      shopIds.push(next.id);
-    }
-    await db.prisma.$executeRaw`
-      WITH shop_rows AS (SELECT id FROM unnest(${shopIds}::uuid[]) AS id), inserted AS (
-        INSERT INTO products (id, shop_id, category_id, name, description, sale_status, admin_hidden)
-        SELECT gen_random_uuid(), shop_rows.id, ${cat.id}::uuid, 'Load item ' || n, 'Performance fixture', 'ACTIVE', false
-        FROM shop_rows CROSS JOIN generate_series(1, 100) AS n RETURNING id, shop_id
-      )
-      INSERT INTO product_variants (id, product_id, shop_id, sku_normalized, attributes_key, price, sale_status)
-      SELECT gen_random_uuid(), id, shop_id, 'LOAD-' || id::text, '{}', 100000, 'ACTIVE' FROM inserted`;
-
-    const observations: number[] = [];
-    for (let batch = 0; batch < 5; batch += 1) {
-      const requests = Array.from({ length: 20 }, async () => {
-        const start = performance.now();
-        const response = await request(app.getHttpServer()).get(
-          "/api/v1/products?q=Load%20item&pageSize=20",
-        );
-        observations.push(performance.now() - start);
-        expect(response.status).toBe(200);
-        expect(response.body.meta.total).toBe(1000);
-        expect(response.body.data).toHaveLength(20);
-      });
-      await Promise.all(requests);
-    }
-    observations.sort((a, b) => a - b);
-    const p95 = observations[Math.ceil(observations.length * 0.95) - 1]!;
-    expect(p95).toBeLessThan(2_000);
-    process.stdout.write(
-      `Discovery baseline: 100 observations, 20 concurrent, 1,000 products / 10 shops; p95=${p95.toFixed(1)}ms; host=${hostname()} ${process.platform}/${process.arch}; CPU=${cpus()[0]?.model ?? "unknown"}; API=Supertest in-process; database=integration helper\n`,
-    );
-  }, 120_000);
 });

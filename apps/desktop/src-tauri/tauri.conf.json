@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Marketplace",
+  "version": "0.1.0",
+  "identifier": "vn.marketplace.desktop",
+  "build": {
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "http://localhost:3000"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "capabilities": []
+    }
+  },
+  "bundle": {
+    "active": false
+  }
+}

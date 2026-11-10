@@ -3,6 +3,7 @@ import { RequestMethod } from "@nestjs/common";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { randomUUID } from "node:crypto";
+import { performance } from "node:perf_hooks";
 import request from "supertest";
 import { AppModule } from "../../apps/api/src/app.module.js";
 import { ContractErrorFilter } from "../../apps/api/src/common/http/error.filter.js";
@@ -10,6 +11,7 @@ import { CsrfRequestMiddleware } from "../../apps/api/src/common/http/csrf-reque
 import { createContractValidationPipe } from "../../apps/api/src/common/http/validation.pipe.js";
 import { DatabaseService } from "../../apps/api/src/database/prisma.service.js";
 import { resetAndDeployMigrations } from "../../apps/api/test/helpers/database.js";
+import { summarizeLatencies } from "../../apps/api/test/helpers/performance-metrics.js";
 
 const password = "Correct horse battery staple 9!";
 const email = () => `payment-${randomUUID()}@example.test`;
@@ -198,29 +200,40 @@ describe("payment and cancellation concurrency on PostgreSQL", () => {
     const buyer = `Bearer ${test.buyerToken}`;
     const key = randomUUID();
     const body = { quoteId: test.quoteId };
+    const checkoutLatencies: number[] = [];
     const checkouts = await Promise.all(
-      Array.from({ length: 10 }, () =>
-        request(app.getHttpServer())
+      Array.from({ length: 10 }, async () => {
+        const startedAt = performance.now();
+        const response = await request(app.getHttpServer())
           .post("/api/v1/checkout")
           .set("Authorization", buyer)
           .set("Idempotency-Key", key)
-          .send(body),
-      ),
+          .send(body);
+        checkoutLatencies.push(performance.now() - startedAt);
+        return response;
+      }),
     );
     expect(checkouts.map((item) => item.status)).toEqual(Array(10).fill(201));
     expect(new Set(checkouts.map((item) => item.body.data.id)).size).toBe(1);
     const orderId = checkouts[0]!.body.data.id as string;
+    const order = await db.prisma.marketplaceOrder.findUniqueOrThrow({
+      where: { id: orderId },
+    });
+    expect(order.originalTotal.toString()).toBe("2500");
     expect(
       await db.prisma.marketplaceOrder.count({ where: { id: orderId } }),
     ).toBe(1);
     const part = await db.prisma.sellerOrder.findFirstOrThrow({
       where: { orderId },
     });
-    expect(
-      await db.prisma.inventoryMovement.count({
-        where: { sellerOrderId: part.id, kind: "SALE" },
-      }),
-    ).toBe(1);
+    const saleMovements = await db.prisma.inventoryMovement.count({
+      where: { sellerOrderId: part.id, kind: "SALE" },
+    });
+    expect(saleMovements).toBe(1);
+    const orderItem = await db.prisma.orderItem.findFirstOrThrow({
+      where: { sellerOrderId: part.id, variantId: test.variantId },
+    });
+    expect(orderItem.lineTotal.toString()).toBe("2500");
     expect(
       (
         await request(app.getHttpServer())
@@ -246,20 +259,42 @@ describe("payment and cancellation concurrency on PostgreSQL", () => {
         (group: { items: unknown[] }) => group.items,
       ),
     ).toHaveLength(0);
+    process.stdout.write(
+      `T147_SC004_CHECKOUT ${JSON.stringify({
+        ...summarizeLatencies(checkoutLatencies, 2_000),
+        replayResponses: checkouts.length,
+        uniqueOrderIds: new Set(checkouts.map((item) => item.body.data.id))
+          .size,
+        originalTotalVnd: order.originalTotal.toString(),
+        lineTotalVnd: orderItem.lineTotal.toString(),
+        saleMovements,
+        remainingStock: 4,
+      })}\n`,
+    );
   }, 60_000);
 
   it("replays concurrent start, result and cancel ten times with one effect", async () => {
     const test = await fixture();
     const buyer = `Bearer ${test.buyerToken}`;
+    const stockAfterCheckout = (
+      await db.prisma.inventory.findUniqueOrThrow({
+        where: { variantId: test.variantId },
+      })
+    ).availableQuantity;
+    expect(stockAfterCheckout).toBe(4);
     const startKey = randomUUID();
+    const startLatencies: number[] = [];
     const starts = await Promise.all(
-      Array.from({ length: 10 }, () =>
-        request(app.getHttpServer())
+      Array.from({ length: 10 }, async () => {
+        const startedAt = performance.now();
+        const response = await request(app.getHttpServer())
           .post("/api/v1/payments/mock-attempts")
           .set("Authorization", buyer)
           .set("Idempotency-Key", startKey)
-          .send({ orderId: test.orderId }),
-      ),
+          .send({ orderId: test.orderId });
+        startLatencies.push(performance.now() - startedAt);
+        return response;
+      }),
     );
     expect(starts.map((item) => item.status)).toEqual(Array(10).fill(201));
     expect(new Set(starts.map((item) => item.body.data.id)).size).toBe(1);
@@ -284,14 +319,18 @@ describe("payment and cancellation concurrency on PostgreSQL", () => {
       outcome: "SUCCEEDED",
       expectedVersion: order.version,
     };
+    const resultLatencies: number[] = [];
     const pays = await Promise.all(
-      Array.from({ length: 10 }, () =>
-        request(app.getHttpServer())
+      Array.from({ length: 10 }, async () => {
+        const startedAt = performance.now();
+        const response = await request(app.getHttpServer())
           .post(`/api/v1/payments/${attemptId}/mock-result`)
           .set("Authorization", buyer)
           .set("Idempotency-Key", payKey)
-          .send(body),
-      ),
+          .send(body);
+        resultLatencies.push(performance.now() - startedAt);
+        return response;
+      }),
     );
     expect(pays.map((item) => item.status)).toEqual(Array(10).fill(200));
     expect(new Set(pays.map((item) => item.body.data.id)).size).toBe(1);
@@ -314,14 +353,18 @@ describe("payment and cancellation concurrency on PostgreSQL", () => {
       reason: "Cancel test order",
       expectedVersion: order.version,
     };
+    const cancelLatencies: number[] = [];
     const cancellations = await Promise.all(
-      Array.from({ length: 10 }, () =>
-        request(app.getHttpServer())
+      Array.from({ length: 10 }, async () => {
+        const startedAt = performance.now();
+        const response = await request(app.getHttpServer())
           .post(`/api/v1/orders/${test.orderId}/cancel`)
           .set("Authorization", buyer)
           .set("Idempotency-Key", cancelKey)
-          .send(cancelBody),
-      ),
+          .send(cancelBody);
+        cancelLatencies.push(performance.now() - startedAt);
+        return response;
+      }),
     );
     expect(cancellations.map((item) => item.status)).toEqual(
       Array(10).fill(200),
@@ -335,21 +378,46 @@ describe("payment and cancellation concurrency on PostgreSQL", () => {
           .send({ ...cancelBody, reason: "Different reason" })
       ).status,
     ).toBe(409);
-    expect(
-      await db.prisma.paymentAllocation.count({ where: { attemptId } }),
-    ).toBe(1);
+    const allocations = await db.prisma.paymentAllocation.findMany({
+      where: { attemptId },
+      include: { refund: true },
+    });
+    expect(allocations).toHaveLength(1);
+    expect(allocations[0]!.amount.toString()).toBe("2500");
+    expect(allocations[0]!.refund?.amount.toString()).toBe("2500");
     expect(
       await db.prisma.simulatedRefund.count({
         where: { allocation: { attemptId } },
       }),
     ).toBe(1);
-    expect(
-      (
-        await db.prisma.inventory.findUniqueOrThrow({
-          where: { variantId: test.variantId },
-        })
-      ).availableQuantity,
-    ).toBe(6);
+    const stockAfterCancellation = (
+      await db.prisma.inventory.findUniqueOrThrow({
+        where: { variantId: test.variantId },
+      })
+    ).availableQuantity;
+    expect(stockAfterCancellation).toBe(6);
+    const originalTotal = (
+      await db.prisma.marketplaceOrder.findUniqueOrThrow({
+        where: { id: test.orderId },
+      })
+    ).originalTotal.toString();
+    expect(originalTotal).toBe("2500");
+    process.stdout.write(
+      `T147_SC004 ${JSON.stringify({
+        start: summarizeLatencies(startLatencies, 2_000),
+        paymentResult: summarizeLatencies(resultLatencies, 2_000),
+        cancellation: summarizeLatencies(cancelLatencies, 2_000),
+        replayCountPerOperation: 10,
+        originalTotalVnd: originalTotal,
+        allocationVnd: allocations[0]!.amount.toString(),
+        refundVnd: allocations[0]!.refund!.amount.toString(),
+        stock: {
+          initial: 6,
+          afterCheckout: stockAfterCheckout,
+          afterCancellation: stockAfterCancellation,
+        },
+      })}\n`,
+    );
   }, 120_000);
 
   it("serializes cancellation racing with a successful result without restoring stock twice", async () => {

@@ -14,6 +14,15 @@ describe("refresh error codes over native and browser transports", () => {
   const origin = "http://localhost:3000";
   const password = "Correct horse battery staple 9!";
   const email = () => `refresh-${randomUUID()}@example.test`;
+  const setCookieHeaders = (result: { headers: Record<string, unknown> }) => {
+    const value = result.headers["set-cookie"];
+    if (Array.isArray(value)) {
+      return value.filter(
+        (cookie): cookie is string => typeof cookie === "string",
+      );
+    }
+    return typeof value === "string" ? [value] : [];
+  };
   beforeAll(async () => {
     process.env.CORS_ORIGINS = origin;
     await resetAndDeployMigrations();
@@ -89,6 +98,9 @@ describe("refresh error codes over native and browser transports", () => {
         );
       const rotated = await refresh(token);
       expect(rotated.status).toBe(200);
+      if (platform === "WEB") {
+        expect(rotated.body.data.refreshToken).toBeNull();
+      }
       const next =
         platform === "WEB"
           ? cookieToken(rotated)
@@ -113,23 +125,77 @@ describe("refresh error codes over native and browser transports", () => {
         platform === "WEB"
           ? cookieToken(second)
           : (second.body.data.refreshToken as string);
-      await app
-        .get(DatabaseService)
-        .prisma.session.updateMany({
-          where: {
-            refreshHash: createHash("sha256")
-              .update(expiredToken)
-              .digest("hex"),
-          },
-          data: {
-            createdAt: new Date(Date.now() - 8 * 86400_000),
-            expiresAt: new Date(Date.now() - 86400_000),
-          },
-        });
+      await app.get(DatabaseService).prisma.session.updateMany({
+        where: {
+          refreshHash: createHash("sha256").update(expiredToken).digest("hex"),
+        },
+        data: {
+          createdAt: new Date(Date.now() - 8 * 86400_000),
+          expiresAt: new Date(Date.now() - 86400_000),
+        },
+      });
       const expired = await refresh(expiredToken);
       expect(expired.status).toBe(401);
       expect(expired.body.error.code).toBe("INVALID_REFRESH");
     },
     60_000,
   );
+
+  it("keeps the WEB refresh cookie secure and rejects it after logout", async () => {
+    const csrfResponse = await request(app.getHttpServer())
+      .get("/api/v1/auth/csrf")
+      .set("Origin", origin);
+    expect(csrfResponse.status).toBe(200);
+    const csrfToken = csrfResponse.body.data.csrfToken as string;
+    const csrfCookie = String(
+      csrfResponse.headers["set-cookie"]?.[0] ?? "",
+    ).split(";")[0]!;
+
+    const registered = await request(app.getHttpServer())
+      .post("/api/v1/auth/register")
+      .set("Origin", origin)
+      .set("X-CSRF-Token", csrfToken)
+      .set("Cookie", csrfCookie)
+      .send({
+        email: email(),
+        password,
+        fullName: "Web Logout Buyer",
+        clientPlatform: "WEB",
+      });
+    expect(registered.status).toBe(201);
+    expect(registered.body.data.refreshToken).toBeNull();
+
+    const setCookies = setCookieHeaders(registered);
+    const refreshCookie = setCookies.find((value) =>
+      value.startsWith("refresh_token="),
+    )!;
+    expect(refreshCookie).toContain("Path=/api/v1/auth");
+    expect(refreshCookie).toContain("HttpOnly");
+    expect(refreshCookie).toContain("Secure");
+    expect(refreshCookie).toContain("SameSite=Lax");
+    const refreshCookiePair = refreshCookie.split(";")[0]!;
+
+    const logout = await request(app.getHttpServer())
+      .post("/api/v1/auth/logout")
+      .set("Origin", origin)
+      .set("X-CSRF-Token", csrfToken)
+      .set("Cookie", [csrfCookie, refreshCookiePair])
+      .set("Authorization", `Bearer ${registered.body.data.accessToken}`)
+      .send({ clientPlatform: "WEB" });
+    expect(logout.status).toBe(204);
+    const clearedRefreshCookie = setCookieHeaders(logout).find(
+      (value: string) => value.startsWith("refresh_token=;"),
+    );
+    expect(clearedRefreshCookie).toContain("Path=/api/v1/auth");
+    expect(clearedRefreshCookie).toContain("Max-Age=0");
+
+    const refreshAfterLogout = await request(app.getHttpServer())
+      .post("/api/v1/auth/refresh")
+      .set("Origin", origin)
+      .set("X-CSRF-Token", csrfToken)
+      .set("Cookie", [csrfCookie, refreshCookiePair])
+      .send({ clientPlatform: "WEB" });
+    expect(refreshAfterLogout.status).toBe(401);
+    expect(refreshAfterLogout.body.error.code).toBe("SESSION_REVOKED");
+  }, 60_000);
 });

@@ -9,6 +9,14 @@ import { createContractValidationPipe } from "./validation.pipe.js";
 
 export function configureHttp(app: INestApplication): void {
   const config = app.get(ConfigService);
+  const configuredProxyHops =
+    config.get<string | number>("API_TRUST_PROXY_HOPS") ?? 0;
+  const trustedProxyHops = Number(configuredProxyHops);
+  if (!Number.isSafeInteger(trustedProxyHops) || trustedProxyHops < 0) {
+    throw new Error("API_TRUST_PROXY_HOPS must be a non-negative integer");
+  }
+  app.getHttpAdapter().getInstance().set("trust proxy", trustedProxyHops);
+
   const requestId = app.get(RequestIdMiddleware);
   const requestLogger = app.get(RequestLoggerMiddleware);
   const csrfProtection = app.get(CsrfRequestMiddleware);
@@ -32,7 +40,7 @@ export function configureHttp(app: INestApplication): void {
       "X-CSRF-Token",
       "Idempotency-Key",
     ],
-    exposedHeaders: ["X-Request-Id"],
+    exposedHeaders: ["X-Request-Id", "Retry-After"],
     maxAge: 600,
   });
   // After CORS so CSRF rejections still carry the CORS headers the browser needs to read them.

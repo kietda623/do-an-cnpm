@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { RequestMethod, type INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { randomUUID } from "node:crypto";
+import { performance } from "node:perf_hooks";
 import { spawnSync } from "node:child_process";
 import request from "supertest";
 import { Pool } from "pg";
@@ -15,6 +16,7 @@ import {
   resetAndDeployMigrations,
 } from "../helpers/database.js";
 import { Barrier } from "../helpers/concurrency.js";
+import { summarizeLatencies } from "../helpers/performance-metrics.js";
 import { buildTargetSellerOrdersSnapshot } from "../../src/modules/payment/services/target-snapshot.js";
 
 type Actor = { id: string; token: string };
@@ -518,9 +520,12 @@ describe("US8 reviews and revenue on PostgreSQL", () => {
   it("counts only this shop and groups exact VND by Vietnam completion date", async () => {
     const query =
       "from=2026-10-31T00%3A00%3A00.000Z&to=2026-11-02T00%3A00%3A00.000Z";
+    const reportLatencies: number[] = [];
+    let startedAt = performance.now();
     const stats = await request(app.getHttpServer())
       .get(`/api/v1/shops/${shopId}/stats?${query}`)
       .set("Authorization", `Bearer ${seller.token}`);
+    reportLatencies.push(performance.now() - startedAt);
     expect(stats.status).toBe(200);
     expect(stats.body.data).toMatchObject({
       productCount: 2,
@@ -531,9 +536,11 @@ describe("US8 reviews and revenue on PostgreSQL", () => {
       simulated: true,
     });
     expect(await db.prisma.simulatedRefund.count()).toBe(1);
+    startedAt = performance.now();
     const daily = await request(app.getHttpServer())
       .get(`/api/v1/shops/${shopId}/revenue?${query}&groupBy=DAY`)
       .set("Authorization", `Bearer ${seller.token}`);
+    reportLatencies.push(performance.now() - startedAt);
     expect(daily.status).toBe(200);
     expect(daily.body.data).toMatchObject({
       totalRevenue: "303",
@@ -543,9 +550,11 @@ describe("US8 reviews and revenue on PostgreSQL", () => {
         { period: "2026-11-01", completedCount: 1, revenue: "202" },
       ],
     });
+    startedAt = performance.now();
     const monthly = await request(app.getHttpServer())
       .get(`/api/v1/shops/${shopId}/revenue?${query}&groupBy=MONTH`)
       .set("Authorization", `Bearer ${seller.token}`);
+    reportLatencies.push(performance.now() - startedAt);
     expect(monthly.status).toBe(200);
     expect(monthly.body.data).toMatchObject({
       totalRevenue: "303",
@@ -554,6 +563,35 @@ describe("US8 reviews and revenue on PostgreSQL", () => {
         { period: "2026-11", completedCount: 1, revenue: "202" },
       ],
     });
+
+    const reportPlan = await pool.query(
+      `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+       SELECT to_char(timezone('Asia/Saigon', completed_at),
+           CASE WHEN $4::text = 'DAY' THEN 'YYYY-MM-DD' ELSE 'YYYY-MM' END) AS period,
+         COUNT(*)::int AS "completedCount", SUM(original_total)::text AS revenue
+       FROM seller_orders
+       WHERE shop_id = $1::uuid AND status = 'COMPLETED'
+         AND completed_at >= $2::timestamptz AND completed_at < $3::timestamptz
+       GROUP BY 1 ORDER BY 1`,
+      [
+        shopId,
+        new Date("2026-10-31T00:00:00.000Z"),
+        new Date("2026-11-02T00:00:00.000Z"),
+        "DAY",
+      ],
+    );
+    process.stdout.write(
+      `T147_SC008 ${JSON.stringify({
+        ...summarizeLatencies(reportLatencies, 2_000),
+        completedOrders: stats.body.data.completedCount,
+        completedRevenueVnd: stats.body.data.completedRevenue,
+        dailyRevenueVnd: daily.body.data.totalRevenue,
+        monthlyRevenueVnd: monthly.body.data.totalRevenue,
+        dailyPoints: daily.body.data.points,
+        monthlyPoints: monthly.body.data.points,
+        reportPlan: reportPlan.rows[0]?.["QUERY PLAN"],
+      })}\n`,
+    );
   });
 
   it("requires every report parameter, rejects invalid ranges and permits long ranges", async () => {
