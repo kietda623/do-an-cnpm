@@ -115,7 +115,7 @@ Không bỏ failing test hoặc thay DB mock để báo pass. Chỉ chạy test 
 | V11 S6 | Buyer review completed item rồi gửi lại | Rating1–5,one review/item,wrong buyer/unfinished reject; Seller view-only |
 | V12 S6–7 | Dashboard known totals/day/month Asia/Saigon | Revenue chỉ COMPLETED, no parent+part double count; captured/refund/outstanding riêng; SC008 |
 | V13 S7 | Direct unauthorized ID/role requests, bad upload, CSRF/reuse tests | Không đổi/lộ tài nguyên, file signature/size check, credential/log redaction; SC007 |
-| V14 S7 | 5người,giỏ5dòng/2shop,address sẵn | >=4/5 checkout<=3phút, record thời gian và blockers; SC005 |
+| V14 S7 | Playwright UI walkthrough, giỏ5dòng/2shop,address sẵn | Checkout UI hoàn tất<=3phút, ghi thời gian/blockers; SC005 là kiểm thử kỹ thuật, không suy rộng thành usability người thật |
 | V15 S7 | Performance fixture1000products/10shops/20users/100observations | >=95/100 thấy search/list<=2s, ghi môi trường; SC006 |
 | V16 S7 | Cross-device persisted flows, restart server during expiry | Dữ liệu consistent sau reload, deadline job bắt kịp restart; SC009/NFR03 |
 | V17 S8 | Fresh-member setup từ clean clone, prerequisites sẵn | <=30phút đến demo, không undocumented step; SC010 |

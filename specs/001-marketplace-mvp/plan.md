@@ -332,7 +332,7 @@ webview và memory access token. Clear user/shop query caches khi logout.
 | E2E P0 | S2 auth/S3 publish/S5 commerce/S6–7 full | Register→shop→approve→publish→cart→multi-shop→pay→fulfill→review | SC001/002 đủ50FR, real API không DB edit |
 | Concurrency P0 | S4 proof/S5/S7 | Barrier20 requests/5stock, replay10; expiry/cancel/pay/adjust races | SC003/004:5 commit/15 out of stock, effect/totals exact |
 | Security P0 | S2–7 | Buyer IDOR/Seller cross-shop, locked session, price/state spoof, upload, CSRF/reuse/CORS/rate limit | SC007: không lộ/đổi dữ liệu, secrets redacted |
-| Usability P1 | S3–7 | 360/1280/keyboard/form states;5 người mua5 dòng/2shop | SC005:>=4/5 trong3 phút, record từng lần |
+| Usability P1 | S3–7 | 360/1280/keyboard/form states; Playwright walkthrough checkout 5 dòng/2shop | SC005: UI run hoàn tất <=3 phút, record thời gian/blockers; không suy rộng thành usability người thật |
 | Performance P1 | S4 baseline/S7 | 1000 products/10 shops/20users/100 observations | SC006:>=95/100 <=2s, record host/network/fixture |
 | Reports P0 | S6–7 | Completed/cancel/refund/partial COD/midnight | SC008 exact totals không double-count |
 | Desktop P1 (demo) | T140–T145 | Buyer local demo flow trong Tauri WebView trên Windows | SC009: chạy local storefront/API, cùng dữ liệu sau reload; không cần URL public hay installer |

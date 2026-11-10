@@ -172,15 +172,22 @@ export default function CartPage() {
                 <dd data-numeric>{formatVnd(cart?.selectedTotal)}</dd>
               </div>
             </dl>
-            <Link
-              aria-disabled={cart?.selectedTotal === "0"}
-              className={`mp-button mp-button--primary mp-button--lg mp-button--block${
-                cart?.selectedTotal === "0" ? " mp-button--disabled" : ""
-              }`}
-              href="/checkout"
-            >
-              Tiến hành đặt hàng
-            </Link>
+            {cart?.selectedTotal === "0" ? (
+              <button
+                type="button"
+                className="mp-button mp-button--primary mp-button--lg mp-button--block mp-button--disabled"
+                disabled
+              >
+                Tiến hành đặt hàng
+              </button>
+            ) : (
+              <Link
+                className="mp-button mp-button--primary mp-button--lg mp-button--block"
+                href="/checkout"
+              >
+                Tiến hành đặt hàng
+              </Link>
+            )}
             <p className="mp-cart__note">
               Giá và tồn kho sẽ được xác nhận lại khi tạo báo giá. Báo giá có hiệu lực trong
               thời gian ngắn.
