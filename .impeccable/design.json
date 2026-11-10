@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-09T16:47:16.220Z",
+  "title": "Design System: sopi",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Deep cyan",
+        "canonical": "oklch(0.5 0.12 230)"
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Cool neutral canvas",
+        "canonical": "oklch(0.97 0.006 230)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Space Grotesk",
+        "purpose": "Page and section headings"
+      },
+      "body": {
+        "displayName": "Be Vietnam Pro",
+        "purpose": "Vietnamese labels, controls and prose"
+      },
+      "numeric": {
+        "displayName": "IBM Plex Mono",
+        "purpose": "Amounts and identifiers"
+      }
+    },
+    "shadows": [
+      {
+        "name": "raised",
+        "value": "0 4px 16px rgb(0 0 0 / 8%)",
+        "purpose": "Modest hover and floating form depth"
+      },
+      {
+        "name": "popover",
+        "value": "0 18px 48px rgb(15 26 23 / 16%)",
+        "purpose": "Floating menus and dialogs"
+      }
+    ],
+    "motion": [
+      {
+        "name": "fast",
+        "value": "120ms",
+        "purpose": "Press feedback"
+      },
+      {
+        "name": "base",
+        "value": "220ms",
+        "purpose": "Menus and finite entrances"
+      },
+      {
+        "name": "slow",
+        "value": "420ms",
+        "purpose": "Restrained product image transform"
+      },
+      {
+        "name": "chart-arrival",
+        "value": "360ms",
+        "purpose": "Finite transform/opacity entrance of actual chart marks; static under reduced motion"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "640px"
+      },
+      {
+        "name": "tablet",
+        "value": "900px"
+      },
+      {
+        "name": "console-sidebar",
+        "value": "1050px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Existing confirmed primary action; 44px minimum target.",
+      "html": "<button class=\"mp-button mp-button--primary\">Lưu thay đổi</button>",
+      "css": ".mp-button { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 16px; border-radius:var(--radius-control); font-family:var(--font-sans); } .mp-button--primary { background:var(--color-accent); color:var(--color-accent-foreground); } .mp-button:focus-visible { outline:3px solid var(--color-ring); outline-offset:3px; }"
+    },
+    {
+      "name": "Text field",
+      "kind": "input",
+      "description": "Visible Vietnamese label, neutral control edge and immediate focus.",
+      "html": "<label class=\"mp-field\">Họ và tên<input class=\"mp-input\" placeholder=\"Nhập họ và tên\" /></label>",
+      "css": ".mp-field { display:grid; gap:8px; font-family:var(--font-sans); } .mp-input { min-height:44px; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius-control); background:var(--color-surface); color:var(--color-foreground); } .mp-input:focus-visible { outline:3px solid var(--color-ring); outline-offset:3px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "A clear marketplace workbench",
+    "overview": "Search and records carry the interface. Neutral surfaces stay quiet; cyan identifies the primary action and current selection.",
+    "keyCharacteristics": [
+      "Real API states",
+      "Readable Vietnamese typography",
+      "Three surfaces, one token system"
+    ],
+    "rules": [
+      {
+        "name": "One action hue",
+        "body": "Cyan for brand and action; other hues encode genuine semantic states.",
+        "section": "colors"
+      },
+      {
+        "name": "Finite motion",
+        "body": "Transform and opacity only, with reduced-motion alternatives.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Keep empty states truthful",
+      "Preserve existing application wiring"
+    ],
+    "donts": [
+      "No invented metrics or products",
+      "No colored left stripes or decorative eyebrows",
+      "No nested cards or false controls"
+    ]
+  }
+}

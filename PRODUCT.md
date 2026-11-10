@@ -18,7 +18,7 @@ A multi-vendor marketplace MVP for the Vietnamese market. It makes listing, buyi
 
 ## Positioning
 
-The differentiator is the settlement and fulfillment model: multi-shop orders, 15-minute price/stock quotes, per-shop cancellation with idempotent stock restore and late compensation, and an auditable admin recovery path. Surfaces must make those rules legible instead of hiding them behind generic e-commerce chrome.
+The differentiator is the settlement and fulfillment model: multi-shop orders, 5-minute price/stock quotes, per-shop cancellation with idempotent stock restore and late compensation, and an auditable admin recovery path. Surfaces must make those rules legible instead of hiding them behind generic e-commerce chrome.
 
 ## Operating Context
 
@@ -38,7 +38,7 @@ The differentiator is the settlement and fulfillment model: multi-shop orders, 1
 
 ## Brand Commitments
 
-- Product name shown in UI: **Marketplace** (seller console: Seller Center; admin console: Marketplace Admin).
+- Product name shown in UI: **sopi** (seller console: sopi Seller Center; admin console: sopi Admin).
 - Voice: direct, calm Vietnamese; verbs name the action; errors name the problem and the recovery.
 - No invented brand claims, testimonials, benchmarks, or demo imagery.
 
@@ -63,3 +63,7 @@ The differentiator is the settlement and fulfillment model: multi-shop orders, 1
 - Inputs always have labels; async notices use `role="status"`, errors use `role="alert"`.
 - Dialogs are native `<dialog>` with focus return; all flows keyboard-operable.
 - Minimum 44px touch targets; layouts hold at 360px wide.
+
+## Approved presentation scope (2026-11-09)
+
+Light neutral + cyan; Buyer then Seller then Admin. Preserve all application logic and current data. Product/category lists currently return zero records: use honest empty states. Do not seed/reset data or invent flash sales, wishlists, bulk actions, low-stock metrics, command palettes or chart series. Shared tokens and CSS remain the design foundation.

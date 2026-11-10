@@ -63,7 +63,7 @@ export default function ReviewsPage() {
   const pageCount = page + (hasNext ? 1 : 0);
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-seller-page">
       <PageHeader
         title="Đánh giá của người mua"
         description="Đọc phản hồi theo sản phẩm và số sao để cải thiện chất lượng bán hàng."

@@ -9,10 +9,24 @@ export function RouteTransition() {
   useEffect(() => {
     const root = document.documentElement;
     root.classList.remove("mp-route-enter");
-    void root.offsetWidth;
-    root.classList.add("mp-route-enter");
-    const timer = window.setTimeout(() => root.classList.remove("mp-route-enter"), 700);
-    return () => window.clearTimeout(timer);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let enterFrame = 0;
+    let timer = 0;
+    const frame = window.requestAnimationFrame(() => {
+      enterFrame = window.requestAnimationFrame(() => {
+        root.classList.add("mp-route-enter");
+        timer = window.setTimeout(
+          () => root.classList.remove("mp-route-enter"),
+          320,
+        );
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(enterFrame);
+      window.clearTimeout(timer);
+      root.classList.remove("mp-route-enter");
+    };
   }, [pathname]);
 
   return null;

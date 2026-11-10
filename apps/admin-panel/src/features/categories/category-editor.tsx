@@ -142,7 +142,7 @@ export function CategoryEditor({
   ];
 
   return (
-    <div className="mp-stack mp-stack--loose">
+    <div className="mp-stack mp-admin-category-editor">
       <Panel title="Tạo danh mục" description="Thêm danh mục gốc hoặc danh mục con.">
         <form className="mp-form" onSubmit={submit} aria-label="Tạo danh mục">
           <div className="mp-form-grid">

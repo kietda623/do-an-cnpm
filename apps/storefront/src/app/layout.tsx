@@ -8,13 +8,6 @@ import "./globals.css";
 import { RouteTransition, StorefrontShell } from "@marketplace/ui-web";
 import { Providers } from "./providers";
 
-const display = Space_Grotesk({
-  subsets: ["latin", "vietnamese"],
-  weight: ["500", "700"],
-  display: "swap",
-  variable: "--font-space-grotesk",
-});
-
 const sans = Be_Vietnam_Pro({
   subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600", "700"],
@@ -29,10 +22,17 @@ const mono = IBM_Plex_Mono({
   variable: "--font-ibm-plex-mono",
 });
 
+const display = Space_Grotesk({
+  subsets: ["latin", "vietnamese"],
+  weight: ["500", "700"],
+  display: "swap",
+  variable: "--font-space-grotesk",
+});
+
 const themeScript = `(function(){var k="marketplace-theme";var m="system";try{var s=localStorage.getItem(k);if(s==="light"||s==="dark"||s==="system")m=s;}catch(e){}var d=m==="dark"||(m==="system"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.dataset.theme=d?"dark":"light";r.dataset.themeMode=m;})();`;
 
 export const metadata: Metadata = {
-  title: { default: "Marketplace", template: "%s | Marketplace" },
+  title: { default: "sopi", template: "%s | sopi" },
   description:
     "Sàn thương mại nhiều cửa hàng: mua sắm, theo dõi đơn và thanh toán an toàn.",
 };
@@ -40,8 +40,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   colorScheme: "light dark",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#EDF1EF" },
-    { media: "(prefers-color-scheme: dark)", color: "#0A100E" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f6f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1115" },
   ],
 };
 
@@ -53,7 +53,7 @@ export default async function RootLayout({
   return (
     <html
       lang="vi"
-      className={`${display.variable} ${sans.variable} ${mono.variable}`}
+      className={`${sans.variable} ${mono.variable} ${display.variable}`}
       suppressHydrationWarning
     >
       <head>

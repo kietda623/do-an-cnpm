@@ -3,7 +3,7 @@ import { ReturnConfirmation } from "../../../features/orders/return-confirmation
 
 export default function ReturnsPage() {
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-admin-page">
       <RoleGate role="ADMIN">
         <PageHeader
           title="Xác nhận hàng hoàn về"

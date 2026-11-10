@@ -56,13 +56,13 @@ test("guest header search, footer and mobile drawer expose working navigation", 
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
 
-  await expect(page.getByRole("link", { name: "Marketplace — trang chủ" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "sopi — trang chủ" })).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "Danh mục chính" }).getByRole("link", { name: "Sản phẩm" }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Đăng nhập" }).first()).toBeVisible();
 
-  await page.getByLabel("Tìm trên Marketplace").fill("linen");
+  await page.getByLabel("Tìm trên sopi").fill("linen");
   await page.getByRole("button", { name: "Tìm", exact: true }).click();
   await expect(page).toHaveURL(/\/products\?q=linen/);
 

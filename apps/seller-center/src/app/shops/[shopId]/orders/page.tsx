@@ -106,7 +106,7 @@ export default function SellerOrdersPage() {
   }
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-seller-page">
       <PageHeader
         title="Xử lý đơn hàng"
         description="Xác nhận, đóng gói và cập nhật vận chuyển cho từng phần đơn của cửa hàng."

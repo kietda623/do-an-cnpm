@@ -27,8 +27,8 @@ export default function HomePage() {
   }, [api, router, status]);
 
   return (
-    <div className="mp-page" role="status">
-      <span className="mp-visually-hidden">Đang mở Seller Center…</span>
+    <div className="mp-page mp-seller-page" role="status">
+      <span className="mp-visually-hidden">Đang mở sopi Seller Center…</span>
       <Skeleton className="mp-skeleton--line" />
       <Skeleton className="mp-skeleton--block" />
     </div>

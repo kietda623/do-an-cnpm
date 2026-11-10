@@ -223,7 +223,7 @@ export default function ShopQueuePage() {
   const needsReason = pending ? pending.action !== "approve" : false;
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-admin-page">
       <PageHeader
         title="Duyệt cửa hàng"
         description="Kiểm tra hồ sơ đăng ký, phê duyệt hoặc tạm ngưng cửa hàng kèm lý do được ghi vào nhật ký."

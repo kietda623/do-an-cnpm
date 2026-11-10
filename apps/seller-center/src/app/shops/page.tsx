@@ -95,7 +95,7 @@ export default function ShopsPage() {
   }
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-seller-page mp-seller-shop-profile">
       <PageHeader
         title="Cửa hàng của tôi"
         description="Đăng ký mở gian hàng, theo dõi trạng thái duyệt và cập nhật hồ sơ công khai."
@@ -115,7 +115,7 @@ export default function ShopsPage() {
           <EmptyState
             icon={<Store size={22} />}
             title="Bạn chưa có cửa hàng nào."
-            description="Gửi hồ sơ đăng ký bên dưới để bắt đầu bán hàng trên Marketplace."
+            description="Gửi hồ sơ đăng ký bên dưới để bắt đầu bán hàng trên sopi."
           />
           <ShopRegisterForm
             onCreated={async () => {

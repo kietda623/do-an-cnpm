@@ -63,7 +63,10 @@ type AuditRow = {
 function rangeParams(): string {
   const now = new Date();
   const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  return new URLSearchParams({ from: from.toISOString(), to: now.toISOString() }).toString();
+  return new URLSearchParams({
+    from: from.toISOString(),
+    to: now.toISOString(),
+  }).toString();
 }
 
 export default function AdminDashboardPage() {
@@ -203,32 +206,72 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-admin-page mp-admin-dashboard">
       <PageHeader
         title="Tổng quan nền tảng"
-        description="Số liệu 30 ngày gần nhất trên toàn Marketplace, kèm hồ sơ cửa hàng chờ duyệt và hoạt động quản trị."
+        description="Theo dõi hồ sơ chờ duyệt, hàng hoàn và hoạt động trên toàn sopi."
         actions={
-          <Link className="mp-button mp-button--secondary mp-button--md" href="/orders/returns">
+          <Link
+            className="mp-button mp-button--secondary mp-button--md"
+            href="/orders/returns"
+          >
             <span className="mp-button__label">Xác nhận hàng hoàn</span>
             <ArrowRight size={16} aria-hidden="true" />
           </Link>
         }
       />
 
+      <Panel
+        className="mp-admin-queue"
+        title="Cửa hàng chờ duyệt"
+        description="Hồ sơ mới nhất cần quyết định."
+        actions={
+          <Link className="mp-link" href="/shops">
+            Xem tất cả <ArrowRight size={14} aria-hidden="true" />
+          </Link>
+        }
+        flush
+      >
+        <DataTable
+          columns={shopColumns}
+          rows={shops}
+          rowKey={(row) => row.id}
+          caption="Cửa hàng chờ duyệt"
+          loading={shopsLoading}
+          error={shopsError || null}
+          onRetry={() => void loadShops()}
+          dense
+          empty={
+            <div className="mp-panel__pad">
+              <EmptyState
+                icon={<Store size={22} />}
+                title="Không có hồ sơ chờ duyệt"
+                description="Mọi hồ sơ cửa hàng đã được xử lý."
+              />
+            </div>
+          }
+        />
+      </Panel>
+
       {statsError ? (
         <p role="alert" className="mp-alert-inline">
           {statsError}
         </p>
       ) : !stats ? (
-        <div className="mp-kpi-grid" role="status">
-          <span className="mp-visually-hidden">Đang tải thống kê nền tảng…</span>
+        <div className="mp-kpi-grid mp-admin-kpis" role="status">
+          <span className="mp-visually-hidden">
+            Đang tải thống kê nền tảng…
+          </span>
           {Array.from({ length: 4 }, (_, index) => (
             <Skeleton key={index} className="mp-skeleton--block" />
           ))}
         </div>
       ) : (
         <>
-          <section aria-label="Thống kê nền tảng" className="mp-kpi-grid mp-stagger">
+          <section
+            aria-label="Thống kê nền tảng"
+            className="mp-kpi-grid mp-admin-kpis"
+          >
             <StatCard
               label="Người dùng"
               value={formatNumber(stats.userCount)}
@@ -263,128 +306,117 @@ export default function AdminDashboardPage() {
           </section>
           {stats.simulated ? (
             <p className="mp-note">
-              <Badge tone="info">Mô phỏng</Badge> Số liệu doanh thu mô phỏng, không đại diện số tiền
-              đã đối soát.
+              <Badge tone="info">Mô phỏng</Badge> Số liệu doanh thu mô phỏng,
+              không đại diện số tiền đã đối soát.
             </p>
           ) : null}
         </>
       )}
 
-      <div className="mp-dashboard-grid">
+      <div className="mp-admin-dashboard__work">
         <Panel
-          className="mp-reveal"
-          title="Phân bố trạng thái"
-          description="Số lượng bản ghi theo từng trạng thái trong toàn hệ thống."
-          actions={<BarChart3 size={18} aria-hidden="true" />}
-        >
-          {!stats ? (
-            <Skeleton className="mp-skeleton--block" />
-          ) : Object.keys(stats.countsByStatus).length === 0 ? (
-            <EmptyState
-              title="Chưa có dữ liệu trạng thái"
-              description="Hệ thống chưa trả về số lượng theo trạng thái cho khoảng thời gian này."
-            />
-          ) : (
-            <div className="mp-status-bars">
-              {Object.entries(stats.countsByStatus).map(([entity, values]) => {
-                const total = Object.values(values).reduce((sum, value) => sum + value, 0);
-                return (
-                  <section className="mp-status-bars__group" key={entity} aria-label={entity}>
-                    <header>
-                      <strong>{entity}</strong>
-                      <span className="mp-muted">{formatNumber(total)} bản ghi</span>
-                    </header>
-                    {Object.entries(values).length === 0 ? (
-                      <p className="mp-muted">Chưa có bản ghi</p>
-                    ) : (
-                      <ul>
-                        {Object.entries(values).map(([statusKey, count]) => (
-                          <li key={statusKey}>
-                            <span className="mp-status-bars__label">{statusKey}</span>
-                            <span className="mp-status-bars__track">
-                              <span
-                                className="mp-status-bars__fill"
-                                style={{ width: `${total ? (count / total) * 100 : 0}%` }}
-                              />
-                            </span>
-                            <span className="mp-status-bars__value" data-numeric>
-                              {formatNumber(count)}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </section>
-                );
-              })}
-            </div>
-          )}
-        </Panel>
-
-        <Panel
-          className="mp-reveal"
-          title="Cửa hàng chờ duyệt"
-          description="Hồ sơ mới nhất cần quyết định."
+          className="mp-admin-section mp-admin-audit"
+          title="Hoạt động gần đây"
+          description="8 bản ghi nhật ký quản trị mới nhất."
           actions={
-            <Link className="mp-link" href="/shops">
-              Xem tất cả <ArrowRight size={14} aria-hidden="true" />
+            <Link className="mp-link" href="/audit">
+              Mở nhật ký <ArrowRight size={14} aria-hidden="true" />
             </Link>
           }
           flush
         >
           <DataTable
-            columns={shopColumns}
-            rows={shops}
+            columns={auditColumns}
+            rows={audit}
             rowKey={(row) => row.id}
-            caption="Cửa hàng chờ duyệt"
-            loading={shopsLoading}
-            error={shopsError || null}
-            onRetry={() => void loadShops()}
+            caption="Hoạt động quản trị gần đây"
+            loading={auditLoading}
+            error={auditError || null}
+            onRetry={() => void loadAudit()}
             dense
             empty={
               <div className="mp-panel__pad">
                 <EmptyState
-                  icon={<Store size={22} />}
-                  title="Không có hồ sơ chờ duyệt"
-                  description="Mọi hồ sơ cửa hàng đã được xử lý."
+                  icon={<ScrollText size={22} />}
+                  title="Chưa có hoạt động"
+                  description="Các thao tác quản trị sẽ được ghi lại tại đây."
                 />
               </div>
             }
           />
         </Panel>
-      </div>
-
-      <Panel
-        className="mp-reveal"
-        title="Hoạt động gần đây"
-        description="8 bản ghi nhật ký quản trị mới nhất."
-        actions={
-          <Link className="mp-link" href="/audit">
-            Mở nhật ký <ArrowRight size={14} aria-hidden="true" />
-          </Link>
-        }
-        flush
-      >
-        <DataTable
-          columns={auditColumns}
-          rows={audit}
-          rowKey={(row) => row.id}
-          caption="Hoạt động quản trị gần đây"
-          loading={auditLoading}
-          error={auditError || null}
-          onRetry={() => void loadAudit()}
-          dense
-          empty={
-            <div className="mp-panel__pad">
+        <div className="mp-admin-distribution">
+          <Panel
+            className="mp-admin-section"
+            title="Phân bố trạng thái"
+            description="Số lượng bản ghi theo từng trạng thái trong toàn hệ thống."
+            actions={<BarChart3 size={18} aria-hidden="true" />}
+          >
+            {!stats ? (
+              <Skeleton className="mp-skeleton--block" />
+            ) : Object.keys(stats.countsByStatus).length === 0 ? (
               <EmptyState
-                icon={<ScrollText size={22} />}
-                title="Chưa có hoạt động"
-                description="Các thao tác quản trị sẽ được ghi lại tại đây."
+                title="Chưa có dữ liệu trạng thái"
+                description="Hệ thống chưa trả về số lượng theo trạng thái cho khoảng thời gian này."
               />
-            </div>
-          }
-        />
-      </Panel>
+            ) : (
+              <div className="mp-status-bars">
+                {Object.entries(stats.countsByStatus).map(
+                  ([entity, values]) => {
+                    const total = Object.values(values).reduce(
+                      (sum, value) => sum + value,
+                      0,
+                    );
+                    return (
+                      <section
+                        className="mp-status-bars__group"
+                        key={entity}
+                        aria-label={entity}
+                      >
+                        <header>
+                          <strong>{entity}</strong>
+                          <span className="mp-muted">
+                            {formatNumber(total)} bản ghi
+                          </span>
+                        </header>
+                        {Object.entries(values).length === 0 ? (
+                          <p className="mp-muted">Chưa có bản ghi</p>
+                        ) : (
+                          <ul>
+                            {Object.entries(values).map(
+                              ([statusKey, count]) => (
+                                <li key={statusKey}>
+                                  <span className="mp-status-bars__label">
+                                    {statusKey}
+                                  </span>
+                                  <span className="mp-status-bars__track">
+                                    <span
+                                      className="mp-status-bars__fill"
+                                      style={{
+                                        width: `${total ? (count / total) * 100 : 0}%`,
+                                      }}
+                                    />
+                                  </span>
+                                  <span
+                                    className="mp-status-bars__value"
+                                    data-numeric
+                                  >
+                                    {formatNumber(count)}
+                                  </span>
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        )}
+                      </section>
+                    );
+                  },
+                )}
+              </div>
+            )}
+          </Panel>
+        </div>
+      </div>
     </div>
   );
 }

@@ -188,13 +188,13 @@ export default function AdminUsersPage() {
   const pageCount = page + (hasNext ? 1 : 0);
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-admin-page mp-admin-users">
       <PageHeader
         title="Quản lý người dùng"
         description="Tìm kiếm tài khoản, kiểm tra vai trò và khóa hoặc mở khóa khi cần."
       />
 
-      <Panel title="Bộ lọc" description="Lọc theo tên, email hoặc trạng thái.">
+      <Panel className="mp-admin-filters" title="Bộ lọc" description="Lọc theo tên, email hoặc trạng thái.">
         <form className="mp-form" onSubmit={submit}>
           <div className="mp-form-grid">
             <TextField

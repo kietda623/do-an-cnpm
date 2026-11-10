@@ -174,7 +174,7 @@ export default function AdminOrderDetailPage() {
   ];
 
   return (
-    <div className="mp-page">
+    <div className="mp-page mp-admin-page">
       <PageHeader
         title={detail ? detail.order.orderNumber : "Chi tiết đơn hàng"}
         description="Đơn chỉ đọc, bao gồm dữ liệu giao dịch đã hoàn tất."
