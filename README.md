@@ -10,6 +10,8 @@ Giao diện Buyer, Seller và Admin dùng chung hệ thiết kế sáng trung t�
 
 - **Buyer (storefront):** discovery theo danh mục và từ khóa, chi tiết sản phẩm, giỏ hàng, checkout một đơn nhiều shop, theo dõi đơn, xác nhận đã nhận hàng và gửi đánh giá.
 - **Seller (seller-center):** onboarding và cập nhật cửa hàng, quản lý catalog gồm biến thể và ảnh, điều chỉnh tồn kho, xử lý đơn, xem doanh thu, đọc đánh giá và cấu hình cửa hàng. Danh sách sản phẩm hỗ trợ tìm kiếm theo tên, lọc theo trạng thái bán và trạng thái bị quản trị ẩn, phân trang dựa trên `meta.total` trả về từ server.
+
+Khi thêm sản phẩm, Seller nhập biến thể bằng form: mã SKU, giá bán theo đồng, tồn kho ban đầu và trạng thái bán. Dùng **Thêm phân loại** để nhập các cặp như “Màu sắc”/“Đỏ”, “Kích thước”/“M”; dùng **Thêm biến thể** cho lựa chọn khác. Sản phẩm thông thường có thể dùng một biến thể và để trống phân loại. Form kiểm tra dữ liệu trước khi tải ảnh và giữ nội dung nếu lưu thất bại.
 - **Admin (admin-panel):** duyệt/từ chối/tạm ngưng cửa hàng, duyệt hoặc ẩn sản phẩm, quản lý danh mục, khóa/mở khóa tài khoản kèm lý do, theo dõi đơn và vận chuyển, xử lý yêu cầu hoàn trả tại `/orders/returns`, tra cứu audit log.
 
 ### Giới hạn đã biết

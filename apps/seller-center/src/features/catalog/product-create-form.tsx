@@ -11,9 +11,8 @@ import {
 import { normalizeFormError, type ApiPath } from "@marketplace/api-client";
 import type { Category } from "../../lib/types";
 import { uploadAsset } from "../shop/shop-register-form";
-
-const defaultVariants =
-  '[{"sku":"SKU-S","attributes":{"size":"S"},"price":"150000","availableQuantity":1,"selling":true},{"sku":"SKU-M","attributes":{"size":"M"},"price":"160000","availableQuantity":5,"selling":true}]';
+import { emptyVariant, variantsPayload } from "./variant-draft";
+import { VariantEditor } from "./variant-editor";
 
 export function ProductCreateForm({
   shopId,
@@ -28,6 +27,9 @@ export function ProductCreateForm({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
+  const [variantDrafts, setVariantDrafts] = useState(() => [
+    emptyVariant("variant-1"),
+  ]);
 
   useEffect(() => {
     let live = true;
@@ -46,21 +48,17 @@ export function ProductCreateForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError("");
     const targetForm = event.currentTarget;
     const form = new FormData(targetForm);
     try {
+      const variants = variantsPayload(variantDrafts);
       const file = form.get("image");
-      if (!(file instanceof File) || !file.size) throw new Error("Chọn ảnh sản phẩm trước nhé.");
+      if (!(file instanceof File) || !file.size)
+        throw new Error("Chọn ảnh sản phẩm trước nhé.");
       const image = await uploadAsset(api, file, "PRODUCT_IMAGE", shopId);
-      const variants = JSON.parse(String(form.get("variants"))) as Array<{
-        sku: string;
-        attributes: Record<string, string>;
-        price: string;
-        availableQuantity?: number;
-        selling?: boolean;
-      }>;
       await api.request(`/shops/${shopId}/products` as ApiPath, {
         method: "POST",
         body: JSON.stringify({
@@ -69,18 +67,13 @@ export function ProductCreateForm({
           categoryId: String(form.get("categoryId")),
           imageAssetIds: [image.id],
           selling: true,
-          variants: variants.map((variant) => ({
-            sku: variant.sku,
-            attributes: variant.attributes,
-            price: variant.price,
-            stock: Number(variant.availableQuantity ?? 0),
-            selling: variant.selling ?? true,
-          })),
+          variants,
         }),
       });
       targetForm.reset();
       setName("");
       setDescription("");
+      setVariantDrafts([emptyVariant("variant-1")]);
       await onCreated();
     } catch (cause) {
       setError(normalizeFormError(cause));
@@ -99,8 +92,15 @@ export function ProductCreateForm({
           onChange={(event) => setName(event.target.value)}
           required
           maxLength={200}
+          disabled={busy}
         />
-        <SelectField label="Danh mục" name="categoryId" required defaultValue="">
+        <SelectField
+          label="Danh mục"
+          name="categoryId"
+          required
+          defaultValue=""
+          disabled={busy}
+        >
           <option value="" disabled>
             Chọn danh mục
           </option>
@@ -118,6 +118,7 @@ export function ProductCreateForm({
         onChange={(event) => setDescription(event.target.value)}
         required
         rows={3}
+        disabled={busy}
       />
       <label className="mp-file-field">
         <span className="mp-field__label">Ảnh sản phẩm</span>
@@ -127,15 +128,13 @@ export function ProductCreateForm({
           type="file"
           accept="image/jpeg,image/png,image/webp"
           required
+          disabled={busy}
         />
       </label>
-      <TextareaField
-        label="Biến thể (JSON)"
-        name="variants"
-        defaultValue={defaultVariants}
-        hint="Mỗi biến thể cần sku, attributes, price, availableQuantity và selling."
-        required
-        rows={4}
+      <VariantEditor
+        variants={variantDrafts}
+        onChange={setVariantDrafts}
+        disabled={busy}
       />
       {error ? (
         <p role="alert" className="mp-alert-inline">

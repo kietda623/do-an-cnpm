@@ -172,7 +172,7 @@ test("admin creates a category and seller publishes two variants then handles a 
       json: { error: { code: "NOT_FOUND", message: "Not found" } },
     });
   });
-  await page.goto("http://127.0.0.1:3102/login");
+  await page.goto(`${process.env.PLAYWRIGHT_ADMIN_URL ?? "http://127.0.0.1:3102"}/login`);
   await page.getByLabel("Email").fill(admin.email);
   await page.getByLabel("Mật khẩu").fill("Correct horse battery staple 9!");
   await page.getByRole("button", { name: "Đăng nhập" }).click();
@@ -180,7 +180,7 @@ test("admin creates a category and seller publishes two variants then handles a 
   await page.getByLabel("Tên danh mục").fill("Đồ gia dụng");
   await page.getByRole("button", { name: "Tạo danh mục" }).click();
   await expect(page.getByText("Đồ gia dụng · Hiện")).toBeVisible();
-  await page.goto("http://127.0.0.1:3101/login");
+  await page.goto(`${process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3101"}/login`);
   await page.getByLabel(/email/i).fill(seller.email);
   await page.getByLabel(/mật khẩu/i).fill("Correct horse battery staple 9!");
   await page.getByRole("button", { name: /đăng nhập/i }).click();
@@ -198,7 +198,34 @@ test("admin creates a category and seller publishes two variants then handles a 
     mimeType: "image/png",
     buffer: Buffer.from("test image"),
   });
-  await page.getByRole("button", { name: "Tạo và đăng bán" }).click();
+  const createForm = page.getByRole("form", {
+    name: "Tạo sản phẩm",
+    exact: true,
+  });
+  const firstVariant = createForm.getByRole("group", {
+    name: "Biến thể 1",
+    exact: true,
+  });
+  await firstVariant.getByLabel("Mã SKU").fill("SKU-S");
+  await firstVariant.getByLabel("Giá bán (₫)").fill("150000");
+  await firstVariant.getByLabel("Tồn kho ban đầu").fill("1");
+  await firstVariant.getByLabel("Tên phân loại").fill("size");
+  await firstVariant.getByLabel("Giá trị").fill("S");
+  await createForm
+    .getByRole("button", { name: "Thêm biến thể", exact: true })
+    .click();
+  const secondVariant = createForm.getByRole("group", {
+    name: "Biến thể 2",
+    exact: true,
+  });
+  await secondVariant.getByLabel("Mã SKU").fill("SKU-M");
+  await secondVariant.getByLabel("Giá bán (₫)").fill("160000");
+  await secondVariant.getByLabel("Tồn kho ban đầu").fill("5");
+  await secondVariant.getByLabel("Tên phân loại").fill("size");
+  await secondVariant.getByLabel("Giá trị").fill("M");
+  await createForm
+    .getByRole("button", { name: "Tạo và đăng bán", exact: true })
+    .click();
   await expect(page.getByText("Áo cotton", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Sửa", exact: true }).click();
   await page.locator('form input[name="name"]').last().fill("Áo cotton cập nhật");
@@ -263,6 +290,8 @@ test("seller sees a validation error when an image upload is rejected", async ({
   await page
     .locator('input[name="image"]')
     .setInputFiles({ name: "bad.gif", mimeType: "image/gif", buffer: Buffer.from("bad") });
+  await page.getByLabel("Mã SKU").fill("IMAGE-ERROR");
+  await page.getByLabel("Giá bán (₫)").fill("100000");
   await expect
     .poll(() =>
       page
