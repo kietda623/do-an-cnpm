@@ -3,6 +3,8 @@ import { Injectable, LoggerService } from "@nestjs/common";
 const sensitiveKey =
   /password|authorization|cookie|token|secret|api[_-]?key|refresh|email|phone|address|recipient|display[_-]?name|full[_-]?name/i;
 const emailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+const phonePattern =
+  /(?<![A-Z0-9-])(?![0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b)\+?\d[\d ().-]{7,}\d(?![A-Z0-9-])/gi;
 
 function redactText(value: string): string {
   return value
@@ -11,8 +13,11 @@ function redactText(value: string): string {
       /((?:password|token|secret|authorization|cookie|api[_-]?key|email|phone|address|recipient|display[_-]?name|full[_-]?name)\s*[=:]\s*)[^\s,;]+/gi,
       "$1[REDACTED]",
     )
-    .replace(/(postgres(?:ql)?:\/\/)[^\s:/@]+(?::[^\s/@]*)?@/gi, "$1[REDACTED]@")
-    .replace(/(?<![A-Z0-9])\+?\d[\d ().-]{7,}\d(?![A-Z0-9])/gi, "[REDACTED_PHONE]")
+    .replace(
+      /(postgres(?:ql)?:\/\/)[^\s:/@]+(?::[^\s/@]*)?@/gi,
+      "$1[REDACTED]@",
+    )
+    .replace(phonePattern, "[REDACTED_PHONE]")
     .replace(emailPattern, "[REDACTED_EMAIL]");
 }
 
@@ -67,12 +72,18 @@ export class StructuredLogger implements LoggerService {
     this.write("info", { event: "http.request", ...event }, []);
   }
 
-  private write(level: string, message: unknown, optionalParams: unknown[]): void {
+  private write(
+    level: string,
+    message: unknown,
+    optionalParams: unknown[],
+  ): void {
     const record = {
       timestamp: new Date().toISOString(),
       level,
       message: redactValue(message),
-      ...(optionalParams.length ? { context: redactValue(optionalParams) } : {}),
+      ...(optionalParams.length
+        ? { context: redactValue(optionalParams) }
+        : {}),
     };
     const output = `${JSON.stringify(record)}\n`;
     if (level === "error" || level === "fatal") {

@@ -31,7 +31,9 @@ module.exports = {
       displayName: "unit",
       rootDir: ".",
       testEnvironment: "node",
-      testMatch: ["<rootDir>/test/**/*.spec.ts", "<rootDir>/src/**/*.spec.ts"],
+      // Regex discovery works for Windows worktrees rooted under the hidden .codex directory.
+      testRegex:
+        "[/\\\\]apps[/\\\\]api[/\\\\](?:src|test)(?![/\\\\]integration)[/\\\\].*\\.spec\\.ts$",
       testPathIgnorePatterns: ["<rootDir>/test/integration/"],
       setupFiles,
       setupFilesAfterEnv,
@@ -47,13 +49,12 @@ module.exports = {
       roots: [
         "<rootDir>/test/integration",
         "<rootDir>/../../tests/concurrency",
+        "<rootDir>/../../tests/security",
       ],
       modulePaths: [apiNodeModules],
       testEnvironment: "node",
-      testMatch: [
-        "<rootDir>/test/integration/**/*.spec.ts",
-        "<rootDir>/../../tests/concurrency/**/*.spec.ts",
-      ],
+      // Regex discovery works for Windows worktrees rooted under the hidden .codex directory.
+      testRegex: "\\.spec\\.ts$",
       setupFiles,
       setupFilesAfterEnv,
       transform,
