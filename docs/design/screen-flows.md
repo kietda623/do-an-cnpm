@@ -82,10 +82,10 @@ Checkout quote/confirm là một ý định có cùng idempotency key; bất k�
 
 ```mermaid
 flowchart LR
-  NEXT[Buyer Storefront Next Web] --> WRAP[Tauri 2 window]
-  WRAP --> WEBVIEW[System WebView opens storefront URL]
+  NEXT[Buyer Storefront localhost:3000] --> WRAP[Tauri 2 window on Windows]
+  WRAP --> WEBVIEW[WebView2 opens local storefront]
   WEBVIEW --> COOKIE[HttpOnly cookie + CSRF like web]
-  COOKIE --> API[HTTPS API]
+  COOKIE --> API[Local API localhost:4000]
 ```
 
-Desktop buyer không có UI thứ hai: Tauri mở storefront URL trong webview hệ điều hành, dùng chung design system, components, validation và cookie/CSRF với web. Không có Stronghold/SecureStore trong baseline vì không có native refresh token. Seller và Admin chỉ dùng web. T140–T143 đã triển khai; acceptance vẫn BLOCKED đến khi có HTTPS và evidence install/flow trên Windows/macOS. Xem [ADR-0004](../adr/0004-buyer-desktop-webview-wrapper.md) và [UI plan](../../specs/001-marketplace-mvp/ui-plan.md).
+Desktop buyer không có UI thứ hai: Tauri mở storefront local trong WebView2 trên Windows, dùng chung design system, components, validation và cookie/CSRF với web. Không có Stronghold/SecureStore trong baseline vì không có native refresh token. Seller và Admin chỉ dùng web. T140–T145 và SC-009 đã được nghiệm thu cho demo Windows local; không yêu cầu URL public, HTTPS production hay installer. Xem [desktop evidence](../testing/desktop-evidence.md), [ADR-0004](../adr/0004-buyer-desktop-webview-wrapper.md) và [UI plan](../../specs/001-marketplace-mvp/ui-plan.md).

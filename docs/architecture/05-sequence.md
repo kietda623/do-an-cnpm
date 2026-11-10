@@ -8,7 +8,7 @@
 
 | Tên | Ý nghĩa |
 | --- | --- |
-| Client | Web (Next.js) hoặc Desktop buyer (Tauri wrapper của storefront; implementation có, acceptance còn BLOCKED). Không có client mobile. |
+| Client | Web (Next.js) hoặc demo Desktop buyer trên Windows (Tauri wrapper của storefront dùng local storefront/API; SC-009 đã nghiệm thu). Không có client mobile. |
 | API | NestJS: controller, guard xác thực/phân quyền, validation, middleware CSRF/request-id |
 | Identity, Shop, Catalog, Inventory, Cart, Order, Payment, Shipping, Review, Admin | Module trong `apps/api/src/modules/*` |
 | DB | PostgreSQL (mọi ghi quan trọng trong transaction) |

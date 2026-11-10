@@ -65,7 +65,7 @@
 
 1. Any non-local URL, unexpected port, credentials, or lookalike host must fail before launch; in-app navigation to an unapproved origin must be cancelled. Cover with Node URL-validation tests and Rust navigation unit tests in T140.
 2. The storefront response must receive the configured CSP and only the API, image, and font origins it needs. Cover the response header and nonce behavior with the storefront security-header test in T140.
-3. Credentialed refresh and logout must work from the exact storefront origin while an unrelated or tauri://localhost origin remains rejected. Cover the CORS/CSRF contract in T141 and confirm it in the installed webview.
+3. Credentialed refresh and logout must work from the exact storefront origin while an unrelated or tauri://localhost origin remains rejected. Cover the CORS/CSRF contract in T141 and confirm it in the Windows local WebView2 demo.
 4. A reload must restore the buyer session from the HttpOnly cookie; the access token must not appear in localStorage, sessionStorage, or the refresh request body. Logout must revoke the desktop session. Cover with existing WebSession tests plus the desktop smoke evidence in T141 and T145.
 5. Record the Windows/WebView2 versions used for the demo and the observed cookie, CSP, and navigation behavior.
 
@@ -158,7 +158,7 @@
 - Existing search, filters, gallery, variants, shop, and public review behavior remains owned by the storefront.
 
 - [x] Run the existing Web regression: pnpm test:e2e:discovery and pnpm exec playwright test tests/e2e/storefront-shell.spec.ts --config=playwright.config.ts.
-- [x] Install and launch the debug Tauri app on the available target OS. Verify home, search/filter, product gallery/variant, shop, and public review screens load in the same remote origin.
+- [x] Launch the debug Tauri app on Windows. Verify home, search/filter, product gallery/variant, shop, and public review screens load from the same local `http://localhost:3000` origin.
 - [x] Record build URL, OS/WebView version, route results, and any failures in docs/testing/desktop-evidence.md. Do not create a separate discovery UI or a new executable automation framework; T160 remains an unapproved follow-up.
 - [x] Commit this task on the same feature branch with message: test(desktop): verify buyer discovery parity.
 

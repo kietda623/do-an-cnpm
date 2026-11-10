@@ -180,3 +180,5 @@ effort/risk và kế hoạch trước implementation; không âm thầm bỏ n�
 ## Delivery alignment — 2026-11-03
 
 Buyer mobile (Expo) đã bị gỡ khỏi workspace; T130/S4/W032 và SecureStore adapter không còn hiệu lực. Desktop buyer là Tauri wrapper quanh storefront, chưa nằm trong baseline build/CI. Package contract thống nhất packages/contracts, DTO selling và sale_status nội bộ. Không thay các quyết định stack/nghiệp vụ khác của nghiên cứu.
+
+**Cập nhật desktop 2026-11-10:** T140–T145 và SC-009 đã được nghiệm thu cho demo Tauri buyer local trên Windows 11 x64. Workflow Windows riêng chạy Node/Rust checks, không tạo installer; không yêu cầu URL public hay HTTPS production. Phạm vi này không bao gồm desktop trên hệ điều hành khác.

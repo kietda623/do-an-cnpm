@@ -68,16 +68,15 @@ Buyer 360/1280 hiển thị đủ nút; desktop buyer dùng cùng breakpoint res
 | A06 Product Moderation S6 | ProductSearch/Preview/HideReason | admin/products GET; hide POST | reason/version, no direct transaction edit | Hide không xóa snapshot, actor audit |
 | A07 Order Inquiry S6 | OrderSearch, parts/payment/timeline/audit | admin/orders GET/detail; admin/audit; recovery actions | read-only final, recovery action guard reason/key | Xem mọi đơn, không sửa final; failed return-confirmation hoàn đúng1lần |
 
-## Buyer Desktop — Tauri wrapper, kế hoạch (chưa triển khai)
+## Buyer Desktop — Tauri wrapper, demo Windows local đã nghiệm thu
 
-Buyer desktop dùng lại nguyên bộ B01–B13 của web storefront trong một cửa sổ Tauri; không có slice UI riêng.
-Điều kiện khi triển khai:
+Buyer desktop dùng lại nguyên bộ B01–B13 của web storefront trong một cửa sổ Tauri; không có slice UI riêng. Phạm vi đã triển khai và nghiệm thu là demo local trên Windows 11 x64 với WebView2, storefront `http://localhost:3000` và API local.
 
-- Tauri2 mở đúng storefront URL đã cấu hình; CSP/allow-list tối thiểu, không shell/filesystem IPC tùy ý.
-- Cùng auth contract: refresh cookie HttpOnly + CSRF của webview; không có token store native; access token chỉ trong memory.
+- Tauri mở storefront local; CSP/allow-list tối thiểu, không shell/filesystem IPC tùy ý.
+- Dùng cùng auth contract: refresh cookie HttpOnly + CSRF của webview; không có token store native; access token chỉ trong memory.
 - B02 đăng nhập qua webview; B08/B10 giữ retry key theo phiên ý định và refetch khi cửa sổ focus lại.
-- Acceptance: chạy đủ B01–B13 trên OS mục tiêu, gồm reload/session restore; ghi OS/toolchain và app/API SHA.
-- Không có client mobile; B01–B13 trên web là nguồn hành vi duy nhất.
+- T140–T145 và SC-009 đã được nghiệm thu với session restore, flow Buyer và evidence ghi ở [desktop-evidence.md](../../docs/testing/desktop-evidence.md).
+- Không yêu cầu URL public, HTTPS production hoặc installer; không mở rộng acceptance sang hệ điều hành desktop khác. Không có client mobile; B01–B13 trên web là nguồn hành vi duy nhất.
 
 ## Integration contract và exit gates
 
@@ -90,7 +89,7 @@ server release và commands. Polishing không vượt gate correctness/security.
 
 ## Dependency và ngân sách desktop
 
-Desktop buyer **không nằm trong baseline MVP hiện tại**: không có task S4/S6/S7, không cấp PD cho mobile (T130 đã de-scoped). Khi triển khai wrapper, dùng lại toàn bộ B01–B13 và chỉ thêm cấu hình Tauri cùng evidence build/launch trên OS mục tiêu; không coi web pass là desktop pass.
+Desktop buyer không nằm trong baseline MVP ban đầu; T130 mobile đã de-scoped và phần desktop được triển khai bổ sung thành demo Tauri local trên Windows theo T140–T145. Không có cam kết đóng gói/phát hành desktop. Evidence riêng cho demo desktop vẫn cần được phân biệt với web pass; SC-009 đã được nghiệm thu trong phạm vi local nêu trên.
 
 ## Giao diện hiện tại — Signal Dispatch
 

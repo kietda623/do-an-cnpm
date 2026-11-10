@@ -124,7 +124,7 @@ V07 dùng test clock chỉ trong test process và fixture disposable, không end
 Expiry kiểm tại request và sweep30s; worker trễ không cho payment sau deadline.
 Báo cáo tách target expected với observed results, không tick acceptance khi chưa có evidence.
 
-## Desktop validation (đã triển khai; acceptance còn BLOCKED)
+## Desktop validation (Windows local demo — đã nghiệm thu)
 
 Desktop buyer dùng Tauri wrapper quanh storefront hiện có. Chạy development shell và bộ kiểm tra riêng:
 
@@ -142,7 +142,7 @@ hay phát hành ứng dụng.
 - Buyer desktop: US1,4–8 trong webview, gồm reload/session restore, cookie HttpOnly/CSRF, không token plaintext.
 - Seller/Admin: chỉ web; không có desktop hay mobile client riêng.
 
-Trên mỗi target ghi thao tác, response redacted, screenshots/video khi phù hợp và record/totals evidence từ server.
+Ghi Windows/WebView2 version, thao tác, response redacted, screenshots/video khi phù hợp và record/totals evidence từ server. SC-009 đã nghiệm thu cho phạm vi demo local; không yêu cầu cài installer hoặc truy cập HTTPS production.
 
 ## Demo release và recovery rehearsal
 
@@ -161,5 +161,5 @@ image digests và smoke results. Kiểm tra object assets đọc lại sau resto
 Mỗi test/run: ticket/FR/SC, release SHA, environment+OS+dataset, exact command,
 exit code hoặc thao tác, expected/observed, link sanitized logs/screenshots,
 remaining defects và reviewer. Kết luận PASS chỉ từ bằng chứng thực tế.
-Nếu không có Mac/device/bucket hoặc command chưa được cung cấp, ghi BLOCKED và owner/date xử lý;
+Nếu thiếu Windows/device/bucket evidence cho một kiểm tra cần thiết hoặc command chưa được cung cấp, ghi BLOCKED và owner/date xử lý;
 không đánh dấu yêu cầu hoàn tất bằng giả định.

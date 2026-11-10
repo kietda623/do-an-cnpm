@@ -22,7 +22,7 @@ Paths là repository-relative từ `C:/Users/admin/Desktop/cnpm`; dùng exact pa
 
 Ràng buộc fields/nullable/enums/unique/index trong task model được trích nguyên văn từ data-model. DTO max/min/required/money/enums bổ sung dùng đúng contract; mọi thay đổi sau này phải đồng bộ cả hai nguồn, không tự phát minh nghiệp vụ. `selling` là tên transport chính thức; `packages/contracts` là package chính thức theo plan, không tạo package contract thứ hai.
 
-Phase là thứ tự capability, không tương đương Sprint. Gán lịch theo WBS: identity core S2, assets/avatar S3; stock S3, cart S4, order/payment/shipping S5, reviews/stats/Admin S6, desktop wrapper (kế hoạch) S6–7 và release S8. US1 avatar có thể được hoàn thiện trong S3; không coi auth core đã có là toàn US1 đã DONE. Mock preparation không thay gate nền tảng/backend thật.
+Phase là thứ tự capability, không tương đương Sprint. Gán lịch theo WBS ban đầu: identity core S2, assets/avatar S3; stock S3, cart S4, order/payment/shipping S5, reviews/stats/Admin S6 và release S8. Desktop wrapper được triển khai bổ sung sau baseline theo T140–T145 thành demo local Windows, SC-009 đã nghiệm thu. US1 avatar có thể được hoàn thiện trong S3; không coi auth core đã có là toàn US1 đã DONE. Mock preparation không thay gate nền tảng/backend thật.
 
 ## Phase 1: Setup (Shared Infrastructure)
 
@@ -370,24 +370,24 @@ T121–T129 are recorded in a separate follow-up commit.
 
 **Goal**: Ổn định,kiểm chứng toàn50FR và bàn giao; không mở scope mới.
 
-**Independent Test / Checkpoint**: SC001–010 có evidence,zero release-blocking auth/money/stock defects,clean setup/desktop (khi có build)/restore thật.
+**Independent Test / Checkpoint**: SC001–010 có evidence, zero release-blocking auth/money/stock defects, clean setup, Windows desktop local demo checks và restore thật.
 
 - [ ] T146 [P] Rà OWASP/IDOR/CSRF/CORS/rate-limit/upload/refresh reuse/secret-redaction trên tất cả mutations; sửa theo negative tests,ghi docs/testing/security-review.md và tests/security/authorization.spec.ts. [Owner: M1; Reviewer: M5; Sprint: S7; WBS: W050; Allocation: W050=1.25PD(M1/S7); Depends: T129, T131]
 - [ ] T147 [P] Benchmark1000products/10shops/20users/100searches,EXPLAIN và tune index trước cache,số tiền mẫu biết trước/stock reconciliation trong tests/performance/discovery.spec.ts,docs/testing/performance-evidence.md; SC003/004/006/008 phải có observed metrics. [Owner: M2; Reviewer: M1; Sprint: S7; WBS: W052; Allocation: W052=3.00PD(M2/S7); Depends: T111]
-- [ ] T148 [P] Cho 5 người checkout 5 dòng/2shop,>=4/5 trong3phút; rà360/1280/keyboard/desktop labels (khi có),mọi trạng thái UI,ghi docs/testing/usability-evidence.md; sửaUX core không thêm feature. [Owner: M3; Reviewer: M5; Sprint: S7; WBS: W054; Allocation: W054=2.00PD(M3/S7); Depends: T111]
+- [ ] T148 [P] Cho 5 người checkout 5 dòng/2shop,>=4/5 trong3phút; rà360/1280/keyboard/desktop labels trên demo Windows, mọi trạng thái UI, ghi docs/testing/usability-evidence.md; sửaUX core không thêm feature. [Owner: M3; Reviewer: M5; Sprint: S7; WBS: W054; Allocation: W054=2.00PD(M3/S7); Depends: T111]
 - [ ] T149 Fresh/upgrade migrations,FK/unique/check/snapshot consistency và backup/restore cô lập,no sửa sharedmigration; thêm corrective additive nếu cần,ghi docs/database/migration-rehearsal.md,docs/adr/0003-data-integrity.md. [Owner: M2; Reviewer: M5; Sprint: S7; WBS: W053; Allocation: W053=1.00PD(M2/S7); Depends: T146, T147, T148]
 - [ ] T150 Hoàn deterministic demo10shops/1000products và pending/locked/hidden/expired/refunded/completed fixtures từ stablekeys,seed twice không reset transaction trong apps/api/prisma/seed/demo.seed.ts; bootstrap secret từenv. [Owner: M2; Reviewer: M1; Sprint: S8; WBS: W059; Allocation: W059=2.00PD(M2/S8); Depends: T149]
 - [ ] T151 Đối chiếu toànendpoint/runtimeSwagger/OpenAPI/generatedclients,regenerate và freeze contract,FRtest trace,docs trong packages/contracts/openapi.yaml,packages/api-client/src/generated/index.ts,docs/api/README.md,docs/testing/acceptance-matrix.md. [Owner: M1; Reviewer: M4; Sprint: S7; WBS: W051; Allocation: W051=1.50PD(M1/S7); Depends: T150]
-- [ ] T152 Hoàn CI unit/integration/contracts/E2E/desktop artifacts (khi có build),health/structuredlog checks,image digests/Actionpins/secrets và release metadata ở .github/workflows/release.yml,infra/compose.demo.yml,infra/proxy/Caddyfile; cấu hình chưa tự deploy. [Owner: M5; Reviewer: M2; Sprint: S7,S8; WBS: W057,W060; Allocation: W057=1.50PD(M5/S7), W060=1.00PD(M2/S8); Depends: T151]
+- [ ] T152 Hoàn CI unit/integration/contracts/E2E và desktop checks trên Windows (không tạo installer), health/structuredlog checks, image digests/Actionpins/secrets và release metadata ở .github/workflows/release.yml,infra/compose.demo.yml,infra/proxy/Caddyfile; cấu hình chưa tự deploy. [Owner: M5; Reviewer: M2; Sprint: S7,S8; WBS: W057,W060; Allocation: W057=1.50PD(M5/S7), W060=1.00PD(M2/S8); Depends: T151]
 - [ ] T153 [P] HTTPS/env/migrate/health/backupencrypted/offhost7days/restoreRPO24h-RTO2htarget/compatible-image-rollbackrunbook ở docs/deployment/runbook.md,docs/deployment/backup-restore.md; destructive recovery cần quyết định của chủ dữ liệu. [Owner: M5; Reviewer: M2; Sprint: S8; WBS: W063; Allocation: W063=1.00PD(M5/S8); Depends: T152]
 - [ ] T154 [P] Cập nhật SRS/use-case/architecture/ERD/sequence/deploymentdiagram/TestPlan/README theo code thật và decisions/limitations trong docs/report/report.md,docs/architecture/system.md,README.md; không copy tài liệu stale. [Owner: M1; Reviewer: M3; Sprint: S8; WBS: W058; Allocation: W058=3.00PD(M1/S8); Depends: T152]
-- [ ] T155 [P] Slides/userguide/SellerAdminmanual,demo 15 phút2shops/mock+COD/review,video dự phòng có nhãn và checksum desktop artifacts (khi có build) ở docs/demo/demo-script.md,docs/demo/slides.md,docs/user/seller-admin.md,docs/releases/desktop-artifacts.md. [Owner: M3; Reviewer: M4; Sprint: S8; WBS: W061,W062; Allocation: W061=3.00PD(M3/S8), W062=3.00PD(M4/S8); Depends: T152]
+- [ ] T155 [P] Slides/userguide/SellerAdminmanual và demo 15 phút với 2 shops/mock+COD/review; chuẩn bị video dự phòng có nhãn và hướng dẫn chạy buyer demo Tauri local trên Windows tại docs/demo/demo-script.md,docs/demo/slides.md,docs/user/seller-admin.md. Ghi link đến [desktop evidence](../../docs/testing/desktop-evidence.md); không tạo installer/checksum desktop. [Owner: M3; Reviewer: M4; Sprint: S8; WBS: W061,W062; Allocation: W061=3.00PD(M3/S8), W062=3.00PD(M4/S8); Depends: T152]
 - [ ] T156 Rehearse authorized local/staging release,backup/restore/rollback trênDB cô lập và smoke theo quickstart; ghi kết quả quan sát thực tế trong docs/deployment/rehearsal-evidence.md; không destructive sharedDB/reset hoặc deployexternal chưa được ủy quyền. [Owner: M5; Reviewer: M2; Sprint: S8; WBS: W063; Allocation: W063=1.00PD(M5/S8); Depends: T153, T154, T155]
-- [ ] T157 Chạy đầy đủlint/type/unit/build/integration/contracts/E2E/concurrency/security/perf/desktop (nếu có build),50FR/10SC và cleancloneSC010<=30phút sau khi đủ prerequisites; ghi commands/exits/blockers/reviewer trong docs/testing/final-acceptance.md. [Owner: M5; Reviewer: M3; Sprint: S7; WBS: W056,W064; Allocation: W056=2.50PD(M5/S7), W064=0.00PD(reference); Depends: T156]
-- [ ] T158 Bàn giao release/source/schema/API/tests/desktop artifacts (nếu có)/report/demo,không còn lỗi P0 và vấn đề còn lại rõ; cập nhật README.md,docs/releases/handover.md và specs/001-marketplace-mvp/quickstart.md; chưa có evidence thì đểtask unchecked. [Owner: M5; Reviewer: M1; Sprint: S8; WBS: W064; Allocation: W064=1.50PD(M5/S8); Depends: T157]
+- [ ] T157 Chạy đầy đủlint/type/unit/build/integration/contracts/E2E/concurrency/security/perf và desktop checks Windows,50FR/10SC và cleancloneSC010<=30phút sau khi đủ prerequisites; ghi commands/exits/blockers/reviewer trong docs/testing/final-acceptance.md. [Owner: M5; Reviewer: M3; Sprint: S7; WBS: W056,W064; Allocation: W056=2.50PD(M5/S7), W064=0.00PD(reference); Depends: T156]
+- [ ] T158 Bàn giao release/source/schema/API/tests/Windows desktop demo guide/evidence/report/demo,không còn lỗi P0 và vấn đề còn lại rõ; cập nhật README.md,docs/releases/handover.md và specs/001-marketplace-mvp/quickstart.md; chưa có evidence thì đểtask unchecked. [Owner: M5; Reviewer: M1; Sprint: S8; WBS: W064; Allocation: W064=1.50PD(M5/S8); Depends: T157]
 ## Proposed follow-up (not in the approved allocation)
 - [x] T159 E2E full-stack trình duyệt <-> API thật <-> PostgreSQL thật cho luồng US7 fulfillment/cancel/receive; ghi evidence và lệnh chạy tại docs/testing/us7-evidence.md. Đây là đề xuất follow-up, chưa thuộc phân bổ đã duyệt. [Owner: chờ phân bổ; Reviewer: chờ phân bổ; Sprint: chờ phân bổ; WBS: chờ phân bổ; Allocation: đề xuất, không cộng vào tổng 157 PD đã duyệt; Depends: T111]
-- [ ] T160 [PLANNED 2026-11-03 — chưa triển khai] Executable buyer desktop journeys cho Tauri wrapper (search/cart/checkout/order/review) tại apps/desktop/test/buyer-journeys.spec.tsx, gắn với OS/evidence khi wrapper được build. [Owner: chờ phân bổ; Reviewer: chờ phân bổ; Sprint: chưa xếp; WBS: W054,W056; Allocation: 0 PD (đề xuất, chưa phân bổ); Depends: T142, T143]
+- [ ] T160 [PLANNED 2026-11-03 — chưa triển khai] Executable buyer desktop journeys cho Tauri wrapper Windows (search/cart/checkout/order/review) tại apps/desktop/test/buyer-journeys.spec.tsx, gắn với Windows/WebView2 evidence; wrapper demo đã được triển khai qua T140–T145. [Owner: chờ phân bổ; Reviewer: chờ phân bổ; Sprint: chưa xếp; WBS: W054,W056; Allocation: 0 PD (đề xuất, chưa phân bổ); Depends: T142, T143]
 
 
 **Checkpoint**: Không chuyển gate nếu còn dependency hoặc bằng chứng bắt buộc chưa đạt.
@@ -453,7 +453,7 @@ Mỗi checkpoint thêm giá trị mà vẫn rerun regression trước đó. Ch�
 
 ### Parallel Team Strategy
 
-M1 identity/shop/state/cancel/shipping; M2 data/catalog/inventory/checkout/payment; M3 Buyer Web completion; M4 Seller/Admin web + desktop buyer (kế hoạch); M5 web test harness/DevOps, review chéo theo WBS. Phần khó chia giữa owner, mỗi người tự viết tests phần mình. Dùng 157 PD baseline và capacity 4.5 PD/member/Sprint, không lấy số lượng task bằng năng lực hoàn thành. Nếu task tách tiếp thì giữ tổng effort và gate.
+M1 identity/shop/state/cancel/shipping; M2 data/catalog/inventory/checkout/payment; M3 Buyer Web completion; M4 Seller/Admin web + desktop buyer Windows local demo (T140–T145 complete); M5 web test harness/DevOps, review chéo theo WBS. Phần khó chia giữa owner, mỗi người tự viết tests phần mình. Dùng 157 PD baseline và capacity 4.5 PD/member/Sprint, không lấy số lượng task bằng năng lực hoàn thành. Nếu task tách tiếp thì giữ tổng effort và gate.
 
 ## Coverage & Independent Acceptance Summary
 
@@ -471,7 +471,7 @@ M1 identity/shop/state/cancel/shipping; M2 data/catalog/inventory/checkout/payme
 | US8 | 9 | Completed/unfinished/cancelled fixtures với exact totals;one review đúngBuyer/rating1–5,dup reject;revenue chỉ completed ngày/tháng Asia/Saigon. |
 | US9 | 9 | Admin tìm/khóa/mở user,ẩn hàng,tra cứu allorders và exactcount;nonAdmin denied,final data immutable,action log ai/lúc nào/lý do. |
 | US10 | 16 | Buyer web hoàn tất và giữ dữ liệu sau reload; Tauri local demo có Windows session/commerce evidence; không có mobile, production URL hay installer scope. |
-| Cross-cutting | 13 | SC001–010 có evidence,zero release-blocking auth/money/stock defects,clean setup/desktop (khi có build)/restore thật. |
+| Cross-cutting | 13 | SC001–010 có evidence, zero release-blocking auth/money/stock defects, clean setup, Windows desktop local demo checks và restore thật. |
 
 ## Notes
 

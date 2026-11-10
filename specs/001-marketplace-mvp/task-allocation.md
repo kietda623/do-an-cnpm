@@ -1,8 +1,8 @@
 # Task Ownership and Budget Allocation
 
-Ngày chỉnh: 2026-10-20. 158 task chưa thực hiện; 64 WBS giữ nguyên tổng 157 person-day.
+Ngày lập baseline phân bổ: 2026-10-20. Các con số task/WBS và tổng 157 person-day bên dưới là kế hoạch gốc, không phải trạng thái hoàn thành hiện tại.
 
-**Cập nhật 2026-11-03:** app mobile đã bị gỡ; buyer dùng web và desktop wrapper Tauri (kế hoạch, chưa triển khai). T130–T139 (nhánh Buyer Mobile) chuyển trạng thái de-scoped/removed; T140–T145 (Seller Desktop cũ) đổi thành packaging/verify desktop buyer nhưng **chưa thực hiện**. Các dòng dưới đây giữ nguyên số liệu phân bổ gốc để đối chiếu lịch sử ngân sách, không phải effort còn lại của baseline hiện tại. Tổng PD kế hoạch không đổi.
+**Cập nhật 2026-11-10:** app mobile đã bị gỡ; buyer dùng web và demo desktop Tauri trên Windows. T130–T139 (nhánh Buyer Mobile) chuyển trạng thái de-scoped/removed; T140–T145 đã triển khai và SC-009 được nghiệm thu bằng demo local Windows. Các dòng bên dưới giữ nguyên số liệu phân bổ gốc để đối chiếu lịch sử ngân sách, không phải effort còn lại. Demo desktop không yêu cầu URL public, HTTPS production hay installer.
 
 ## Trạng thái sai lệch so với baseline
 
@@ -12,9 +12,9 @@ Ngày chỉnh: 2026-10-20. 158 task chưa thực hiện; 64 WBS giữ nguyên t�
 | T131 | Done, web-only | Test phiên web cookie/CSRF trong `packages/api-client/test/web-session.test.ts`; 27 test pass |
 | T132–T137 | Removed | Buyer Mobile integration (W048); không còn client mobile |
 | T138–T139 | Removed | Mobile review/usability/security (W054/W049); thay bằng kiểm chứng web |
-| T140–T145 | De-scoped → kế hoạch | Trước là Seller Desktop; nay là packaging/verify desktop buyer Tauri, chưa triển khai tại thời điểm 2026-11-03 |
-| T148 | Điều chỉnh | Usability 360/1280 vẫn là web; bỏ nhãn native, desktop chỉ khi có build |
-| T155 | Điều chỉnh | W061 demo vẫn còn; phần W062 nay là verify desktop buyer (kế hoạch) |
+| T140–T145 | Hoàn tất — Windows local demo | Trước là Seller Desktop; đổi thành demo buyer Tauri trên Windows, nghiệm thu theo [desktop evidence](../../docs/testing/desktop-evidence.md) |
+| T148 | Điều chỉnh | Usability 360/1280 vẫn là web; kiểm tra nhãn desktop trên demo Windows theo phạm vi hiện hành |
+| T155 | Điều chỉnh | W061 demo vẫn còn; W062 hỗ trợ hướng dẫn và evidence cho demo desktop buyer local trên Windows, không có gói cài đặt/checksum |
 | T160 | Điều chỉnh | Seller desktop journeys → buyer desktop journeys (kế hoạch) |
 
 ## Quy tắc

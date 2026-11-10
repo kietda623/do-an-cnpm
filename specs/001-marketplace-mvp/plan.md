@@ -7,7 +7,7 @@
 Setup resolver trả logical context `001-marketplace-mvp`; Git thực tế vẫn là `main`.
 Không tạo/chuyển branch; toàn bộ công việc trong bước này chỉ là tài liệu thiết kế.
 
-**Implementation status update 2026-11-09:** Phạm vi desktop được chốt là demo buyer trên Windows với storefront/API local (`http://localhost:3000`). T140–T145 được nghiệm thu bằng Windows demo/session/commerce evidence; không yêu cầu URL public, MSI hay nền tảng khác. Xem [tasks.md](tasks.md) và [desktop-evidence.md](../../docs/testing/desktop-evidence.md).
+**Implementation status update 2026-11-10:** Phạm vi desktop được chốt là demo buyer trên Windows với storefront/API local (`http://localhost:3000`). T140–T145 được nghiệm thu bằng Windows demo/session/commerce evidence; không yêu cầu URL public, MSI hay hỗ trợ desktop trên nền tảng khác. Xem [tasks.md](tasks.md) và [desktop-evidence.md](../../docs/testing/desktop-evidence.md).
 
 ## Summary
 
@@ -78,11 +78,11 @@ specs/001-marketplace-mvp/
   quickstart.md
 ```
 
-`tasks.md` đã được tạo: 158 task chưa thực hiện, nhóm theo 10 user stories. `task-allocation.md` ghi owner/reviewer, Sprint và phân bổ đúng 157 PD từ WBS; không cộng effort hai lần. Phase là nhóm capability; lịch chọn task sẵn sàng theo Sprint và dependency, không chờ hoàn tất Admin để thử desktop buyer.
+`tasks.md` phân rã 158 task theo 10 user stories; trạng thái hiện hành nằm ở checkbox và cập nhật của từng task. `task-allocation.md` ghi owner/reviewer, Sprint và phân bổ đúng 157 PD từ WBS; không cộng effort hai lần. Phase là nhóm capability; lịch chọn task sẵn sàng theo Sprint và dependency, không chờ hoàn tất Admin để thử desktop buyer.
 
 ### Source Code (repository root)
 
-Cây workspace được khởi tạo ở T008; source của từng app/package sẽ được thêm bởi các task triển khai tương ứng:
+Cây workspace được khởi tạo ở T008; source hiện hành của từng app/package nằm trong repo và trạng thái triển khai theo dõi trong `tasks.md`:
 
 ```text
 apps/
@@ -478,6 +478,6 @@ không tạo migration, không deploy và không tạo tasks.md.
 - T002: kiến trúc/public interfaces, Owner M1/Reviewer M2, W002/S1/2 PD.
 - T003: thiết kế dữ liệu/transaction invariants, Owner M2/Reviewer M1, W003/S1/2.5 PD.
 - T130 (nhánh thử Mobile S4) đã de-scoped cùng việc gỡ app mobile ngày 2026-11-03; không cấp lại W032 cho mobile. Desktop buyer chỉ được triển khai như wrapper sau web, không cần scaffold S4.
-- S6 hoàn thiện web evidence và role denial; desktop acceptance chỉ tính khi wrapper được build trên OS mục tiêu.
+- S6 hoàn thiện web evidence và role denial; T140–T145/SC-009 desktop được nghiệm thu cho demo local Windows theo evidence, không yêu cầu installer hoặc public deployment.
 - Dùng packages/contracts, DTO selling, trạng thái nội bộ sale_status. Owner/reviewer/Sprint và allocation ở từng task; bảng kiểm toán tại [task-allocation.md](task-allocation.md).
-- 158 task vẫn unchecked, tổng effort giữ 157 PD; lần chỉnh này chỉ sửa tài liệu.
+- Tại thời điểm lập baseline ngày 2026-10-20, 158 task ban đầu chưa được thực hiện; tổng effort dự toán là 157 PD. Trạng thái hiện tại được theo dõi trong `tasks.md`.
